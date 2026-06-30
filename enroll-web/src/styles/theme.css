@@ -1,0 +1,86 @@
+/* ================================================================
+   杭电特色班报名系统 · 主题变量 + Element Plus 覆盖
+   严格遵循 themeCss.json 紧凑风格
+   ================================================================ */
+
+:root {
+  /* === 品牌色系 === */
+  --brand-primary: #337eff;
+  --brand-hover: #1f6fe5;
+  --brand-press: #1859c4;
+  --brand-bg-light: #eff6ff;
+
+  /* === 文字色系 === */
+  --text-primary: #1e293b;
+  --text-secondary: #64748b;
+  --text-tertiary: #94a3b8;
+
+  /* === 背景/表面 === */
+  --bg-page: #f5f7fa;
+  --bg-th: #f8fafc;
+  --surface-card: #ffffff;
+  --divider: #e2e8f0;
+
+  /* === 功能色 === */
+  --success: #10b981;
+  --success-bg: #ecfdf5;
+  --warning: #f59e0b;
+  --warning-bg: #fff7e6;
+  --error: #ef4444;
+  --info: #3b82f6;
+
+  /* === 圆角 === */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+
+  /* === 滚动条宽度（themeCss --scrollbar-size） === */
+  --scrollbar-size: 8px;
+
+  /* ================================================================
+     Element Plus 变量覆盖（贴合 themeCss.json Vben 紧凑风格）
+     ================================================================ */
+  --el-color-primary: #337eff;
+  --el-color-primary-light-3: #1f6fe5;
+  --el-font-size-base: 13px;       /* themeCss --font-size-base */
+  --el-font-size-small: 12px;
+  --el-border-radius-base: 4px;    /* themeCss button 默认圆角 */
+  --el-border-radius-small: 3px;
+  --el-component-size: 32px;       /* themeCss button-height: --height-small */
+  --el-table-header-bg-color: #f8fafc;
+  --el-table-row-hover-bg-color: #f0f7ff;
+  --el-table-border-color: #e2e8f0;
+  --el-table-cell-padding: 5px 3px 5px 5px;   /* themeCss table-view-td-padding */
+  --el-table-header-padding: 8px 3px 8px 8px;  /* themeCss table-view-th-padding */
+  --el-menu-active-color: #337eff;
+  --el-menu-hover-bg-color: #eff6ff;
+  --el-card-border-radius: 6px;
+  --el-dialog-border-radius: 8px;
+  --el-message-border-radius: 6px;
+}
+
+/* === 全局页面背景 === */
+body {
+  background-color: var(--bg-page);
+  color: var(--text-primary);
+  font-size: var(--el-font-size-base);
+}
+
+/* === 自定义滚动条（8px） === */
+::-webkit-scrollbar {
+  width: var(--scrollbar-size);
+  height: var(--scrollbar-size);
+}
+::-webkit-scrollbar-thumb {
+  background: #c0c4cc;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #909399;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* === Element Plus 表格单元格 padding 精确覆盖（需 :deep() 在组件内） === */
+/* 这里设置全局默认，组件内用 :deep() 确保优先级 */
