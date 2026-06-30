@@ -8,8 +8,8 @@
     <div class="banner">
       <div class="banner-content">
         <h1>2026 特色班报名通道已开启</h1>
-        <p>杭州电子科技大学信息工程学院 · 7 个特色班级任你选择</p>
-        <el-button link type="primary" class="notice-link" @click="showNotice = true">
+        <p>杭州电子科技大学信息工程学院 · 7 个特色班级供你选择</p>
+        <el-button type="primary" class="notice-link" @click="showNotice = true">
           📋 查看报名须知
         </el-button>
       </div>
@@ -237,7 +237,7 @@ function onFilterSelect(key) {
   filterKey.value = key
 }
 
-function goFormDirect(classId) {
+async function goFormDirect(classId) {
   const c = classes.value.find(c => c.id === classId)
   if (!c) return
   const { canApply, label } = getClassTimeStatus(c)
@@ -246,21 +246,36 @@ function goFormDirect(classId) {
     return
   }
   showNotice.value = false
+  await nextTick()
   router.push(`/form/${classId}`)
 }
 
-const timelineItems = computed(() =>
-  classes.value.map(c => {
+const timelineItems = computed(() => {
+  // 按报名开始日期升序（最早的在左/上），PC 端垂直列表顺序无所谓，
+  // 移动端横向排列时最早放左边，符合阅读习惯
+  const sorted = [...classes.value].sort((a, b) => {
+    // 按报名开始日期升序（最早的在左），解析失败则按 id 保底
+    try {
+      const [sA] = a.period.split(' - ')
+      const [sB] = b.period.split(' - ')
+      const dA = new Date(sA.replace(/\//g, '-'))
+      const dB = new Date(sB.replace(/\//g, '-'))
+      return dA - dB
+    } catch {
+      return a.id - b.id
+    }
+  })
+  return sorted.map(c => {
     const { status, label } = getClassTimeStatus(c)
     return {
-      name: c.name,  // 直接用真实名称（含...是名称本身字符，不是省略）
+      name: c.name,
       period: c.period,
       active: status === 'open',
       tagType: status === 'open' ? 'success' : status === 'not_started' ? 'warning' : 'info',
       tagText: label,
     }
   })
-)
+})
 </script>
 
 <style scoped>
@@ -322,12 +337,15 @@ const timelineItems = computed(() =>
   margin-bottom: 16px;
 }
 .notice-link {
-  color: rgba(255,255,255,0.75);
+  background: rgba(255,255,255,0.2) !important;
+  border-color: rgba(255,255,255,0.5) !important;
+  color: #fff !important;
   margin-left: 12px;
   font-size: 13px;
 }
 .notice-link:hover {
-  color: #fff;
+  background: rgba(255,255,255,0.35) !important;
+  border-color: #fff !important;
 }
 .card-grid {
   display: grid;
@@ -339,7 +357,7 @@ const timelineItems = computed(() =>
 .home-timeline {
   width: 260px;
   flex-shrink: 0;
-  margin-left: 15px;               /* 整体左移 15px */
+  margin-left: 15px;
 }
 .timeline-title {
   font-size: 14px;
@@ -359,9 +377,9 @@ const timelineItems = computed(() =>
   margin-left: -23px;
   padding-left: 23px;
   display: grid;
-  grid-template-columns: 1fr auto;   /* 左：班级名+时间（两行） | 右：标签 */
-  grid-template-rows: auto auto;       /* 上：班级名 | 下：时间 */
-  row-gap: 4px;                        /* 上下行间距 */
+  grid-template-columns: 1fr auto;
+  grid-template-rows: auto auto;
+  row-gap: 4px;
 }
 .timeline-dot {
   position: absolute;
@@ -378,7 +396,7 @@ const timelineItems = computed(() =>
 }
 .timeline-left {
   grid-column: 1;
-  grid-row: 1 / 3;   /* 占据上下两行，作为两行内容的容器 */
+  grid-row: 1 / 3;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -389,7 +407,6 @@ const timelineItems = computed(() =>
   font-weight: 600;
   color: var(--text-primary);
   line-height: 1.4;
-  /* 两行布局：班级名完整显示，换行不截断 */
   white-space: normal;
   overflow: visible;
   text-overflow: unset;
@@ -403,7 +420,7 @@ const timelineItems = computed(() =>
 }
 .timeline-tag {
   grid-column: 2;
-  grid-row: 1 / 3;   /* 右侧标签占据两行 */
+  grid-row: 1 / 3;
   flex-shrink: 0;
   align-self: center;
 }
@@ -479,17 +496,18 @@ const timelineItems = computed(() =>
   .home-main {
     order: -1;
   }
-  .filter-menu :deep(.el-menu) {
-    display: flex;
-    overflow-x: auto;
-    white-space: nowrap;
+  .filter-menu {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
     border-bottom: 1px solid var(--divider);
   }
-  .filter-menu :deep(.el-menu-item) {
-    flex-shrink: 0;
-    min-width: auto;
-    padding: 0 14px;
-    font-size: 13px;
+  .filter-menu .el-menu-item {
+    flex: 0 0 calc(33.33% - 6px) !important;
+    min-width: auto !important;
+    padding: 0 8px !important;
+    font-size: 13px !important;
+    justify-content: center !important;
   }
   .banner-content h1 { font-size: 18px; }
   .banner-content p { font-size: 12px; margin-bottom: 12px; }
@@ -500,17 +518,18 @@ const timelineItems = computed(() =>
     display: flex;
     flex-wrap: nowrap;       /* 不换行，横向滚动 */
     gap: 8px;
-    padding-left: 5px;        /* 左移5px，和左侧边缘留5px间距 */
+    padding-left: 5px;
     border-left: none;
     border-top: 2px solid var(--divider);
-    padding-top: 10px;
+    padding-top: 15px;
+    padding-bottom: 15px;
     overflow-x: auto;         /* 水平滚动条 */
     -webkit-overflow-scrolling: touch;
   }
   /* 移动端：横向滚动，每列 = 班级名(上) + 时间(下) + 标签 */
   .timeline-item {
     flex-shrink: 0;
-    width: 100px;            /* 每列固定宽度，避免挤在一起 */
+    width: 130px;            /* 每列固定宽度，避免挤在一起 */
     display: grid;
     grid-template-rows: auto auto auto;  /* 三行：班级名、时间、标签 */
     grid-template-columns: 1fr;

@@ -83,7 +83,7 @@
           <el-row :gutter="24" class="form-row">
             <el-col :xs="24" :sm="24">
               <el-form-item label="申报班级" prop="classId">
-                <el-select v-model="form.classId" placeholder="请选择特色班" style="width: 100%;">
+                <el-select v-model="form.classId" placeholder="请选择特色班" style="width: 100%;" :disabled="!!route.params.classId">
                   <el-option
                     v-for="c in classes"
                     :key="c.id"
@@ -149,7 +149,7 @@
 
           <!-- ===== 按钮组 ===== -->
           <el-form-item class="submit-btn-wrap">
-            <el-button type="primary" size="large" class="submit-btn" @click="onSubmit" :loading="submitting">
+            <el-button type="primary" size="large" class="submit-btn" @click="onSubmit" :loading="submitting" :disabled="submitting">
               提交报名
             </el-button>
           </el-form-item>
@@ -199,22 +199,26 @@ onMounted(async () => {
   }
 })
 
-// 监听班级列表 + 路由 classId，任一就绪则预填表单
-watchEffect(() => {
-  const cid = Number(route.params.classId)
-  if (!cid || !classes.value.length) return
-  if (form.classId === cid) return   // 已有值，跳过
-  const cls = classes.value.find(c => c.id === cid)
-  if (!cls) return
-  const { canApply, label } = getClassTimeStatus(cls)
-  if (!canApply) {
-    ElMessage.warning(`「${cls.name}」${label}，无法报名`)
-    router.replace('/home')
-    return
-  }
-  form.classId = cid
-  activeStep.value = 1
-})
+// 监听班级列表 + 路由 classId，两者都就绪才预填表单
+watch(
+  [() => classes.value.length, () => route.params.classId],
+  ([len, cid]) => {
+    if (!len || !cid) return
+    const classId = Number(cid)
+    if (!classId || form.classId === classId) return
+    const cls = classes.value.find(c => c.id === classId)
+    if (!cls) return
+    const { canApply, label } = getClassTimeStatus(cls)
+    if (!canApply) {
+      ElMessage.warning(`「${cls.name}」${label}，无法报名`)
+      router.replace('/home')
+      return
+    }
+    form.classId = classId
+    activeStep.value = 1
+  },
+  { immediate: true }
+)
 
 const selectedClass = computed(() =>
   classes.value.find(c => c.id === form.classId) || null
@@ -344,9 +348,11 @@ async function onSubmit() {
   color: var(--brand-primary);
 }
 .submit-btn-wrap {
-  display: flex;
-  justify-content: center;
   margin-top: 24px;
+}
+.submit-btn-wrap :deep(.el-form-item__content) {
+  display: flex !important;
+  justify-content: center !important;
 }
 .submit-btn {
   width: 240px;
