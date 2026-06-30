@@ -173,20 +173,54 @@ onMounted(async () => {
     loading.value = false
   }
 })
-// 监听弹窗打开 → 等 DOM 渲染完 → 强制设移动端宽度和高度
+// 监听弹窗打开 → 设备自适应设宽度和高度
 watch(showNotice, async (val) => {
   if (val) {
     // Element Plus Teleport 到 body，等几帧确保渲染
     await new Promise(resolve => setTimeout(resolve, 200))
-    // notice-dialog 和 el-dialog 是同一元素（同一 DOM 节点有两个 class）
     const dialog = document.querySelector('.notice-dialog')
-    if (dialog) {
+    if (!dialog) return
+
+    const isMobile = window.innerWidth < 768
+
+    if (isMobile) {
+      // ===== 移动端：dialog 固定宽度，body 弹性滚动 =====
       dialog.style.setProperty('width', '95vw', 'important')
       dialog.style.maxWidth = '355px'
-      dialog.style.maxHeight = '85vh'
-      // 强制 top=0，Element Plus 用 transform 居中，top:0 让它从顶部开始
-      dialog.style.setProperty('top', '0px', 'important')
+      dialog.style.maxHeight = '88vh'
+      dialog.style.setProperty('top', 'auto', 'important')
       dialog.style.setProperty('transform', 'none', 'important')
+      // overlay-dialog 顶部留 5vh 间距
+      const overlayDialog = document.querySelector('.el-overlay-dialog')
+      if (overlayDialog) {
+        overlayDialog.style.setProperty('align-items', 'flex-start', 'important')
+        overlayDialog.style.setProperty('justify-content', 'center', 'important')
+        overlayDialog.style.setProperty('display', 'flex', 'important')
+        overlayDialog.style.setProperty('padding-top', '5vh', 'important')
+      }
+      // body：固定 max-height = 剩余空间，overflow-y auto
+      await new Promise(resolve => setTimeout(resolve, 50))
+      const headerH = dialog.querySelector('.el-dialog__header')?.getBoundingClientRect().height ?? 53
+      const footerH = dialog.querySelector('.el-dialog__footer')?.getBoundingClientRect().height ?? 49
+      const maxBodyH = Math.floor(88 * window.innerHeight / 100 - headerH - footerH - 8)
+      const body = dialog.querySelector('.el-dialog__body')
+      if (body) {
+        body.style.setProperty('max-height', maxBodyH + 'px', 'important')
+        body.style.overflowY = 'auto'
+      }
+    } else {
+      // ===== PC 端：居中，max-width 720px，body 内部滚动 =====
+      dialog.style.maxWidth = '720px'
+      // body 固定 max-height = 85vh - header - footer - buffer
+      await new Promise(resolve => setTimeout(resolve, 50))
+      const headerH = dialog.querySelector('.el-dialog__header')?.getBoundingClientRect().height ?? 60
+      const footerH = dialog.querySelector('.el-dialog__footer')?.getBoundingClientRect().height ?? 49
+      const maxBodyH = Math.floor(85 * window.innerHeight / 100 - headerH - footerH - 8)
+      const body = dialog.querySelector('.el-dialog__body')
+      if (body) {
+        body.style.setProperty('max-height', maxBodyH + 'px', 'important')
+        body.style.overflowY = 'auto'
+      }
     }
   }
 })
@@ -608,15 +642,14 @@ const timelineItems = computed(() =>
 
 /* ===== 移动端（max-width: 768px）===== */
 @media (max-width: 768px) {
-  /* el-overlay 是弹窗的视口层，对齐到顶部附近 */
-  .notice-dialog.el-overlay {
+  /* el-overlay-dialog 是控制 dialog 位置的容器，对齐到顶部 */
+  .notice-dialog.el-overlay-dialog {
     display: flex !important;
     align-items: flex-start !important;
     justify-content: center !important;
-    padding-top: 5vh !important;
   }
   /* .el-dialog 是实际弹窗 — 强制覆盖 inline style width */
-  .notice-dialog .el-dialog {
+  .notice-dialog.el-dialog {
     width: 95vw !important;
     max-width: 355px !important;
     min-width: unset !important;
@@ -675,8 +708,8 @@ const timelineItems = computed(() =>
   .notice-dialog .el-dialog__body {
     padding: 6px 10px !important;
     overflow-y: auto !important;
-    flex: 1 1 auto !important;
-    max-height: calc(90vh - 90px) !important;
+    flex: none !important;
+    max-height: calc(85vh - 102px) !important;
   }
   /* footer */
   .notice-dialog .el-dialog__footer {
@@ -687,6 +720,7 @@ const timelineItems = computed(() =>
     display: flex !important;
     align-items: center !important;
     justify-content: flex-end !important;
+    align-self: flex-end !important;
   }
   /* 表格 */
   .notice-dialog .el-table {

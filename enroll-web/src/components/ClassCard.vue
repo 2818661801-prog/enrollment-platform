@@ -1,6 +1,6 @@
 <!--
   ClassCard.vue · 特色班卡片
-  展示班级图标、名称、报名时间、「查看详情」链接
+  展示班级图标、名称、报名时间
 -->
 <template>
   <el-card class="class-card" shadow="hover" @click="$emit('select', classInfo.id)">
@@ -17,32 +17,21 @@
     <div class="card-name">{{ classInfo.name }}</div>
     <!-- 报名时间 -->
     <div class="card-period">{{ classInfo.period }}</div>
-    <!-- 查看详情 -->
-    <el-button link type="primary" size="small" @click.stop="goDetail">
-      查看详情 →
-    </el-button>
   </el-card>
 </template>
 
 <script setup>
 import { computed } from 'vue'
-import { useRouter } from 'vue-router'
 
 const props = defineProps({
   classInfo: { type: Object, required: true }, // 班级数据对象
 })
 defineEmits(['select'])
 
-const router = useRouter()
-
 // 根据分类选图标背景色：理工类→蓝，经管类→青
 const iconBg = computed(() =>
   props.classInfo.category === '理工类' ? '#337eff' : '#06b6d4'
 )
-
-function goDetail() {
-  router.push(`/form/${props.classInfo.id}`) // 跳转报名表单页
-}
 </script>
 
 <style scoped>
