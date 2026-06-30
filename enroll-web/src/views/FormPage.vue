@@ -100,10 +100,8 @@
             <el-col :xs="24" :sm="24">
               <el-form-item label="杭电班类别" prop="hdSubType">
                 <el-radio-group v-model="form.hdSubType">
-                  <el-radio-button value="电子信息类">电子信息类</el-radio-button>
-                  <el-radio-button value="计算机类">计算机类</el-radio-button>
-                  <el-radio-button value="自动化类">自动化类</el-radio-button>
-                  <el-radio-button value="机械类">机械类</el-radio-button>
+                  <el-radio-button value="经管类">经管类</el-radio-button>
+                  <el-radio-button value="理工类">理工类</el-radio-button>
                 </el-radio-group>
               </el-form-item>
             </el-col>
@@ -199,20 +197,23 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
+})
 
-  // 处理 URL 里的 classId
+// 监听班级列表 + 路由 classId，任一就绪则预填表单
+watchEffect(() => {
   const cid = Number(route.params.classId)
-  if (cid && classes.value.some(c => c.id === cid)) {
-    const cls = classes.value.find(c => c.id === cid)
-    const { canApply, label } = getClassTimeStatus(cls)
-    if (!canApply) {
-      ElMessage.warning(`「${cls.name}」${label}，无法报名`)
-      router.replace('/home')
-      return
-    }
-    form.classId = cid
-    activeStep.value = 1
+  if (!cid || !classes.value.length) return
+  if (form.classId === cid) return   // 已有值，跳过
+  const cls = classes.value.find(c => c.id === cid)
+  if (!cls) return
+  const { canApply, label } = getClassTimeStatus(cls)
+  if (!canApply) {
+    ElMessage.warning(`「${cls.name}」${label}，无法报名`)
+    router.replace('/home')
+    return
   }
+  form.classId = cid
+  activeStep.value = 1
 })
 
 const selectedClass = computed(() =>
