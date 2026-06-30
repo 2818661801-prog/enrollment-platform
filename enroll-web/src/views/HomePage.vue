@@ -8,7 +8,7 @@
     <div class="banner">
       <div class="banner-content">
         <h1>2026 特色班报名通道已开启</h1>
-        <p>杭州电子科技大学 · 7 个特色班级任你选择 · 即日起开放报名</p>
+        <p>杭州电子科技大学信息工程学院 · 7 个特色班级任你选择</p>
         <el-button link type="primary" class="notice-link" @click="showNotice = true">
           📋 查看报名须知
         </el-button>
@@ -173,7 +173,7 @@ onMounted(async () => {
     loading.value = false
   }
 })
-// 监听弹窗打开 → 等 DOM 渲染完 → 强制设移动端宽度
+// 监听弹窗打开 → 等 DOM 渲染完 → 强制设移动端宽度和高度
 watch(showNotice, async (val) => {
   if (val) {
     // Element Plus Teleport 到 body，等几帧确保渲染
@@ -183,6 +183,10 @@ watch(showNotice, async (val) => {
     if (dialog) {
       dialog.style.setProperty('width', '95vw', 'important')
       dialog.style.maxWidth = '355px'
+      dialog.style.maxHeight = '85vh'
+      // 强制 top=0，Element Plus 用 transform 居中，top:0 让它从顶部开始
+      dialog.style.setProperty('top', '0px', 'important')
+      dialog.style.setProperty('transform', 'none', 'important')
     }
   }
 })
@@ -417,7 +421,7 @@ const timelineItems = computed(() =>
   .banner {
     min-height: auto;
     padding: 20px 16px;
-    margin: 6px 12px 0;
+    margin: 0 12px 0;
     width: auto;
   }
   .home-body {
@@ -604,11 +608,12 @@ const timelineItems = computed(() =>
 
 /* ===== 移动端（max-width: 768px）===== */
 @media (max-width: 768px) {
-  /* el-overlay 是弹窗的视口层，需要让它居中 */
+  /* el-overlay 是弹窗的视口层，对齐到顶部附近 */
   .notice-dialog.el-overlay {
     display: flex !important;
-    align-items: center !important;
+    align-items: flex-start !important;
     justify-content: center !important;
+    padding-top: 5vh !important;
   }
   /* .el-dialog 是实际弹窗 — 强制覆盖 inline style width */
   .notice-dialog .el-dialog {
@@ -627,7 +632,7 @@ const timelineItems = computed(() =>
   }
   /* 头部 */
   .notice-dialog .el-dialog__header {
-    padding: 12px 14px 10px !important;
+    padding: 8px 12px 6px !important;
     min-height: unset !important;
     position: relative !important;
     flex-shrink: 0 !important;
@@ -643,13 +648,13 @@ const timelineItems = computed(() =>
     display: block !important;
     padding-right: 48px !important;  /* 给关闭按钮留空间 */
   }
-  /* 关闭按钮：固定在弹窗右上角，44×44px 红色圆形 */
+  /* 关闭按钮：固定在弹窗右上角，36×36px 红色圆形 */
   .notice-dialog .el-dialog__headerbtn {
     position: absolute !important;
-    top: 8px !important;
-    right: 8px !important;
-    width: 44px !important;
-    height: 44px !important;
+    top: 6px !important;
+    right: 6px !important;
+    width: 36px !important;
+    height: 36px !important;
     border-radius: 50% !important;
     background: #ef4444 !important;
     display: flex !important;
@@ -663,22 +668,22 @@ const timelineItems = computed(() =>
   }
   .notice-dialog .el-dialog__headerbtn .el-dialog__close {
     color: #fff !important;
-    font-size: 18px !important;
+    font-size: 16px !important;
     line-height: 1 !important;
   }
   /* body */
   .notice-dialog .el-dialog__body {
-    padding: 8px 12px !important;
+    padding: 6px 10px !important;
     overflow-y: auto !important;
     flex: 1 1 auto !important;
-    max-height: calc(90vh - 110px) !important;
+    max-height: calc(90vh - 90px) !important;
   }
   /* footer */
   .notice-dialog .el-dialog__footer {
-    padding: 10px 14px !important;
+    padding: 8px 12px !important;
     flex-shrink: 0 !important;
     border-top: 1px solid #e2e8f0 !important;
-    min-height: 52px !important;
+    min-height: 44px !important;
     display: flex !important;
     align-items: center !important;
     justify-content: flex-end !important;
