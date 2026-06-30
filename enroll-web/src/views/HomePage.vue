@@ -234,13 +234,13 @@ const timelineItems = computed(() =>
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  padding-top: 36px;  /* 头部高度占位（减小白空） */
+  /* padding-top: 0; */  /* header 改为普通流，banner 自然紧贴下方 */
 }
 /* Banner：独立元素，桌面端作为 home-page 顶部最大宽度块 */
 .banner {
   max-width: 1400px;
   width: calc(100% - 68px);
-  margin: 4px auto 0;
+  margin: 20px auto 0;
   padding: 0 0 0 0;
 }
 .home-body {
@@ -416,12 +416,12 @@ const timelineItems = computed(() =>
 
 /* ==================== 响应式：手机 ==================== */
 @media (max-width: 768px) {
-  .home-page { padding-top: 52px; }  /* 移动端头部高度（index.html） */
+  .home-page { padding-top: 0; }  /* header 已改为普通流，不需要占位 */
   /* Banner 已经在 home-page 顶部，自然排第一 */
   .banner {
     min-height: auto;
-    padding: 20px 16px;
-    margin: 0 12px 0;
+    padding: 12px 16px;
+    margin: 12px 12px 0;
     width: auto;
   }
   .home-body {

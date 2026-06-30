@@ -9,9 +9,9 @@
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; }
 
-    /* ===== Header：纯 HTML，固定定位，不占文档流 ===== */
+    /* ===== Header：纯 HTML，不固定定位，随文档流 ===== */
     .app-header {
-      position: fixed;
+      /* position: fixed; */   /* ← 主人要求注释：不固定，随文档流排列 */
       top: 0;
       left: 0;
       right: 0;
