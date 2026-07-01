@@ -407,6 +407,7 @@ public class ApplicationService {
                 .hasEnglish(e.getHasEnglish())
                 .classId(e.getClassId())
                 .className(className)
+                .appliedCategory(e.getAppliedCategory())
                 .status(String.valueOf(e.getStatus()))
                 .applyTime(e.getApplyTime())
                 .plainPassword(plainPassword)  // 仅提交时有值
