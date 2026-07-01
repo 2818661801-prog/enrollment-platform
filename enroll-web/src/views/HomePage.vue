@@ -97,13 +97,6 @@
               </template>
             </el-table-column>
             <el-table-column prop="category" label="类别" width="120" align="center" />
-            <el-table-column label="高考科目包含\n物理/理综" width="120" align="center">
-              <template #default="{ row }">
-                <el-tag :type="row.needPhysics ? 'warning' : 'info'" size="small">
-                  {{ row.needPhysics ? '需要' : '不需要' }}
-                </el-tag>
-              </template>
-            </el-table-column>
             <el-table-column label="报名时间" align="center" min-width="180">
               <template #default="{ row }">
                 <span class="period-text">{{ row.period }}</span>

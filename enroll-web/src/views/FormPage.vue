@@ -21,6 +21,8 @@
           label-width="120px"
           label-position="right"
           size="default"
+          validateOnMount="false"
+          @submit.prevent
         >
           <!-- ===== 第一行：姓名 + 身份证号 ===== -->
           <el-row :gutter="24" class="form-row">
@@ -148,11 +150,11 @@
           />
 
           <!-- ===== 按钮组 ===== -->
-          <el-form-item class="submit-btn-wrap">
+          <div class="submit-btn-wrap">
             <el-button type="primary" size="large" class="submit-btn" @click="onSubmit" :loading="submitting" :disabled="submitting">
               提交报名
             </el-button>
-          </el-form-item>
+          </div>
         </el-form>
       </el-card>
     </div>
@@ -162,7 +164,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, watch, onMounted } from 'vue'
+import { ref, reactive, computed, watch, onMounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { SuccessFilled, ArrowLeft } from '@element-plus/icons-vue'
@@ -177,7 +179,6 @@ const router = useRouter()
 const { submitApplication } = useApplication()
 
 const formRef = ref(null)
-const activeStep = ref(0)
 const submitting = ref(false)
 const idCardValid = ref(false)
 const loading = ref(false)
@@ -197,6 +198,8 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
+  // 进入页面时清除所有校验提示（不自动校验）
+  nextTick(() => formRef.value?.clearValidate())
 })
 
 // 监听班级列表 + 路由 classId，两者都就绪才预填表单
@@ -215,7 +218,6 @@ watch(
       return
     }
     form.classId = classId
-    activeStep.value = 1
   },
   { immediate: true }
 )
@@ -239,31 +241,28 @@ function onIdCardBlur() {
 
 const rules = computed(() => ({
   name: [
-    { required: true, message: '请输入姓名', trigger: 'blur' },
-    { validator: (_r, v, cb) => validateName(v) ? cb() : cb(new Error('请输入2-10个中文字符')), trigger: 'blur' },
+    { validator: (_r, v, cb) => !v ? cb(new Error('请输入姓名')) : validateName(v) ? cb() : cb(new Error('请输入2-10个中文字符')), trigger: 'blur' },
   ],
   idCard: [
-    { required: true, message: '请输入身份证号', trigger: 'blur' },
-    { validator: (_r, v, cb) => validateIdCard(v) ? cb() : cb(new Error('身份证号格式不正确')), trigger: 'blur' },
+    { validator: (_r, v, cb) => !v ? cb(new Error('请输入身份证号')) : validateIdCard(v) ? cb() : cb(new Error('身份证号格式不正确')), trigger: 'blur' },
   ],
   gender: [
-    { required: true, message: '请选择性别', trigger: 'change' },
+    { validator: (_r, v, cb) => !v ? cb(new Error('请选择性别')) : cb(), trigger: 'change' },
   ],
   phone: [
-    { required: true, message: '请输入联系电话', trigger: 'blur' },
-    { validator: (_r, v, cb) => validatePhone(v) ? cb() : cb(new Error('手机号格式不正确')), trigger: 'blur' },
+    { validator: (_r, v, cb) => !v ? cb(new Error('请输入联系电话')) : validatePhone(v) ? cb() : cb(new Error('手机号格式不正确')), trigger: 'blur' },
   ],
   hasPhysics: [
-    { required: true, message: '请选择是否选考物理', trigger: 'change' },
+    { validator: (_r, v, cb) => !v ? cb(new Error('请选择是否选考物理')) : cb(), trigger: 'change' },
   ],
   hasEnglish: [
-    { required: true, message: '请选择是否选考英语', trigger: 'change' },
+    { validator: (_r, v, cb) => !v ? cb(new Error('请选择是否选考英语')) : cb(), trigger: 'change' },
   ],
   classId: [
-    { required: true, message: '请选择申报班级', trigger: 'change' },
+    { validator: (_r, v, cb) => !v ? cb(new Error('请选择申报班级')) : cb(), trigger: 'change' },
   ],
   hdSubType: [
-    { required: form.classId === 1, message: '请选择杭电班类别', trigger: 'change' },
+    { validator: (_r, v, cb) => form.classId !== 1 || v ? cb() : cb(new Error('请选择杭电班类别')), trigger: 'change' },
   ],
 }))
 
@@ -271,28 +270,18 @@ function goBack() {
   router.push('/home')
 }
 
-function prevStep() {
-  if (activeStep.value > 0) activeStep.value--
-}
-
-function nextStep() {
-  if (activeStep.value < 2) activeStep.value++
-}
-
 async function onSubmit() {
-  if (activeStep.value === 0) {
-    if (!form.classId) {
-      ElMessage.warning('请先选择申报班级')
-      return
-    }
-    if (!timeStatus.value?.canApply) {
-      ElMessage.warning(`该班级${timeStatus.value?.label || '不在报名期内'}`)
-      return
-    }
-    activeStep.value = 1
+  // 1) 校验班级选择
+  if (!form.classId) {
+    ElMessage.warning('请先选择申报班级')
+    return
+  }
+  if (!timeStatus.value?.canApply) {
+    ElMessage.warning(`该班级${timeStatus.value?.label || '不在报名期内'}`)
     return
   }
 
+  // 2) 校验表单
   if (!formRef.value) return
   try {
     await formRef.value.validate()
@@ -301,11 +290,7 @@ async function onSubmit() {
     return
   }
 
-  if (activeStep.value === 1) {
-    activeStep.value = 2
-    return
-  }
-
+  // 3) 实际提交
   if (!timeStatus.value?.canApply) {
     ElMessage.error(`该班级${timeStatus.value?.label || '已不在报名期内'}，无法提交`)
     return
@@ -319,7 +304,7 @@ async function onSubmit() {
 
   if (result.success) {
     ElMessage.success('🎉 提交成功！感谢你的报名，请等待录取结果通知。')
-    router.push('/home') // 提交后回到首页
+    router.push('/home')
   } else {
     ElMessage.error(result.message || '提交失败')
   }
@@ -349,10 +334,7 @@ async function onSubmit() {
 }
 .submit-btn-wrap {
   margin-top: 24px;
-}
-.submit-btn-wrap :deep(.el-form-item__content) {
-  display: flex !important;
-  justify-content: center !important;
+  text-align: center;
 }
 .submit-btn {
   width: 240px;

@@ -1,0 +1,39 @@
+# ============================================================
+# 杭电信工学院特色班报名系统 · 【外部数据库】配置
+# ============================================================
+#
+# 🎯 用途：当主人想把后端连到服务器/其他机器的 MySQL 时，
+#         只需要改这一个文件，**不动 application.yml**
+#
+# 启动方式（2 选 1）：
+#   A) 手动激活：mvnw.cmd spring-boot:run --spring.profiles.active=external
+#   B) 默认启用 ：删掉本文件中的注释 + 把 .active=external 写进 application.yml
+#
+# ✅ 主人以后部署/换库，只改本文件即可，零侵入
+# ============================================================
+
+spring:
+  datasource:
+    # ============ 主人改这里就行 ============
+    # 服务器地址：localhost = 本机；x.x.x.x = 服务器 IP
+    # 端口：默认 3306
+    # 数据库名：默认 enroll_db
+    url: jdbc:mysql://localhost:3306/enroll_db?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=utf-8&allowPublicKeyRetrieval=true
+
+    # 数据库账号（请主人自己创建专用账号，不要用 root）
+    username: enroll
+
+    # 数据库密码（生产环境建议用环境变量 DB_PASSWORD 覆盖，不要写死）
+    password: ***REMOVED***
+
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+
+# ==================== 示例：连到远程服务器 ====================
+# url: jdbc:mysql://***REMOVED***:3306/enroll_db?useSSL=true&serverTimezone=Asia/Shanghai
+# username: enroll_prod
+# password: ${DB_PASSWORD:YourStrongPassword}
+# driver-class-name: com.mysql.cj.jdbc.Driver

@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+         https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.2.7</version> <!-- 2026年最新稳定版 -->
+        <relativePath/>
+    </parent>
+
+    <groupId>com.enroll</groupId>
+    <artifactId>enroll-server</artifactId>
+    <version>1.0.0</version>
+    <name>enroll-server</name>
+    <description>杭电信工学院特色班报名系统 · 后端服务</description>
+
+    <properties>
+        <java.version>17</java.version> <!-- Spring Boot 3.x 要求 JDK 17+ -->
+<!-- Lombok 已移除：Java 24 下注解处理不兼容，所有代码手写 getter/setter/builder -->
+    </properties>
+
+    <dependencies>
+        <!-- Web 框架：处理 HTTP 请求（内嵌 Tomcat） -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <!-- JPA：用 Java 对象操作数据库，自动生成 SQL -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+
+        <!-- MySQL 驱动（已启用：连 localhost:3306 的 root/enroll_db） -->
+        <dependency>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- H2 内嵌数据库（已切换到 MySQL，注释掉） -->
+        <!--
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        -->
+
+        <!-- JJWT：JWT 生成与解析（鉴权用） -->
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-api</artifactId>
+            <version>0.12.5</version>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-impl</artifactId>
+            <version>0.12.5</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-jackson</artifactId>
+            <version>0.12.5</version>
+            <scope>runtime</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <!-- Lombok exclude 已移除（项目不再使用 Lombok） -->
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>
