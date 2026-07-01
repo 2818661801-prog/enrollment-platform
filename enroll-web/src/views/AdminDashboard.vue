@@ -59,11 +59,6 @@
             <el-table-column prop="id" label="ID" width="60" />
             <el-table-column prop="name" label="班级名称" min-width="200" show-overflow-tooltip />
             <el-table-column prop="period" label="报名时间段" min-width="160" />
-            <el-table-column prop="round" label="轮次" width="80">
-              <template #default="{ row }">
-                {{ row.round === 1 ? '两轮' : '单轮' }}
-              </template>
-            </el-table-column>
             <el-table-column prop="quota" label="名额" width="70" />
             <el-table-column prop="enrolled" label="已报名" width="80" />
             <el-table-column prop="isDeleted" label="状态" width="80">
@@ -367,7 +362,7 @@ onMounted(() => {
 <style scoped>
 .admin-page { min-height: 100vh; background: #f0f2f5; }
 .admin-header {
-  background: #fff;
+  background: #337eff;
   padding: 0 24px;
   height: 56px;
   display: flex;
@@ -376,9 +371,10 @@ onMounted(() => {
   box-shadow: 0 1px 4px rgba(0,0,0,0.1);
   margin-bottom: 0;
 }
-.logo { font-size: 18px; font-weight: 600; color: #333; }
+.logo { font-size: 18px; font-weight: 600; color: #fff; }
 .header-right { display: flex; align-items: center; gap: 12px; }
-.admin-phone { font-size: 13px; color: #666; }
+.admin-phone { font-size: 13px; color: rgba(255,255,255,0.85); }
+:deep(.header-right .el-button) { color: #fff; }
 .admin-tabs { min-height: calc(100vh - 56px); }
 .tab-body { padding: 20px; }
 .toolbar { margin-bottom: 14px; }
