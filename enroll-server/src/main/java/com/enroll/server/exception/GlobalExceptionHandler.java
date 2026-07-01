@@ -42,6 +42,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<?> handleAll(Exception ex) {
         log.error("系统异常", ex);
+        try { new java.io.PrintWriter(new java.io.FileWriter("d:/err.log")).append(ex + "\n").close(); } catch(Exception e2) {}
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(R.fail(ResultCode.SYSTEM_ERROR));

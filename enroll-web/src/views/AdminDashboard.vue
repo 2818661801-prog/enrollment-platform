@@ -284,6 +284,10 @@ async function onSaveClass() {
     if (periodRange.value?.length === 2) {
       classForm.period = periodRange.value.join(' - ')
     }
+    if (!periodRange.value || periodRange.value.length !== 2) {
+      ElMessage.warning('请选择报名时间段')
+      return
+    }
     if (classForm.id) {
       await updateAdminClass(classForm.id, { ...classForm })
     } else {
