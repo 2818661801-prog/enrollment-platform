@@ -290,6 +290,22 @@ public class ApplicationService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * 按手机号查我的报名（JWT 认证，学生登录后直接查询）
+     * @param phone 登录手机号（来自 JWT sub）
+     * @return 报名列表（只查已报名 status=1 的）
+     */
+    public List<ApplicationDTO> findMyByPhone(String phone) {
+        return appRepo.findByPhoneAndStatus(phone, STATUS_APPLIED).stream()
+                .map(app -> {
+                    String className = classRepo.findById(app.getClassId())
+                            .map(ClassInfo::getName)
+                            .orElse("未知班级");
+                    return toDTO(app, className);
+                })
+                .collect(Collectors.toList());
+    }
+
     // ==================== 修改报名（写） ====================
 
     /**

@@ -36,6 +36,9 @@ public interface ApplicationRepository extends JpaRepository<Application, Intege
     /** 按身份证号 + 班级 ID + status列表 查（查某几状态的报名） */
     List<Application> findByIdCardAndClassIdAndStatusIn(String idCard, Integer classId, List<Integer> statuses);
 
+    /** 按手机号 + status 查（学生端 JWT 认证查询） */
+    List<Application> findByPhoneAndStatus(String phone, Integer status);
+
     /**
      * 管理员分页查询（支持多条件组合）
      * 动态 SQL：只有传入非 null 的条件才会拼入 WHERE
