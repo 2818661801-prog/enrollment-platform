@@ -128,22 +128,31 @@ public class ApplicationService {
     // ==================== 二轮判断逻辑 ====================
 
     /**
-     * 根据当前时间和班级 round 配置，判断当前处于哪一轮
-     * @return 0=不在报名期  1=第一轮  2=第二轮
+     * 根据当前时间和班级 periods 配置，判断当前处于哪一轮
+     * periods = [{"round":1,"period":"2026/09/01 - 2026/09/13"},{"round":2,"period":"2026/09/15 - 2026/09/16"}]
+     * @return 0=不在报名期  否则返回轮次号
      */
     private int determineCurrentRound(ClassInfo cls) {
-        Integer round = cls.getRound();
-        if (round == null || round == 0) {
-            // 普通班：直接判断 period
+        String periodsJson = cls.getPeriods();
+        if (periodsJson == null || periodsJson.isBlank()) {
+            // 无 periods：用旧的 period 字段fallback
             return isInPeriod(cls.getPeriod()) ? 1 : 0;
         }
-        if (round == 1) {
-            // 成电班（两轮）：根据 period 推断当前轮次
-            // admin 切轮时改 period 字段；系统通过 apply_time 判断学生报的是哪一轮
+        try {
+            var mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            var list = mapper.readValue(periodsJson, java.util.List.class);
+            for (var item : list) {
+                @SuppressWarnings("unchecked")
+                var entry = (java.util.Map<String, Object>) item;
+                int round = ((Number) entry.get("round")).intValue();
+                String period = (String) entry.get("period");
+                if (isInPeriod(period)) return round;
+            }
+            return 0; // 当前不在任何一轮
+        } catch (Exception e) {
+            log.warn("periods JSON 解析失败: {}", periodsJson, e);
             return isInPeriod(cls.getPeriod()) ? 1 : 0;
         }
-        // round=0：单轮，直接判断 period
-        return isInPeriod(cls.getPeriod()) ? 1 : 0;
     }
 
     /**

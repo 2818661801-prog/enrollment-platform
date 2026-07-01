@@ -16,14 +16,9 @@ import java.util.stream.Collectors;
 /**
  * 班级业务层
  *
- * 职责：
- *   1. 调用 Repository 拿数据
- *   2. Entity → DTO 转换（隐藏数据库结构）
- *   3. 业务规则校验（不存在则抛 BusinessException）
- *
- * @Service 标记为 Spring Bean，Controller 注入使用
- * 构造器注入（Spring 推荐，避免字段注入）
- * @Transactional(readOnly = true) 类级别只读事务，查询自动复用
+ * 多轮设计（periods JSON）：
+ *   [{"round":1,"period":"2026/09/01 - 2026/09/13"},{"round":2,"period":"2026/09/15 - 2026/09/16"}]
+ *   根据当前时间自动计算当前有效时间段
  */
 @Service
 @Transactional(readOnly = true)
@@ -33,7 +28,6 @@ public class ClassService {
 
     private final ClassInfoRepository classRepo;
 
-    /** 构造器注入 */
     public ClassService(ClassInfoRepository classRepo) {
         this.classRepo = classRepo;
     }
@@ -53,14 +47,6 @@ public class ClassService {
         return toDTO(cls);
     }
 
-    /** 按类别查班级 */
-    public List<ClassDTO> listByCategory(String category) {
-        return classRepo.findByCategory(category).stream()
-                .filter(c -> c.getIsDeleted() == null || c.getIsDeleted() == 0)
-                .map(this::toDTO)
-                .collect(Collectors.toList());
-    }
-
     // ==================== 管理端方法 ====================
 
     /** 查所有班级（含已删除，供管理后台用） */
@@ -72,14 +58,15 @@ public class ClassService {
 
     /**
      * 新增班级
-     * @param body {name, period, round, quota, description}
+     * @param body {name, periods(JSON数组), quota, description}
      */
     @Transactional
     public ClassDTO createClass(java.util.Map<String, Object> body) {
         ClassInfo cls = new ClassInfo();
         cls.setName((String) body.get("name"));
-        cls.setPeriod((String) body.get("period"));
-        cls.setRound((Integer) body.getOrDefault("round", 0));
+        cls.setPeriods((String) body.get("periods"));
+        // periods[0].period 作为默认 period
+        cls.setPeriod(extractFirstPeriod((String) body.get("periods")));
         cls.setQuota((Integer) body.getOrDefault("quota", 0));
         cls.setEnrolled(0);
         cls.setDescription((String) body.get("description"));
@@ -90,26 +77,29 @@ public class ClassService {
     }
 
     /**
-     * 更新班级（含 round/quota/is_deleted 等所有可编辑字段）
+     * 更新班级
      * @param id 班级ID
-     * @param body 更新字段
+     * @param body 可编辑字段
      */
     @Transactional
     public ClassDTO updateClass(Integer id, java.util.Map<String, Object> body) {
         ClassInfo cls = classRepo.findById(id)
                 .orElseThrow(() -> new BusinessException(ResultCode.CLASS_NOT_FOUND));
-        if (body.containsKey("name"))         cls.setName((String) body.get("name"));
+        if (body.containsKey("name"))        cls.setName((String) body.get("name"));
+        if (body.containsKey("periods")) {
+            cls.setPeriods((String) body.get("periods"));
+            cls.setPeriod(extractFirstPeriod((String) body.get("periods")));
+        }
         if (body.containsKey("period"))      cls.setPeriod((String) body.get("period"));
-        if (body.containsKey("round"))       cls.setRound((Integer) body.get("round"));
-        if (body.containsKey("quota"))        cls.setQuota((Integer) body.get("quota"));
-        if (body.containsKey("description"))  cls.setDescription((String) body.get("description"));
-        if (body.containsKey("isDeleted"))   cls.setIsDeleted((Integer) body.get("isDeleted"));
+        if (body.containsKey("quota"))       cls.setQuota((Integer) body.get("quota"));
+        if (body.containsKey("description")) cls.setDescription((String) body.get("description"));
+        if (body.containsKey("isDeleted"))  cls.setIsDeleted((Integer) body.get("isDeleted"));
         ClassInfo saved = classRepo.save(cls);
         log.info("更新班级: id={}, name={}", saved.getId(), saved.getName());
         return toDTO(saved);
     }
 
-    /** 修改报名时间段 */
+    /** 修改报名时间段（兼容旧接口） */
     @Transactional
     public ClassDTO updatePeriod(Integer id, String period) {
         ClassInfo cls = classRepo.findById(id)
@@ -143,12 +133,31 @@ public class ClassService {
         return ClassDTO.builder()
                 .id(e.getId())
                 .name(e.getName())
-                .period(e.getPeriod())
-                .round(e.getRound() != null ? e.getRound() : 0)
+                .period(e.getPeriod())                    // 当前有效时间段
+                .periods(e.getPeriods())                  // 原始 periods JSON
                 .quota(e.getQuota())
                 .enrolled(e.getEnrolled())
                 .description(e.getDescription())
                 .isDeleted(e.getIsDeleted() != null ? e.getIsDeleted() : 0)
                 .build();
+    }
+
+    /**
+     * 从 periods JSON 提取第一个 period（用于填充 period 字段）
+     * @param periodsJson [{"round":1,"period":"2026/09/01 - 2026/09/13"},...]
+     */
+    private String extractFirstPeriod(String periodsJson) {
+        if (periodsJson == null || periodsJson.isBlank()) return null;
+        try {
+            var list = new com.fasterxml.jackson.databind.ObjectMapper()
+                    .readValue(periodsJson, java.util.List.class);
+            if (!list.isEmpty()) {
+                var first = (java.util.Map<String, Object>) list.get(0);
+                return (String) first.get("period");
+            }
+        } catch (Exception e) {
+            log.warn("periods JSON 解析失败: {}", periodsJson);
+        }
+        return null;
     }
 }

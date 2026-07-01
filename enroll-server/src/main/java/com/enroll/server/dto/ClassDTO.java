@@ -11,21 +11,21 @@ public class ClassDTO implements Serializable {
 
     private Integer id;
     private String name;
-    private String period;
-    private Integer round;      // 0单轮 1两轮（成电班）
+    private String period;     // 当前有效时间段（后端计算后返回）
+    private String periods;    // 多轮时间段 JSON 数组
     private Integer quota;
     private Integer enrolled;
     private String description;
-    private Integer isDeleted;  // 0正常 1已删除
+    private Integer isDeleted; // 0正常 1已删除
 
     public ClassDTO() {}
 
-    public ClassDTO(Integer id, String name, String period, Integer round,
+    public ClassDTO(Integer id, String name, String period, String periods,
                     Integer quota, Integer enrolled, String description, Integer isDeleted) {
         this.id = id;
         this.name = name;
         this.period = period;
-        this.round = round;
+        this.periods = periods;
         this.quota = quota;
         this.enrolled = enrolled;
         this.description = description;
@@ -41,8 +41,8 @@ public class ClassDTO implements Serializable {
     public String getPeriod() { return period; }
     public void setPeriod(String period) { this.period = period; }
 
-    public Integer getRound() { return round; }
-    public void setRound(Integer round) { this.round = round; }
+    public String getPeriods() { return periods; }
+    public void setPeriods(String periods) { this.periods = periods; }
 
     public Integer getQuota() { return quota; }
     public void setQuota(Integer quota) { this.quota = quota; }
@@ -64,7 +64,7 @@ public class ClassDTO implements Serializable {
         private Integer id;
         private String name;
         private String period;
-        private Integer round;
+        private String periods;
         private Integer quota;
         private Integer enrolled;
         private String description;
@@ -73,14 +73,14 @@ public class ClassDTO implements Serializable {
         public Builder id(Integer v) { this.id = v; return this; }
         public Builder name(String v) { this.name = v; return this; }
         public Builder period(String v) { this.period = v; return this; }
-        public Builder round(Integer v) { this.round = v; return this; }
+        public Builder periods(String v) { this.periods = v; return this; }
         public Builder quota(Integer v) { this.quota = v; return this; }
         public Builder enrolled(Integer v) { this.enrolled = v; return this; }
         public Builder description(String v) { this.description = v; return this; }
         public Builder isDeleted(Integer v) { this.isDeleted = v; return this; }
 
         public ClassDTO build() {
-            return new ClassDTO(id, name, period, round, quota, enrolled, description, isDeleted);
+            return new ClassDTO(id, name, period, periods, quota, enrolled, description, isDeleted);
         }
     }
 }
