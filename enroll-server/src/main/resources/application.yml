@@ -42,6 +42,20 @@ spring:
       mode: ${SQL_INIT_MODE:always}
       data-locations: classpath:data.sql
 
+  # ==================== Redis 配置（本地测试）====================
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      database: 0
+      timeout: 5000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+
 # ==================== JWT 鉴权配置 ====================
 # 主人改这里就能切鉴权开关：
 #   jwt.enabled = false → 学生匿名（问卷式）

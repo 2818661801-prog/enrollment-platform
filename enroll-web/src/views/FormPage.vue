@@ -89,9 +89,13 @@
                   <el-option
                     v-for="c in classes"
                     :key="c.id"
-                    :label="c.name"
                     :value="c.id"
-                  />
+                  >
+                    <span>{{ c.name }}</span>
+                    <el-tag v-if="c.category" size="small" type="primary" style="margin-left:6px;vertical-align:middle">
+                      {{ c.category }}
+                    </el-tag>
+                  </el-option>
                 </el-select>
               </el-form-item>
             </el-col>

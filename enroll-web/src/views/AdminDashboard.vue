@@ -64,10 +64,26 @@
             <el-table-column prop="category" label="班级类别" width="120">
               <template #default="{ row }">{{ row.category || '—' }}</template>
             </el-table-column>
+            <el-table-column label="状态" width="80">
+              <template #default="{ row }">
+                <el-tag :type="row.isDeleted === 1 ? 'danger' : 'success'" size="small">
+                  {{ row.isDeleted === 1 ? '已删除' : '正常' }}
+                </el-tag>
+              </template>
+            </el-table-column>
             <el-table-column label="操作" width="200" fixed="right">
               <template #default="{ row }">
                 <el-button text type="primary" size="small" @click="showClassDialog(row)">编辑</el-button>
-                <el-button text type="danger" size="small" @click="onDeleteClass(row.id)">删除</el-button>
+                <el-button
+                  v-if="row.isDeleted !== 1"
+                  text type="danger" size="small"
+                  @click="onDeleteClass(row.id)"
+                >删除</el-button>
+                <el-button
+                  v-else
+                  text type="warning" size="small"
+                  @click="onRestoreClass(row.id)"
+                >恢复</el-button>
               </template>
             </el-table-column>
           </el-table>
@@ -205,7 +221,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
-  fetchAdminClasses, createAdminClass, updateAdminClass, deleteAdminClass,
+  fetchAdminClasses, createAdminClass, updateAdminClass, deleteAdminClass, restoreAdminClass,
   fetchAdminApplications, deleteAdminApplications, admitAdminApplications,
   fetchAdminConfig, updateAdminConfig,
 } from '../utils/api.js'
@@ -308,6 +324,16 @@ async function onDeleteClass(id) {
   } catch (e) {
     // 用户取消 confirm 时 e 为空，不提示
     if (e) ElMessage.error(e.message || '删除失败')
+  }
+}
+async function onRestoreClass(id) {
+  try {
+    await ElMessageBox.confirm('确定恢复该班级？恢复后学生端可见。', '提示', { type: 'warning' })
+    await restoreAdminClass(id)
+    loadClasses()
+    ElMessage.success('已恢复')
+  } catch (e) {
+    if (e) ElMessage.error(e.message || '恢复失败')
   }
 }
 

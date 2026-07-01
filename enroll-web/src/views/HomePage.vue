@@ -59,7 +59,10 @@
         <div class="timeline">
           <div v-for="(item, i) in timelineItems" :key="i" class="timeline-item">
             <div class="timeline-left">
-              <div class="timeline-name" :title="classes[i]?.name">{{ item.name }}</div>
+              <div class="timeline-name" :title="item.name">
+                <span v-if="item.roundLabel" class="round-badge">{{ item.roundLabel }}</span>
+                {{ item.name }}
+              </div>
               <div class="timeline-period">{{ item.period }}</div>
             </div>
             <el-tag :type="item.tagType" size="small" class="timeline-tag">{{ item.tagText }}</el-tag>
@@ -252,31 +255,66 @@ async function goFormDirect(classId) {
   router.push(`/form/${classId}`)
 }
 
+/**
+ * 判断是否为成电班（多轮班级，id=2,3 或 name 含"成电联合培养"）
+ */
+function isChengDian(cls) {
+  return cls.id === 2 || cls.id === 3 || (cls.name && cls.name.includes('成电联合培养'))
+}
+
+/**
+ * 解析 periods JSON 字符串为数组
+ * 若解析失败或为空，返回单元素数组（用 period 字段兜底）
+ */
+function parsePeriodsArray(periodsJson, fallbackPeriod) {
+  if (!periodsJson || periodsJson.trim() === '') {
+    return [{ round: 1, period: fallbackPeriod || '' }]
+  }
+  try {
+    const arr = JSON.parse(periodsJson)
+    if (Array.isArray(arr) && arr.length > 0) {
+      return arr
+    }
+  } catch {}
+  return [{ round: 1, period: fallbackPeriod || '' }]
+}
+
 const timelineItems = computed(() => {
-  // 按报名开始日期升序（最早的在左/上），PC 端垂直列表顺序无所谓，
-  // 移动端横向排列时最早放左边，符合阅读习惯
-  const sorted = [...classes.value].sort((a, b) => {
-    // 按报名开始日期升序（最早的在左），解析失败则按 id 保底
-    try {
-      const [sA] = a.period.split(' - ')
-      const [sB] = b.period.split(' - ')
-      const dA = new Date(sA.replace(/\//g, '-'))
-      const dB = new Date(sB.replace(/\//g, '-'))
-      return dA - dB
-    } catch {
-      return a.id - b.id
+  const result = []
+  // 按班级 id 排序（保证同一班级的两轮相邻）
+  const sorted = [...classes.value].sort((a, b) => a.id - b.id)
+
+  for (const c of sorted) {
+    const periods = parsePeriodsArray(c.periods, c.period)
+
+    if (periods.length > 1 || isChengDian(c)) {
+      // 成电班（多轮）：每轮一行
+      for (const p of periods) {
+        const { status, label } = getClassTimeStatus({ period: p.period })
+        const roundLabel = p.round === 2 ? '第二轮' : '第一轮'
+        result.push({
+          name: c.name,
+          period: p.period,
+          roundLabel,
+          active: status === 'open',
+          tagType: status === 'open' ? 'success' : status === 'not_started' ? 'warning' : 'info',
+          tagText: label,
+        })
+      }
+    } else {
+      // 普通班：一行
+      const { status, label } = getClassTimeStatus(c)
+      result.push({
+        name: c.name,
+        period: c.period,
+        roundLabel: null,
+        active: status === 'open',
+        tagType: status === 'open' ? 'success' : status === 'not_started' ? 'warning' : 'info',
+        tagText: label,
+      })
     }
-  })
-  return sorted.map(c => {
-    const { status, label } = getClassTimeStatus(c)
-    return {
-      name: c.name,
-      period: c.period,
-      active: status === 'open',
-      tagType: status === 'open' ? 'success' : status === 'not_started' ? 'warning' : 'info',
-      tagText: label,
-    }
-  })
+  }
+  return result
 })
 </script>
 
@@ -376,6 +414,25 @@ const timelineItems = computed(() => {
   position: relative;
   padding-left: 16px;
   border-left: 2px solid var(--divider);
+  max-height: 420px;      /* 约7-8行，超出滚动 */
+  overflow-y: auto;        /* 垂直滚动条 */
+  scrollbar-width: thin;   /* Firefox 细滚动条 */
+}
+/* 滚动条样式（Chrome/Safari） */
+.timeline::-webkit-scrollbar { width: 4px; }
+.timeline::-webkit-scrollbar-thumb { background: #dcdfe6; border-radius: 2px; }
+
+/* 成电班第几轮标签 */
+.round-badge {
+  display: inline-block;
+  font-size: 10px;
+  color: #fff;
+  background: #e6a23c;
+  border-radius: 3px;
+  padding: 0 4px;
+  margin-right: 4px;
+  vertical-align: middle;
+  line-height: 16px;
 }
 /* 两行布局：上行班级名，下行报名时间，右侧状态标签（桌面端） */
 .timeline-item {

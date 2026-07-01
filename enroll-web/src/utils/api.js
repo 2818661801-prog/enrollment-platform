@@ -167,6 +167,10 @@ export const updateAdminClass = (id, data) =>
 export const deleteAdminClass = (id) =>
   adminRequest(`/api/admin/classes/${id}`, { method: 'DELETE' })
 
+/** 管理员：恢复已删除班级（isDeleted=0） */
+export const restoreAdminClass = (id) =>
+  updateAdminClass(id, { isDeleted: 0 })
+
 /** 管理员：读取配置 */
 export const fetchAdminConfig = (key) => adminRequest(`/api/admin/config/${key}`)
 

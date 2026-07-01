@@ -55,6 +55,15 @@ public class JwtUtil {
     }
 
     /**
+     * 生成学生登录 token（手机号做 subject）
+     * @param phone 学生手机号（作为 subject）
+     * @return 签名的 JWT 字符串
+     */
+    public String generateStudent(String phone) {
+        return buildToken(phone, "student");
+    }
+
+    /**
      * 生成管理员 token
      * @param phone 管理员手机号（作为 subject）
      * @return 签名的 JWT 字符串

@@ -1,118 +1,123 @@
 package com.enroll.server.service;
 
-import com.enroll.server.entity.SysConfig;
-import com.enroll.server.repository.SysConfigRepository;
+import com.enroll.server.dto.ResultCode;
+import com.enroll.server.exception.BusinessException;
+import com.enroll.server.security.JwtUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
-import java.util.Map;
-import java.util.Random;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 /**
- * 认证服务
+ * 学生端认证服务（验证码登录）
  *
- * 功能：
- *   1. 发送验证码（6位数字，5分钟有效）
- *   2. 验证手机号+验证码，返 JWT
+ * 流程：
+ *   1. POST /api/auth/send-code {phone} → 生成6位验证码存Redis，调短信接口
+ *   2. POST /api/auth/login/sms {phone, code} → Redis校验成功 → 返JWT
  *
- * 验证码存储：内存 Map（重启后丢失，生产环境建议换 Redis）
- *   key = 手机号
- *   value = {code, expireAt}
+ * Redis Key：sms:login:{phone} → 验证码，TTL 5分钟
  *
- * SMS 发送：目前是 mock（控制台日志），主人可替换为真实 SMS 服务
+ * SMS 发送：目前是 mock（控制台打印），主人替换 sendSms() 即可
  */
 @Service
 public class AuthService {
 
     private static final Logger log = LoggerFactory.getLogger(AuthService.class);
 
-    /** 验证码有效期：5分钟（毫秒） */
-    private static final long CODE_TTL_MS = 5 * 60 * 1000;
+    private static final String SMS_KEY_PREFIX = "sms:login:";
+    private static final int CODE_TTL_SECONDS = 300; // 5分钟
+    private static final int MAX_RETRY = 5;         // 错误超过5次需重新获取
 
-    /** 内存验证码存储：手机号 → {code, expireAt} */
-    private final Map<String, CodeEntry> codeStore = new ConcurrentHashMap<>();
+    private final StringRedisTemplate redis;
+    private final JwtUtil jwtUtil;
 
-    private final SysConfigRepository sysConfigRepo;
-    private final Random random = new Random();
-
-    public AuthService(SysConfigRepository sysConfigRepo) {
-        this.sysConfigRepo = sysConfigRepo;
+    public AuthService(StringRedisTemplate redis, JwtUtil jwtUtil) {
+        this.redis = redis;
+        this.jwtUtil = jwtUtil;
     }
 
-    // ==================== 公开方法 ====================
+    /**
+     * 发送验证码（存入 Redis，支持重复发送刷新 TTL）
+     * @param phone 11位手机号
+     */
+    public void sendCode(String phone) {
+        validatePhone(phone);
+
+        // 生成6位随机数字验证码（100000~999999）
+        int code = (int) (Math.random() * 900000 + 100000);
+        String codeStr = String.valueOf(code);
+
+        String key = SMS_KEY_PREFIX + phone;
+        redis.opsForValue().set(key, codeStr, CODE_TTL_SECONDS, TimeUnit.SECONDS);
+
+        // TODO: 主人提供短信接口后，替换下面这行
+        sendSms(phone, codeStr);
+
+        log.info("【验证码已发送】phone={} code={}", phone, codeStr);
+    }
 
     /**
-     * 发送验证码
-     *
+     * 校验验证码，验证成功返回 JWT
      * @param phone 手机号
-     * @return 发送结果描述（方便调试时从日志里复制验证码）
+     * @param code  用户输入的6位验证码
+     * @return JWT（sub=手机号，role=student）
      */
-    public String sendCode(String phone) {
-        // 1. 生成 6 位数字验证码
-        String code = String.format("%06d", random.nextInt(1_000_000));
-        long expireAt = System.currentTimeMillis() + CODE_TTL_MS;
-        codeStore.put(phone, new CodeEntry(code, expireAt));
+    public String verifyCodeAndLogin(String phone, String code) {
+        validatePhone(phone);
 
-        // 2. Mock 发送（控制台日志），主人可替换为真实 SMS API
+        String key = SMS_KEY_PREFIX + phone;
+        String storedCode = redis.opsForValue().get(key);
+
+        // 验证码不存在（过期或未发送）
+        if (storedCode == null) {
+            throw new BusinessException(ResultCode.PARAM_INVALID, "验证码已过期，请重新获取");
+        }
+
+        // 验证码错误
+        if (!storedCode.equals(code.trim())) {
+            // 错误计数（防止暴力穷举）
+            String errKey = "sms:err:" + phone;
+            Long errCount = redis.opsForValue().increment(errKey);
+            redis.expire(errKey, CODE_TTL_SECONDS, TimeUnit.SECONDS);
+            if (errCount != null && errCount >= MAX_RETRY) {
+                redis.delete(key);
+                redis.delete(errKey);
+                throw new BusinessException(ResultCode.PARAM_INVALID, "验证码错误次数过多，请重新获取");
+            }
+            throw new BusinessException(ResultCode.PARAM_INVALID, "验证码错误");
+        }
+
+        // 验证成功，删除验证码（一次性使用）
+        redis.delete(key);
+        redis.delete("sms:err:" + phone);
+
+        // 生成学生 JWT
+        String token = jwtUtil.generateStudent(phone);
+        log.info("【学生登录成功】phone={}", phone);
+        return token;
+    }
+
+    /**
+     * 发送短信（Mock 版，主人替换为真实接口）
+     * @param phone 收件人手机号
+     * @param code  验证码
+     */
+    private void sendSms(String phone, String code) {
+        // TODO: 主人提供短信接口后，在此调用真实短信服务
+        // 示例：aliyunSmsClient.send(phone, code);
         log.info("========== 【Mock SMS】发送验证码 ==========");
         log.info("  收件人：{}", phone);
         log.info("  验证码：{}（5分钟内有效）", code);
-        log.info("  用途  ：管理员登录");
+        log.info("  用途  ：学生登录");
         log.info("==========================================");
-
-        return code; // 调试用，返回 code；生产去掉此行
     }
 
-    /**
-     * 验证验证码
-     *
-     * @param phone 手机号
-     * @param code  用户输入的验证码
-     * @return 验证成功返回 true，失败返回 false
-     */
-    public boolean verifyCode(String phone, String code) {
-        CodeEntry entry = codeStore.get(phone);
-        if (entry == null) {
-            log.debug("验证码不存在或已过期：phone={}", phone);
-            return false;
-        }
-        if (System.currentTimeMillis() > entry.expireAt) {
-            codeStore.remove(phone);
-            log.debug("验证码已过期：phone={}", phone);
-            return false;
-        }
-        if (!entry.code.equals(code)) {
-            log.debug("验证码错误：phone={}, input={}, actual={}", phone, code, entry.code);
-            return false;
-        }
-        // 验证成功，删除验证码（一次性）
-        codeStore.remove(phone);
-        log.debug("验证码验证成功：phone={}", phone);
-        return true;
-    }
-
-    /**
-     * 获取管理员手机号（从 sys_config 读取）
-     * 如果未配置，返回默认手机号供测试用
-     */
-    public String getAdminPhone() {
-        return sysConfigRepo.findByCfgKey("admin_phone")
-                .map(SysConfig::getCfgValue)
-                .orElse("***REMOVED***"); // 测试用默认值
-    }
-
-    // ==================== 内部类 ====================
-
-    /** 验证码条目 */
-    private static class CodeEntry {
-        final String code;
-        final long expireAt;
-
-        CodeEntry(String code, long expireAt) {
-            this.code = code;
-            this.expireAt = expireAt;
+    /** 手机号格式校验 */
+    private void validatePhone(String phone) {
+        if (phone == null || !phone.matches("^1[3-9]\\d{9}$")) {
+            throw new BusinessException(ResultCode.PARAM_INVALID, "手机号格式不正确");
         }
     }
 }
