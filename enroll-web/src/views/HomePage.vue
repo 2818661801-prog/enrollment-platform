@@ -78,17 +78,17 @@
       show-close
       class="notice-dialog"
     >
-      <!-- 一、报名条件 -->
+      <!-- 一、报名条件（从 sys_config 动态加载） -->
       <section class="nd-section">
         <h3>一、报名条件</h3>
         <el-alert type="info" :closable="false" show-icon style="margin-bottom:12px;">
           <template #title>以下条件需 <strong>全部满足</strong> 方可报名</template>
         </el-alert>
-        <ul>
-          <li>杭州电子科技大学 2026 级 <strong>全日制本科新生</strong>（已取得学籍）</li>
-          <li>思想品德良好，无违纪记录</li>
-          <li>部分班级要求 <strong>选考物理</strong>（见下方班级介绍）</li>
-          <li>每位学生 <strong>限报 1 个</strong> 特色班</li>
+        <ul v-if="noticeData.conditions && noticeData.conditions.length">
+          <li v-for="(c, i) in noticeData.conditions" :key="i" v-html="c" />
+        </ul>
+        <ul v-else>
+          <li>加载报名条件失败，请刷新页面</li>
         </ul>
       </section>
 
@@ -111,14 +111,14 @@
         </div>
       </section>
 
-      <!-- 三、注意事项 -->
+      <!-- 三、注意事项（从 sys_config 动态加载） -->
       <section class="nd-section">
         <h3>三、注意事项</h3>
-        <ul>
-          <li>⏰ 请在报名时间内提交，逾期不予补报</li>
-          <li>📝 信息提交后无法修改，请仔细核对</li>
-          <li>🆔 身份证号将用于学籍比对，请如实填写</li>
-          <li>📞 如有疑问，请联系招生办：<strong>0571-58619116</strong></li>
+        <ul v-if="noticeData.notices && noticeData.notices.length">
+          <li v-for="(n, i) in noticeData.notices" :key="i" v-html="n" />
+        </ul>
+        <ul v-else>
+          <li>暂无注意事项</li>
         </ul>
       </section>
 
@@ -138,7 +138,7 @@ import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { getClassTimeStatus } from '../utils/data.js'
-import { fetchClasses } from '../utils/api.js'
+import { fetchClasses, fetchNotice } from '../utils/api.js'
 import AppFooter from '../components/AppFooter.vue'
 import ClassCard from '../components/ClassCard.vue'
 
@@ -151,6 +151,7 @@ const loadError = ref('')
 
 // 报名须知弹窗
 const showNotice = ref(false)
+const noticeData = ref({ conditions: [], notices: [] })
 
 // 仅首次进入弹窗（关闭浏览器标签后重开才再弹）
 // 为什么用 sessionStorage：关闭标签即清除，localStorage 会永久记着
@@ -159,10 +160,14 @@ onMounted(async () => {
     showNotice.value = true
     sessionStorage.setItem('notice_shown', '1')
   }
-  // 从后端拉取班级列表
-  loading.value = true
+  // 从后端拉取班级列表和报名须知（并行）
   try {
-    classes.value = await fetchClasses()
+  const [clsRes, noticeRes] = await Promise.all([
+    fetchClasses(),
+    fetchNotice(),
+  ])
+  classes.value = clsRes
+  noticeData.value = noticeRes
   } catch (err) {
     loadError.value = '班级数据加载失败，请检查后端是否启动'
     ElMessage.error(loadError.value)
