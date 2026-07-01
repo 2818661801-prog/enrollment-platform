@@ -1,37 +1,32 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
 
 /**
- * 路由配置（hash 模式 · 问卷式）
+ * 路由配置
  *
- * 学生端仅 2 个路由：
- *   /home      — 首页（班级浏览 + 报名须知弹窗）
- *   /form      — 报名表单
- *   /form/:id  — 直达某班表单
+ * 学生端：
+ *   /home            — 首页
+ *   /form            — 报名表单
+ *   /form/:classId   — 直达某班表单
+ *   /my-applications — 我的报名（身份证查询）
  *
- * 管理端已移除 — 主人直接看数据库
- * 「我的报名」已移除 — 问卷式收集，学生不需查状态
+ * 管理端（需重新登录）：
+ *   /admin/login     — 管理员登录
+ *   /admin           — 管理后台
  */
 const routes = [
+  // 学生端
   { path: '/', redirect: '/home' },
-  {
-    path: '/home',
-    name: 'Home',
-    component: () => import('../views/HomePage.vue'),
-  },
-  {
-    path: '/form',
-    name: 'Form',
-    component: () => import('../views/FormPage.vue'),
-  },
-  {
-    path: '/form/:classId', // 携带班级 ID
-    name: 'FormDirect',
-    component: () => import('../views/FormPage.vue'),
-  },
+  { path: '/home',         name: 'Home',            component: () => import('../views/HomePage.vue') },
+  { path: '/form',         name: 'Form',            component: () => import('../views/FormPage.vue') },
+  { path: '/form/:classId', name: 'FormDirect',     component: () => import('../views/FormPage.vue') },
+  { path: '/my-applications', name: 'MyApplications', component: () => import('../views/MyApplications.vue') },
+  // 管理端
+  { path: '/admin/login',  name: 'AdminLogin',      component: () => import('../views/AdminLogin.vue') },
+  { path: '/admin',        name: 'AdminDashboard',  component: () => import('../views/AdminDashboard.vue') },
 ]
 
 const router = createRouter({
-  history: createWebHashHistory(), // hash 模式
+  history: createWebHashHistory(),
   routes,
 })
 

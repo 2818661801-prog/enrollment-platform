@@ -72,10 +72,104 @@ export const submitApplicationAPI = (form) =>
 
 /** 撤回报名 */
 export const withdrawApplicationAPI = (id) =>
-  request(`/api/applications/${id}`, { method: 'DELETE' })
+  request(`/api/applications/${id}/withdraw`, { method: 'PUT' })
 
 /** 按身份证查我的报名（返 data 数组） */
 export const fetchMyApplications = async (idCard) => {
   const res = await request(`/api/applications/my?idCard=${encodeURIComponent(idCard)}`)
   return res.data || []
+}
+
+// ==================== 认证 API ====================
+
+/** 发送验证码 */
+export const sendLoginCode = (phone) =>
+  request('/api/auth/login/send-code', {
+    method: 'POST',
+    body: JSON.stringify({ phone }),
+  })
+
+/** 验证验证码 → 返 token */
+export const verifyLoginCode = (phone, code) =>
+  request('/api/auth/login/verify', {
+    method: 'POST',
+    body: JSON.stringify({ phone, code }),
+  })
+
+// ==================== 管理端 API（需 JWT）====================
+
+/** 通用带 JWT 的 fetch */
+async function adminRequest(url, options = {}) {
+  const token = localStorage.getItem('admin_token')
+  const res = await fetch(url, {
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    ...options,
+  })
+  if (!res.ok) {
+    if (res.status === 401) {
+      localStorage.removeItem('admin_token')
+      window.location.hash = '#/admin/login'
+    }
+    const err = new Error(`HTTP ${res.status}: ${res.statusText}`)
+    err.status = res.status
+    throw err
+  }
+  return res.json()
+}
+
+/** 管理员：分页查询报名 */
+export const fetchAdminApplications = (params) => {
+  const qs = new URLSearchParams(params).toString()
+  return adminRequest(`/api/admin/applications?${qs}`)
+}
+
+/** 管理员：批量删除报名 */
+export const deleteAdminApplications = (ids) =>
+  adminRequest(`/api/admin/applications/batch?ids=${ids.join(',')}`, { method: 'DELETE' })
+
+/** 管理员：清空班级报名 */
+export const clearAdminClass = (classId) =>
+  adminRequest(`/api/admin/applications/clear?classId=${classId}`, { method: 'DELETE' })
+
+/** 管理员：批量录取 */
+export const admitAdminApplications = (ids) =>
+  adminRequest(`/api/admin/applications/admit/batch?ids=${ids.join(',')}`, { method: 'PUT' })
+
+/** 管理员：班级列表 */
+export const fetchAdminClasses = () => adminRequest('/api/admin/classes')
+
+/** 管理员：新增班级 */
+export const createAdminClass = (data) =>
+  adminRequest('/api/admin/classes', { method: 'POST', body: JSON.stringify(data) })
+
+/** 管理员：更新班级 */
+export const updateAdminClass = (id, data) =>
+  adminRequest(`/api/admin/classes/${id}`, { method: 'PUT', body: JSON.stringify(data) })
+
+/** 管理员：删除班级 */
+export const deleteAdminClass = (id) =>
+  adminRequest(`/api/admin/classes/${id}`, { method: 'DELETE' })
+
+/** 管理员：读取配置 */
+export const fetchAdminConfig = (key) => adminRequest(`/api/admin/config/${key}`)
+
+/** 管理员：更新配置 */
+export const updateAdminConfig = (key, cfgValue, updatedBy) =>
+  adminRequest(`/api/admin/config/${key}`, {
+    method: 'PUT',
+    body: JSON.stringify({ cfgValue, updatedBy }),
+  })
+
+// ==================== 公开 API（学生端）====================
+
+/** 获取报名须知（学生端） */
+export const fetchNotice = async () => {
+  try {
+    return await request('/api/config/notice')
+  } catch {
+    return { data: null }
+  }
 }
