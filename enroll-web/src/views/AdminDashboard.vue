@@ -305,7 +305,10 @@ async function onDeleteClass(id) {
     await deleteAdminClass(id)
     loadClasses()
     ElMessage.success('已删除')
-  } catch {}
+  } catch (e) {
+    // 用户取消 confirm 时 e 为空，不提示
+    if (e) ElMessage.error(e.message || '删除失败')
+  }
 }
 
 // ==================== 报名查询 ====================
@@ -376,6 +379,7 @@ onMounted(() => {
   loadNotice()
   loadClasses()
   loadApplications()
+  loadAdmitList()
 })
 </script>
 

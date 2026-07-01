@@ -65,8 +65,8 @@ export function parsePeriod(period) {
  * @returns {{ status: 'not_started'|'open'|'closed', label: string, canApply: boolean }}
  */
 export function getClassTimeStatus(classInfo, now = null) {
-  // 测试模式：所有班级强制开放（VITE_TEST_MODE=true 时生效）
-  const isTestMode = import.meta.env.VITE_TEST_MODE === 'true'
+  // ===== 测试开关 ===== 临时开放报名，测完改回 false
+  const isTestMode = false
   if (isTestMode) {
     return { status: 'open', label: '报名中（测试模式）', canApply: true }
   }

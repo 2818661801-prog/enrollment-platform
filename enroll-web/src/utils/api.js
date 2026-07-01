@@ -74,9 +74,30 @@ export const submitApplicationAPI = (form) =>
 export const withdrawApplicationAPI = (id) =>
   request(`/api/applications/${id}/withdraw`, { method: 'PUT' })
 
+/** 修改报名信息（姓名/电话/选科） */
+export const updateApplicationAPI = (id, data) =>
+  request(`/api/applications/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  })
+
 /** 按身份证查我的报名（返 data 数组） */
 export const fetchMyApplications = async (idCard) => {
   const res = await request(`/api/applications/my?idCard=${encodeURIComponent(idCard)}`)
+  return res.data || []
+}
+
+/** 验证密码后查我的报名（身份证+密码双因子，POST body 防密码暴露） */
+export const fetchMyApplicationsWithPwd = async (idCard, password) => {
+  const res = await request('/api/applications/my-verify', {
+    method: 'POST',
+    body: JSON.stringify({ idCard, password }),
+  })
+  if (res.code !== 200) {
+    const err = new Error(res.message || '查询失败')
+    err.code = res.code
+    throw err
+  }
   return res.data || []
 }
 

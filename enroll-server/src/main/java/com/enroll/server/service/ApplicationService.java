@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.security.MessageDigest;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -68,6 +69,7 @@ public class ApplicationService {
      */
     @Transactional
     public ApplicationDTO submit(Map<String, Object> form) {
+        try {
         String idCard  = (String) form.get("idCard");
         Integer classId = (Integer) form.get("classId");
 
@@ -104,7 +106,11 @@ public class ApplicationService {
             throw new BusinessException(ResultCode.CLASS_FULL);
         }
 
-        // 6) 构造报名记录
+        // 6) 生成查询密码（明文 + SHA256 存储）
+        String plainPwd = generatePassword();
+        String hashedPwd = sha256(plainPwd);
+
+        // 7) 构造报名记录
         Application app = new Application();
         app.setName((String) form.get("name"));
         app.setIdCard(idCard);
@@ -118,15 +124,20 @@ public class ApplicationService {
         app.setIsAdmitted(0);
         Object agreed = form.get("noticeAgreed");
         app.setNoticeAgreed(parseFlag(agreed));
+        app.setPassword(hashedPwd);
         app.setApplyTime(LocalDateTime.now());
         Application saved = appRepo.save(app);
 
-        // 7) 班级已报名人数 +1
+        // 8) 班级已报名人数 +1
         cls.setEnrolled(cls.getEnrolled() + 1);
         classRepo.save(cls);
 
         log.info("报名成功: id={}, name={}, classId={}, round={}", saved.getId(), saved.getName(), classId, currentRound);
-        return toDTO(saved, cls.getName());
+        return toDTO(saved, cls.getName(), plainPwd);
+        } catch (Exception e) {
+            log.error("submit 异常: form={}", form, e);
+            throw e;
+        }
     }
 
     // ==================== 二轮判断逻辑 ====================
@@ -189,8 +200,9 @@ public class ApplicationService {
         try {
             String[] parts = period.split(" - ");
             if (parts.length != 2) return false;
-            java.time.LocalDate start = java.time.LocalDate.parse(parts[0].trim());
-            java.time.LocalDate end   = java.time.LocalDate.parse(parts[1].trim());
+            java.time.format.DateTimeFormatter FMT = java.time.format.DateTimeFormatter.ofPattern("yyyy/MM/dd");
+            java.time.LocalDate start = java.time.LocalDate.parse(parts[0].trim(), FMT);
+            java.time.LocalDate end   = java.time.LocalDate.parse(parts[1].trim(), FMT);
             java.time.LocalDate now   = java.time.LocalDate.now();
             return !now.isBefore(start) && !now.isAfter(end);
         } catch (Exception e) {
@@ -249,6 +261,55 @@ public class ApplicationService {
                     return toDTO(app, className);
                 })
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * 验证密码后查我的报名（身份证+密码双因子）
+     * @param idCard  身份证号
+     * @param password 明文密码（与 DB 中 SHA256 比对）
+     * @return 报名列表（验证失败抛异常）
+     */
+    public List<ApplicationDTO> findMyWithPwd(String idCard, String password) {
+        String hashed = sha256(password);
+        List<Application> apps = appRepo.findByIdCardAndStatus(idCard, STATUS_APPLIED);
+        if (apps.isEmpty()) {
+            throw new BusinessException(ResultCode.APPLICATION_NOT_FOUND, "未找到报名记录");
+        }
+        // 密码匹配校验（任意一条匹配即可，说明是本人）
+        boolean matched = apps.stream().anyMatch(a -> hashed.equals(a.getPassword()));
+        if (!matched) {
+            throw new BusinessException(ResultCode.PARAM_INVALID, "密码错误，请重新输入");
+        }
+        return apps.stream()
+                .map(app -> {
+                    String className = classRepo.findById(app.getClassId())
+                            .map(ClassInfo::getName)
+                            .orElse("未知班级");
+                    return toDTO(app, className);
+                })
+                .collect(Collectors.toList());
+    }
+
+    // ==================== 修改报名（写） ====================
+
+    /**
+     * 修改报名信息（姓名/电话/选科）
+     * @param id   报名记录 ID
+     * @param body {name, phone, hasPhysics, hasEnglish}
+     */
+    @Transactional
+    public void updateApp(Integer id, Map<String, Object> body) {
+        Application app = appRepo.findById(id)
+                .orElseThrow(() -> new BusinessException(ResultCode.APPLICATION_NOT_FOUND));
+        if (app.getStatus() != STATUS_APPLIED) {
+            throw new BusinessException(ResultCode.PARAM_INVALID, "只能修改已报名的记录");
+        }
+        if (body.containsKey("name"))        app.setName((String) body.get("name"));
+        if (body.containsKey("phone"))       app.setPhone((String) body.get("phone"));
+        if (body.containsKey("hasPhysics"))  app.setHasPhysics((String) body.get("hasPhysics"));
+        if (body.containsKey("hasEnglish")) app.setHasEnglish((String) body.get("hasEnglish"));
+        appRepo.save(app);
+        log.info("修改报名: id={}, name={}", id, app.getName());
     }
 
     // ==================== 管理端方法 ====================
@@ -312,8 +373,13 @@ public class ApplicationService {
         return "true".equalsIgnoreCase(s) || "1".equals(s) ? 1 : 0;
     }
 
-    /** Entity → DTO */
+    /** Entity → DTO（无密码，用于查询列表） */
     private ApplicationDTO toDTO(Application e, String className) {
+        return toDTO(e, className, null);
+    }
+
+    /** Entity → DTO（带明文密码，仅提交报名时调用一次） */
+    private ApplicationDTO toDTO(Application e, String className, String plainPassword) {
         return ApplicationDTO.builder()
                 .id(e.getId())
                 .name(e.getName())
@@ -326,6 +392,29 @@ public class ApplicationService {
                 .className(className)
                 .status(String.valueOf(e.getStatus()))
                 .applyTime(e.getApplyTime())
+                .plainPassword(plainPassword)  // 仅提交时有值
                 .build();
+    }
+
+    // ==================== 密码工具 ====================
+
+    /** 生成 8 位随机数字密码 */
+    private String generatePassword() {
+        java.security.SecureRandom r = new java.security.SecureRandom();
+        int pwd = r.nextInt(90000000) + 10000000; // 8 位，10000000~99999999
+        return String.valueOf(pwd);
+    }
+
+    /** SHA256 哈希（用于存储） */
+    private String sha256(String input) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            byte[] hash = md.digest(input.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            StringBuilder sb = new StringBuilder();
+            for (byte b : hash) sb.append(String.format("%02x", b));
+            return sb.toString();
+        } catch (Exception e) {
+            throw new RuntimeException("SHA256 计算失败", e);
+        }
     }
 }

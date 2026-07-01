@@ -134,7 +134,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { getClassTimeStatus } from '../utils/data.js'
@@ -155,26 +155,33 @@ const noticeData = ref({ conditions: [], notices: [] })
 
 // 仅首次进入弹窗（关闭浏览器标签后重开才再弹）
 // 为什么用 sessionStorage：关闭标签即清除，localStorage 会永久记着
+let pollTimer = null
+
 onMounted(async () => {
   if (!sessionStorage.getItem('notice_shown')) {
     showNotice.value = true
     sessionStorage.setItem('notice_shown', '1')
   }
-  // 从后端拉取班级列表和报名须知（并行）
+  await loadData()
+  // 每 30 秒轮询，管理员操作后返回首页能自动看到最新数据
+  pollTimer = setInterval(loadData, 30_000)
+})
+
+onUnmounted(() => { if (pollTimer) clearInterval(pollTimer) })
+
+async function loadData() {
   try {
-  const [clsRes, noticeRes] = await Promise.all([
-    fetchClasses(),
-    fetchNotice(),
-  ])
-  classes.value = clsRes
-  noticeData.value = noticeRes
+    const [clsRes, noticeRes] = await Promise.all([fetchClasses(), fetchNotice()])
+    classes.value = clsRes
+    noticeData.value = noticeRes
   } catch (err) {
     loadError.value = '班级数据加载失败，请检查后端是否启动'
     ElMessage.error(loadError.value)
   } finally {
     loading.value = false
   }
-})
+}
+
 // 监听弹窗打开 → 设备自适应设宽度和高度
 watch(showNotice, async (val) => {
   if (val) {

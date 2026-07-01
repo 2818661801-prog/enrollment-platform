@@ -23,6 +23,8 @@ public class ApplicationDTO implements Serializable {
     private String hdSubType;
     private String status;
     private LocalDateTime applyTime;
+    /** 报名时返回的明文密码（仅一次性返回，之后查询不返回） */
+    private String plainPassword;
 
     // ==================== 构造器 ====================
 
@@ -32,7 +34,7 @@ public class ApplicationDTO implements Serializable {
     public ApplicationDTO(Integer id, String name, String idCard, String gender,
                           String phone, String hasPhysics, String hasEnglish,
                           Integer classId, String className, String hdSubType,
-                          String status, LocalDateTime applyTime) {
+                          String status, LocalDateTime applyTime, String plainPassword) {
         this.id = id;
         this.name = name;
         this.idCard = idCard;
@@ -45,6 +47,7 @@ public class ApplicationDTO implements Serializable {
         this.hdSubType = hdSubType;
         this.status = status;
         this.applyTime = applyTime;
+        this.plainPassword = plainPassword;
     }
 
     // ==================== Getter / Setter ====================
@@ -85,6 +88,9 @@ public class ApplicationDTO implements Serializable {
     public LocalDateTime getApplyTime() { return applyTime; }
     public void setApplyTime(LocalDateTime applyTime) { this.applyTime = applyTime; }
 
+    public String getPlainPassword() { return plainPassword; }
+    public void setPlainPassword(String plainPassword) { this.plainPassword = plainPassword; }
+
     // ==================== Builder（链式构建） ====================
 
     /** 静态入口：ApplicationDTO.builder() 开始链式调用 */
@@ -105,6 +111,7 @@ public class ApplicationDTO implements Serializable {
         private String hdSubType;
         private String status;
         private LocalDateTime applyTime;
+        private String plainPassword;
 
         public Builder id(Integer id) { this.id = id; return this; }
         public Builder name(String name) { this.name = name; return this; }
@@ -118,10 +125,11 @@ public class ApplicationDTO implements Serializable {
         public Builder hdSubType(String hdSubType) { this.hdSubType = hdSubType; return this; }
         public Builder status(String status) { this.status = status; return this; }
         public Builder applyTime(LocalDateTime applyTime) { this.applyTime = applyTime; return this; }
+        public Builder plainPassword(String plainPassword) { this.plainPassword = plainPassword; return this; }
 
         public ApplicationDTO build() {
             return new ApplicationDTO(id, name, idCard, gender, phone, hasPhysics, hasEnglish,
-                    classId, className, hdSubType, status, applyTime);
+                    classId, className, hdSubType, status, applyTime, plainPassword);
         }
     }
 }

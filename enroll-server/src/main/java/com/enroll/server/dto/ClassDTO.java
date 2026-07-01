@@ -1,5 +1,6 @@
 package com.enroll.server.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import java.io.Serializable;
 
 /**
@@ -7,6 +8,7 @@ import java.io.Serializable;
  *
  * Builder 让 Service 转换时用链式调用
  */
+@JsonInclude(JsonInclude.Include.ALWAYS) // null 字段也返回，保证前端能拿到 category
 public class ClassDTO implements Serializable {
 
     private Integer id;

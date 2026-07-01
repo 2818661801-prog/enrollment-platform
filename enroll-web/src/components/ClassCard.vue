@@ -15,6 +15,8 @@
     </div>
     <!-- 班级名称 -->
     <div class="card-name">{{ classInfo.name }}</div>
+    <!-- 班级类别标签 -->
+    <div v-if="classInfo.category" class="card-category">{{ classInfo.category }}</div>
     <!-- 报名时间 -->
     <div class="card-period">{{ classInfo.period }}</div>
   </el-card>
@@ -57,6 +59,15 @@ const iconBg = computed(() =>
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+.card-category {
+  font-size: 11px;
+  color: #fff;
+  background: #337eff;
+  border-radius: 4px;
+  padding: 1px 6px;
+  display: inline-block;
+  margin-bottom: 6px;
 }
 .card-period {
   font-size: 12px;

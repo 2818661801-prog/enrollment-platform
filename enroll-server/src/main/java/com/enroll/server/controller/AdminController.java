@@ -141,6 +141,7 @@ public class AdminController {
     @PutMapping("/classes/{id}")
     public Map<String, Object> updateClass(@PathVariable Integer id,
                                             @RequestBody Map<String, Object> body) {
+        log.info("=== UPDATE CLASS id={} body={}", id, body);
         return R.ok("更新成功", classService.updateClass(id, body));
     }
 
@@ -172,6 +173,7 @@ public class AdminController {
     @Transactional
     @DeleteMapping("/classes/{id}")
     public Map<String, Object> deleteClass(@PathVariable Integer id) {
+        log.info("=== DELETE CLASS id={}", id);
         classService.deleteClass(id);
         return R.ok("已删除", null);
     }

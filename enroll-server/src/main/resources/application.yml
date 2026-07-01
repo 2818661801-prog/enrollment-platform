@@ -22,6 +22,9 @@ spring:
     password: ${DB_PASSWORD:***REMOVED***}
     driver-class-name: com.mysql.cj.jdbc.Driver
 
+  jackson:
+    default-property-inclusion: always  # null 字段也序列化，保证 category=null 时返回 "category":null
+
   # ==================== JPA 配置 ====================
   jpa:
     hibernate:

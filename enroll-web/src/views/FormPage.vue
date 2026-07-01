@@ -150,6 +150,29 @@
     </div>
 
     <AppFooter />
+
+    <!-- 密码弹窗（报名成功后显示一次性密码） -->
+    <el-dialog
+      v-model="pwdDialogVisible"
+      title="报名成功！请保存您的查询密码"
+      width="90%"
+      :close-on-click-modal="false"
+      @close="onPwdDialogClose"
+    >
+      <div class="pwd-dialog-body">
+        <p class="pwd-tip">您的报名已提交成功！以下密码用于查询和撤回报名，请 <strong>截图保存</strong> 或 <strong>复制保存</strong>。</p>
+        <div class="pwd-display">
+          <span class="pwd-value">{{ pwdDialogData.plainPassword }}</span>
+          <el-button size="small" @click="copyPassword">
+            {{ copied ? '已复制' : '复制密码' }}
+          </el-button>
+        </div>
+        <p class="pwd-warn">⚠️ 密码仅显示这一次，之后无法再查看，请务必保存！</p>
+      </div>
+      <template #footer>
+        <el-button type="primary" @click="onPwdDialogClose">我已保存，前往首页</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -172,6 +195,11 @@ const formRef = ref(null)
 const submitting = ref(false)
 const idCardValid = ref(false)
 const loading = ref(false)
+
+// 密码弹窗
+const pwdDialogVisible = ref(false)
+const pwdDialogData = ref({ plainPassword: '' })
+const copied = ref(false)
 
 // 班级列表：从后端 API 拿
 const classes = ref([])
@@ -293,11 +321,24 @@ async function onSubmit() {
   submitting.value = false
 
   if (result.success) {
-    ElMessage.success('🎉 提交成功！感谢你的报名，请等待录取结果通知。')
-    router.push('/home')
+    pwdDialogData.value = { plainPassword: result.data?.plainPassword || '' }
+    pwdDialogVisible.value = true
   } else {
     ElMessage.error(result.message || '提交失败')
   }
+}
+
+function copyPassword() {
+  navigator.clipboard.writeText(pwdDialogData.value.plainPassword).then(() => {
+    copied.value = true
+    setTimeout(() => { copied.value = false }, 2000)
+  }).catch(() => {
+    ElMessage.warning('复制失败，请手动截图保存')
+  })
+}
+
+function onPwdDialogClose() {
+  router.push('/home')
 }
 </script>
 
@@ -383,5 +424,39 @@ async function onSubmit() {
   .form-row :deep(.el-radio-button) {
     margin: 0;
   }
+}
+
+/* 密码弹窗 */
+.pwd-dialog-body {
+  text-align: center;
+}
+.pwd-tip {
+  font-size: 15px;
+  color: #333;
+  margin-bottom: 20px;
+  line-height: 1.6;
+}
+.pwd-display {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: #f0f5ff;
+  border: 2px dashed #337ffe;
+  border-radius: 8px;
+  padding: 16px 24px;
+  margin-bottom: 12px;
+}
+.pwd-value {
+  font-size: 32px;
+  font-weight: bold;
+  letter-spacing: 4px;
+  color: #337ffe;
+  font-family: monospace;
+}
+.pwd-warn {
+  font-size: 13px;
+  color: #e6a23c;
+  margin-top: 8px;
 }
 </style>

@@ -36,10 +36,10 @@ public class Application {
     @Column(nullable = false, length = 11)
     private String phone;     // 联系电话
 
-    @Column(name = "has_physics", nullable = false, length = 2)
+    @Column(name = "has_physics", length = 2)
     private String hasPhysics; // 是否选考物理：是/否
 
-    @Column(name = "has_english", nullable = false, length = 2)
+    @Column(name = "has_english", length = 2)
     private String hasEnglish; // 是否选考英语：是/否
 
     @Column(name = "class_id", nullable = false)
@@ -65,6 +65,10 @@ public class Application {
     /** 是否同意报名须知：0否 1是 */
     @Column(name = "notice_agreed", nullable = false)
     private Integer noticeAgreed = 0;
+
+    /** 查询密码（SHA256存储），提交报名时生成返回给学生 */
+    @Column(nullable = false, length = 64)
+    private String password = "";
 
     @Column(name = "apply_time", nullable = false)
     private LocalDateTime applyTime = LocalDateTime.now(); // 报名时间
@@ -112,4 +116,7 @@ public class Application {
 
     public LocalDateTime getApplyTime() { return applyTime; }
     public void setApplyTime(LocalDateTime applyTime) { this.applyTime = applyTime; }
+
+    public String getPassword() { return password; }
+    public void setPassword(String password) { this.password = password; }
 }
