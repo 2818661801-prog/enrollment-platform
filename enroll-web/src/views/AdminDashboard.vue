@@ -174,13 +174,16 @@
           <el-input v-model="classForm.name" />
         </el-form-item>
         <el-form-item label="报名时间段">
-          <el-input v-model="classForm.period" placeholder="2026/08/01 - 2026/08/15" />
-        </el-form-item>
-        <el-form-item label="轮次">
-          <el-radio-group v-model="classForm.round">
-            <el-radio-button :value="0">单轮</el-radio-button>
-            <el-radio-button :value="1">两轮</el-radio-button>
-          </el-radio-group>
+          <el-date-picker
+            v-model="periodRange"
+            type="daterange"
+            range-separator="至"
+            start-placeholder="开始日期"
+            end-placeholder="结束日期"
+            format="YYYY/MM/DD"
+            value-format="YYYY/MM/DD"
+            style="width:100%"
+          />
         </el-form-item>
         <el-form-item label="名额上限">
           <el-input-number v-model="classForm.quota" :min="-1" :step="10" />
@@ -252,22 +255,35 @@ async function loadClasses() {
 
 const classDialogVisible = ref(false)
 const classDialogTitle = ref('')
-const classForm = reactive({ id: null, name: '', period: '', round: 0, quota: 0, description: '' })
+const classForm = reactive({ id: null, name: '', period: '', quota: 0, description: '' })
+const periodRange = ref([])
 const classSaving = ref(false)
+
+/** 解析 "2026/09/01 - 2026/09/13" → ["2026/09/01", "2026/09/13"] */
+function parsePeriod(period) {
+  if (!period) return []
+  return period.split(' - ').map(s => s.trim())
+}
 
 function showClassDialog(row) {
   if (row) {
     classDialogTitle.value = '编辑班级'
-    Object.assign(classForm, { id: row.id, name: row.name, period: row.period, round: row.round, quota: row.quota, description: row.description })
+    Object.assign(classForm, { id: row.id, name: row.name, period: row.period, quota: row.quota, description: row.description })
+    periodRange.value = parsePeriod(row.period)
   } else {
     classDialogTitle.value = '新增班级'
-    Object.assign(classForm, { id: null, name: '', period: '', round: 0, quota: 0, description: '' })
+    Object.assign(classForm, { id: null, name: '', period: '', quota: 0, description: '' })
+    periodRange.value = []
   }
   classDialogVisible.value = true
 }
 async function onSaveClass() {
   classSaving.value = true
   try {
+    // 日期范围选择器 → period 字符串
+    if (periodRange.value?.length === 2) {
+      classForm.period = periodRange.value.join(' - ')
+    }
     if (classForm.id) {
       await updateAdminClass(classForm.id, { ...classForm })
     } else {
