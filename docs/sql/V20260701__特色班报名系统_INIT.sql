@@ -10,7 +10,7 @@ CREATE TABLE `classes` (
   `id`          INT         PRIMARY KEY AUTO_INCREMENT,
   `name`        VARCHAR(200) NOT NULL                COMMENT '班级名称',
   `period`      VARCHAR(50)  NOT NULL                COMMENT '当前有效时间段（由 periods 计算得出）',
-  `periods`     TEXT                                 COMMENT '多轮时间段 JSON：[{round,period}]',
+  `periods`     TEXT                                 COMMENT '多轮时间段 JSON 数组，格式：[{"round":1,"period":"2026/09/01 - 2026/09/13"},{"round":2,"period":"2026/09/15 - 2026/09/16"}]，由后端根据当前时间自动计算当前有效 period',
   `quota`       INT          DEFAULT 0              COMMENT '名额上限，-1不限',
   `enrolled`    INT          DEFAULT 0              COMMENT '已报名人数',
   `description` TEXT                                 COMMENT '班级说明',
