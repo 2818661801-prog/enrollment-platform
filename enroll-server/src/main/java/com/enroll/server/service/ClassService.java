@@ -65,8 +65,15 @@ public class ClassService {
         ClassInfo cls = new ClassInfo();
         cls.setName((String) body.get("name"));
         cls.setPeriods((String) body.get("periods"));
-        // periods[0].period 作为默认 period
-        cls.setPeriod(extractFirstPeriod((String) body.get("periods")));
+        // 至少要有 period（直接传或从 periods 提取），否则报错
+        String period = (String) body.get("period");
+        if (period == null || period.isBlank()) {
+            period = extractFirstPeriod((String) body.get("periods"));
+        }
+        if (period == null || period.isBlank()) {
+            throw new BusinessException(ResultCode.PARAM_INVALID, "报名时间段不能为空");
+        }
+        cls.setPeriod(period);
         cls.setQuota((Integer) body.getOrDefault("quota", 0));
         cls.setEnrolled(0);
         cls.setDescription((String) body.get("description"));
@@ -90,7 +97,10 @@ public class ClassService {
             cls.setPeriods((String) body.get("periods"));
             cls.setPeriod(extractFirstPeriod((String) body.get("periods")));
         }
-        if (body.containsKey("period"))      cls.setPeriod((String) body.get("period"));
+        if (body.containsKey("period")) {
+            String p = (String) body.get("period");
+            if (p != null && !p.isBlank()) cls.setPeriod(p);
+        }
         if (body.containsKey("quota"))       cls.setQuota((Integer) body.get("quota"));
         if (body.containsKey("description")) cls.setDescription((String) body.get("description"));
         if (body.containsKey("isDeleted"))  cls.setIsDeleted((Integer) body.get("isDeleted"));
