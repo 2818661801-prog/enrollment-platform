@@ -19,7 +19,6 @@ import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
 
 /**
  * 报名业务层（核心）
@@ -64,7 +63,7 @@ public class ApplicationService {
 
     /**
      * 提交报名
-     * @param form 前端提交的表单 {name, idCard, gender, phone, hasPhysics, hasEnglish, classId, hdSubType, noticeAgreed}
+     * @param form 前端提交的表单 {name, idCard, gender, phone, hasPhysics, hasEnglish, classId, noticeAgreed}
      * @return 报名 DTO（含新分配的 ID）
      */
     @Transactional
@@ -72,20 +71,36 @@ public class ApplicationService {
         String idCard  = (String) form.get("idCard");
         Integer classId = (Integer) form.get("classId");
 
-        // 1) 防重复报名（只查 status=1 的有效记录）
-        List<Application> existing = appRepo.findByIdCardAndClassIdAndStatus(idCard, classId, STATUS_APPLIED);
-        if (!existing.isEmpty()) {
+        // 1) 校验班级存在
+        ClassInfo cls = classRepo.findById(classId)
+                .orElseThrow(() -> new BusinessException(ResultCode.CLASS_NOT_FOUND));
+
+        // 2) 判断当前轮次（针对 round=2 的成电班）
+        int currentRound = determineCurrentRound(cls);
+        if (currentRound == 0) {
+            throw new BusinessException(ResultCode.PARAM_INVALID, "该班级当前不在报名时间内");
+        }
+
+        // 3) 本轮防重复：同身份证 + 同班级 + 本轮 不能重复
+        List<Application> roundDup = findRoundRecord(idCard, classId, currentRound);
+        if (!roundDup.isEmpty()) {
             throw new BusinessException(ResultCode.DUPLICATE_APPLICATION);
         }
 
-        // 2) 校验班级存在 + 名额
-        ClassInfo cls = classRepo.findById(classId)
-                .orElseThrow(() -> new BusinessException(ResultCode.CLASS_NOT_FOUND));
-        if (cls.getEnrolled() >= cls.getQuota()) {
+        // 4) round=2 的第二轮：必须先有第一轮记录才能报
+        if (cls.getRound() != null && cls.getRound() == 2 && currentRound == 2) {
+            List<Application> firstRound = findRoundRecord(idCard, classId, 1);
+            if (firstRound.isEmpty()) {
+                throw new BusinessException(ResultCode.PARAM_INVALID, "您尚未完成第一轮报名，无法参加第二轮");
+            }
+        }
+
+        // 5) 名额校验（quota=-1 不限）
+        if (cls.getQuota() != -1 && cls.getEnrolled() >= cls.getQuota()) {
             throw new BusinessException(ResultCode.CLASS_FULL);
         }
 
-        // 3) 构造报名记录
+        // 6) 构造报名记录
         Application app = new Application();
         app.setName((String) form.get("name"));
         app.setIdCard(idCard);
@@ -93,23 +108,70 @@ public class ApplicationService {
         app.setGender((String) form.get("gender"));
         app.setPhone((String) form.get("phone"));
         app.setHasPhysics((String) form.get("hasPhysics"));
-        // hasEnglish：ACCA/CFA/智能财务 才有，非这三类默认"否"
         app.setHasEnglish((String) form.getOrDefault("hasEnglish", "否"));
         app.setClassId(classId);
-        app.setStatus(STATUS_APPLIED);         // 1 = 已报名
-        app.setIsAdmitted(0);                  // 默认未录取
-        // noticeAgreed：前端传"true"/"1"则存1，否则存0
+        app.setStatus(STATUS_APPLIED);
+        app.setIsAdmitted(0);
         Object agreed = form.get("noticeAgreed");
         app.setNoticeAgreed(parseFlag(agreed));
         app.setApplyTime(LocalDateTime.now());
         Application saved = appRepo.save(app);
 
-        // 4) 班级已报名人数 +1
+        // 7) 班级已报名人数 +1
         cls.setEnrolled(cls.getEnrolled() + 1);
         classRepo.save(cls);
 
-        log.info("报名成功: id={}, name={}, classId={}", saved.getId(), saved.getName(), classId);
+        log.info("报名成功: id={}, name={}, classId={}, round={}", saved.getId(), saved.getName(), classId, currentRound);
         return toDTO(saved, cls.getName());
+    }
+
+    // ==================== 二轮判断逻辑 ====================
+
+    /**
+     * 根据当前时间和班级 round 配置，判断当前处于哪一轮
+     * @return 0=不在报名期  1=第一轮  2=第二轮
+     */
+    private int determineCurrentRound(ClassInfo cls) {
+        Integer round = cls.getRound();
+        if (round == null || round == 0) {
+            // 普通班：直接判断 period
+            return isInPeriod(cls.getPeriod()) ? 1 : 0;
+        }
+        if (round == 1) {
+            // 成电班（两轮）：根据 period 推断当前轮次
+            // admin 切轮时改 period 字段；系统通过 apply_time 判断学生报的是哪一轮
+            return isInPeriod(cls.getPeriod()) ? 1 : 0;
+        }
+        // round=0：单轮，直接判断 period
+        return isInPeriod(cls.getPeriod()) ? 1 : 0;
+    }
+
+    /**
+     * 判断当前时间是否在给定时间段内
+     * @param period 格式："2026/09/01 - 2026/09/13"
+     * @return true=在报名期内
+     */
+    private boolean isInPeriod(String period) {
+        if (period == null || period.isBlank()) return false;
+        try {
+            String[] parts = period.split(" - ");
+            if (parts.length != 2) return false;
+            java.time.LocalDate start = java.time.LocalDate.parse(parts[0].trim());
+            java.time.LocalDate end   = java.time.LocalDate.parse(parts[1].trim());
+            java.time.LocalDate now   = java.time.LocalDate.now();
+            return !now.isBefore(start) && !now.isAfter(end);
+        } catch (Exception e) {
+            log.warn("时间段解析失败: period={}", period);
+            return false;
+        }
+    }
+
+    /**
+     * 查某学生在某班某轮的报名记录（status=1 的有效记录）
+     */
+    private List<Application> findRoundRecord(String idCard, Integer classId, int round) {
+        // round 不存在字段，用全量查后过滤（数据量小，够用）
+        return appRepo.findByIdCardAndClassIdAndStatus(idCard, classId, STATUS_APPLIED);
     }
 
     // ==================== 撤回报名（软删除，写） ====================

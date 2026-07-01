@@ -34,13 +34,9 @@ public class ClassInfo {
     @Column(columnDefinition = "TEXT")
     private String description;    // 班级简介（TEXT = 长文本）
 
-    /** 0=无第二轮 1=第一轮 2=第二轮（成电班有两轮） */
+    /** 0=单轮 1=两轮（成电班） */
     @Column(nullable = false)
     private Integer round = 0;
-
-    /** 第一轮时间段（round=2 时使用，如 "2026/09/01 - 2026/09/13"） */
-    @Column(name = "round1_period", length = 50)
-    private String round1Period;
 
     /** 软删除：0=正常 1=已删除 */
     @Column(name = "is_deleted", nullable = false)
@@ -68,9 +64,6 @@ public class ClassInfo {
 
     public Integer getRound() { return round; }
     public void setRound(Integer round) { this.round = round; }
-
-    public String getRound1Period() { return round1Period; }
-    public void setRound1Period(String round1Period) { this.round1Period = round1Period; }
 
     public Integer getIsDeleted() { return isDeleted; }
     public void setIsDeleted(Integer isDeleted) { this.isDeleted = isDeleted; }

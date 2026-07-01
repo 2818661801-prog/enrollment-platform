@@ -72,7 +72,7 @@ public class ClassService {
 
     /**
      * 新增班级
-     * @param body {name, period, round, round1Period, quota, description}
+     * @param body {name, period, round, quota, description}
      */
     @Transactional
     public ClassDTO createClass(java.util.Map<String, Object> body) {
@@ -80,7 +80,6 @@ public class ClassService {
         cls.setName((String) body.get("name"));
         cls.setPeriod((String) body.get("period"));
         cls.setRound((Integer) body.getOrDefault("round", 0));
-        cls.setRound1Period((String) body.get("round1Period"));
         cls.setQuota((Integer) body.getOrDefault("quota", 0));
         cls.setEnrolled(0);
         cls.setDescription((String) body.get("description"));
@@ -102,7 +101,6 @@ public class ClassService {
         if (body.containsKey("name"))         cls.setName((String) body.get("name"));
         if (body.containsKey("period"))      cls.setPeriod((String) body.get("period"));
         if (body.containsKey("round"))       cls.setRound((Integer) body.get("round"));
-        if (body.containsKey("round1Period")) cls.setRound1Period((String) body.get("round1Period"));
         if (body.containsKey("quota"))        cls.setQuota((Integer) body.get("quota"));
         if (body.containsKey("description"))  cls.setDescription((String) body.get("description"));
         if (body.containsKey("isDeleted"))   cls.setIsDeleted((Integer) body.get("isDeleted"));
@@ -147,7 +145,6 @@ public class ClassService {
                 .name(e.getName())
                 .period(e.getPeriod())
                 .round(e.getRound() != null ? e.getRound() : 0)
-                .round1Period(e.getRound1Period())
                 .quota(e.getQuota())
                 .enrolled(e.getEnrolled())
                 .description(e.getDescription())
