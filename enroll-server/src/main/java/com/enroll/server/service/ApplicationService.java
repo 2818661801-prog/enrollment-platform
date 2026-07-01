@@ -87,11 +87,15 @@ public class ApplicationService {
             throw new BusinessException(ResultCode.DUPLICATE_APPLICATION);
         }
 
-        // 4) round=2 的第二轮：必须先有第一轮记录才能报
-        if (cls.getRound() != null && cls.getRound() == 2 && currentRound == 2) {
-            List<Application> firstRound = findRoundRecord(idCard, classId, 1);
-            if (firstRound.isEmpty()) {
-                throw new BusinessException(ResultCode.PARAM_INVALID, "您尚未完成第一轮报名，无法参加第二轮");
+        // 4) 第二轮（currentRound=2）：必须先有第一轮记录才能报
+        if (currentRound == 2) {
+            // 从 periods JSON 判断是否真的有第二轮
+            boolean hasRound2 = hasRound(cls.getPeriods(), 2);
+            if (hasRound2) {
+                List<Application> firstRound = findRoundRecord(idCard, classId, 1);
+                if (firstRound.isEmpty()) {
+                    throw new BusinessException(ResultCode.PARAM_INVALID, "您尚未完成第一轮报名，无法参加第二轮");
+                }
             }
         }
 
@@ -153,6 +157,26 @@ public class ApplicationService {
             log.warn("periods JSON 解析失败: {}", periodsJson, e);
             return isInPeriod(cls.getPeriod()) ? 1 : 0;
         }
+    }
+
+    /**
+     * 判断 periods JSON 中是否存在指定轮次
+     */
+    private boolean hasRound(String periodsJson, int round) {
+        if (periodsJson == null || periodsJson.isBlank()) return false;
+        try {
+            var mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            var list = mapper.readValue(periodsJson, java.util.List.class);
+            for (var item : list) {
+                @SuppressWarnings("unchecked")
+                var entry = (java.util.Map<String, Object>) item;
+                int r = ((Number) entry.get("round")).intValue();
+                if (r == round) return true;
+            }
+        } catch (Exception e) {
+            log.warn("hasRound 解析失败: {}", periodsJson, e);
+        }
+        return false;
     }
 
     /**
