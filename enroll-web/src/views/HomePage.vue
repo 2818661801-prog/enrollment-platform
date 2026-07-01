@@ -8,7 +8,7 @@
     <div class="banner">
       <div class="banner-content">
         <h1>2026 特色班报名通道已开启</h1>
-        <p>杭州电子科技大学信息工程学院 · 7 个特色班级供你选择</p>
+        <p>杭州电子科技大学信息工程学院 · {{ classes.length }} 个特色班级供你选择</p>
         <el-button type="primary" class="notice-link" @click="showNotice = true">
           📋 查看报名须知
         </el-button>
@@ -16,30 +16,36 @@
     </div>
 
     <div class="home-body">
-      <!-- ===== 左侧边栏：分类筛选 ===== -->
-      <aside class="home-sidebar">
-        <el-menu default-active="all" class="filter-menu" @select="onFilterSelect">
-          <el-menu-item index="all">
-            <el-icon><Grid /></el-icon>
-            <span>全部班级（{{ classes.length }}）</span>
-          </el-menu-item>
-          <el-menu-item index="理工类">
-            <el-icon><Cpu /></el-icon>
-            <span>理工类（{{ 理工Count }}）</span>
-          </el-menu-item>
-          <el-menu-item index="经管类">
-            <el-icon><TrendCharts /></el-icon>
-            <span>经管类（{{ 经管Count }}）</span>
-          </el-menu-item>
-        </el-menu>
-      </aside>
-
-      <!-- ===== 主区（只放卡片）===== -->
+      <!-- ===== 主区 ===== -->
       <main class="home-main">
-        <el-empty v-if="filteredClasses.length === 0" description="暂无匹配班级" />
+        <!-- 搜索栏 -->
+        <div class="search-bar">
+          <el-select
+            v-model="searchKeyword"
+            placeholder="搜索班级名称..."
+            filterable
+            clearable
+            size="large"
+            style="width:320px"
+          >
+            <el-option
+              v-for="c in classes"
+              :key="c.id"
+              :label="c.name"
+              :value="c.id"
+            />
+          </el-select>
+          <el-button size="large" @click="searchKeyword=null">重置</el-button>
+          <el-button text type="primary" @click="router.push('/my-applications')" style="margin-left:auto">
+            我的报名 →
+          </el-button>
+        </div>
+
+        <!-- 卡片 -->
+        <el-empty v-if="displayClasses.length === 0" description="暂无匹配班级" />
         <div v-else class="card-grid">
           <ClassCard
-            v-for="c in filteredClasses"
+            v-for="c in displayClasses"
             :key="c.id"
             :class-info="c"
             @select="goFormDirect"
@@ -96,7 +102,6 @@
                 <span class="class-name-full">{{ row.name }}</span>
               </template>
             </el-table-column>
-            <el-table-column prop="category" label="类别" width="120" align="center" />
             <el-table-column label="报名时间" align="center" min-width="180">
               <template #default="{ row }">
                 <span class="period-text">{{ row.period }}</span>
@@ -132,14 +137,13 @@
 import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Grid, Cpu, TrendCharts } from '@element-plus/icons-vue'
 import { getClassTimeStatus } from '../utils/data.js'
 import { fetchClasses } from '../utils/api.js'
 import AppFooter from '../components/AppFooter.vue'
 import ClassCard from '../components/ClassCard.vue'
 
 const router = useRouter()
-const filterKey = ref('all')
+const searchKeyword = ref(null)
 // 班级列表：从后端 API 拿
 const classes = ref([])
 const loading = ref(false)
@@ -218,17 +222,10 @@ watch(showNotice, async (val) => {
   }
 })
 
-const 理工Count = computed(() => classes.value.filter(c => c.category === '理工类').length)
-const 经管Count = computed(() => classes.value.filter(c => c.category === '经管类').length)
-
-const filteredClasses = computed(() => {
-  if (filterKey.value === 'all') return classes.value
-  return classes.value.filter(c => c.category === filterKey.value)
+const displayClasses = computed(() => {
+  if (!searchKeyword.value) return classes.value
+  return classes.value.filter(c => c.id === searchKeyword.value)
 })
-
-function onFilterSelect(key) {
-  filterKey.value = key
-}
 
 async function goFormDirect(classId) {
   const c = classes.value.find(c => c.id === classId)
@@ -295,16 +292,6 @@ const timelineItems = computed(() => {
   width: 100%;
 }
 
-/* ===== 左侧边栏 ===== */
-.home-sidebar {
-  width: 200px;
-  flex-shrink: 0;
-}
-.filter-menu {
-  border-radius: var(--radius-md);
-  border: 1px solid var(--divider);
-}
-
 /* ===== 主区 ===== */
 .home-main {
   flex: 1;
@@ -339,6 +326,13 @@ const timelineItems = computed(() => {
 .notice-link:hover {
   background: rgba(255,255,255,0.35) !important;
   border-color: #fff !important;
+}
+.search-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 16px;
 }
 .card-grid {
   display: grid;
@@ -474,33 +468,15 @@ const timelineItems = computed(() => {
     margin-top: 12px;
     padding: 0 12px;
   }
-  /* 移动端顺序：时间轴(-3) → 筛选(-2) → 卡片(-1) */
+  /* 移动端顺序：时间轴(-3) → 卡片(-1) */
   .home-timeline {
     width: 100%;
     margin-top: 0;
-    margin-left: 0;           /* 左对齐，与 banner 平齐 */
+    margin-left: 0;
     order: -3;
-  }
-  /* 筛选：放卡片左边（卡片左侧的横向滚动条） */
-  .home-sidebar {
-    width: 100%;
-    order: -2;
   }
   .home-main {
     order: -1;
-  }
-  .filter-menu {
-    display: flex !important;
-    flex-wrap: wrap !important;
-    gap: 8px !important;
-    border-bottom: 1px solid var(--divider);
-  }
-  .filter-menu .el-menu-item {
-    flex: 0 0 calc(33.33% - 6px) !important;
-    min-width: auto !important;
-    padding: 0 8px !important;
-    font-size: 13px !important;
-    justify-content: center !important;
   }
   .banner-content h1 { font-size: 18px; }
   .banner-content p { font-size: 12px; margin-bottom: 12px; }
