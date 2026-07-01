@@ -158,11 +158,13 @@ export const updateAdminConfig = (key, cfgValue, updatedBy) =>
 
 // ==================== 公开 API（学生端）====================
 
-/** 获取报名须知（学生端） */
+/** 获取报名须知（学生端）*/
 export const fetchNotice = async () => {
   try {
-    return await request('/api/config/notice')
+    const res = await request('/api/config/notice')
+    // res.data 是 JSON 字符串，需解析
+    return typeof res.data === 'string' ? JSON.parse(res.data) : res.data
   } catch {
-    return { data: null }
+    return null
   }
 }
