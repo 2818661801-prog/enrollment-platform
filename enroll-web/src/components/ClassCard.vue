@@ -15,10 +15,14 @@
     </div>
     <!-- 班级名称 -->
     <div class="card-name">{{ classInfo.name }}</div>
-    <!-- 班级类别标签 -->
-    <div v-if="classInfo.category" class="card-category">{{ classInfo.category }}</div>
+    <!-- 班级类别标签（多个） -->
+    <div v-if="classInfo.categoryNames && classInfo.categoryNames.length" class="card-categories">
+      <span v-for="n in classInfo.categoryNames" :key="n" class="card-category">{{ n }}</span>
+    </div>
     <!-- 报名时间 -->
     <div class="card-period">{{ classInfo.period }}</div>
+    <!-- 报名按钮 -->
+    <el-button type="primary" size="small" class="card-btn" @click.stop="$emit('select', classInfo.id)">立即报名</el-button>
   </el-card>
 </template>
 
@@ -30,10 +34,8 @@ const props = defineProps({
 })
 defineEmits(['select'])
 
-// 根据分类选图标背景色：理工类→蓝，经管类→青
-const iconBg = computed(() =>
-  props.classInfo.category === '理工类' ? '#337eff' : '#06b6d4'
-)
+// 图标背景色固定
+const iconBg = computed(() => '#06b6d4')
 </script>
 
 <style scoped>
@@ -60,6 +62,12 @@ const iconBg = computed(() =>
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+.card-categories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 6px;
+}
 .card-category {
   font-size: 11px;
   color: #fff;
@@ -67,11 +75,13 @@ const iconBg = computed(() =>
   border-radius: 4px;
   padding: 1px 6px;
   display: inline-block;
-  margin-bottom: 6px;
 }
 .card-period {
   font-size: 12px;
   color: var(--text-tertiary);
   margin-bottom: 10px;
+}
+.card-btn {
+  width: 100%;
 }
 </style>

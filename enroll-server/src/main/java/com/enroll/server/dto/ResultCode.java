@@ -20,6 +20,7 @@ public enum ResultCode {
     CLASS_FULL(4002, "该班级名额已满，请选择其他班级"),
     DUPLICATE_APPLICATION(4003, "你已报名过该班级，请勿重复提交"),
     APPLICATION_NOT_FOUND(4004, "报名记录不存在"),
+    CATEGORY_NOT_FOUND(4006, "类别不存在"),
     PARAM_INVALID(4005, "请求参数不合法"),
 
     // === 系统异常 5xxx ===

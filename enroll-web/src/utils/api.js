@@ -181,6 +181,32 @@ export const updateAdminConfig = (key, cfgValue, updatedBy) =>
     body: JSON.stringify({ cfgValue, updatedBy }),
   })
 
+// ==================== 类别管理 API ====================
+
+/** 管理员：获取类别列表 */
+export const fetchAdminCategories = () => adminRequest('/api/admin/categories')
+
+/** 管理员：新增类别 */
+export const createAdminCategory = (name) =>
+  adminRequest('/api/admin/categories', {
+    method: 'POST',
+    body: JSON.stringify({ name }),
+  })
+
+/** 管理员：修改类别 */
+export const updateAdminCategory = (id, name) =>
+  adminRequest(`/api/admin/categories/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify({ name }),
+  })
+
+/** 管理员：删除类别 */
+export const deleteAdminCategory = (id) =>
+  adminRequest(`/api/admin/categories/${id}`, { method: 'DELETE' })
+
+/** 学生端：获取类别列表（供表单下拉） */
+export const fetchCategories = () => request('/api/categories')
+
 // ==================== 公开 API（学生端）====================
 
 /** 获取报名须知（学生端）*/

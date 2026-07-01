@@ -14,12 +14,12 @@
     </div>
 
     <!-- 4个Tab -->
-    <el-tabs v-model="activeTab" class="admin-tabs" type="border-card">
+    <el-tabs v-model="activeTab" class="admin-tabs" type="border-card" @tab-change="onTabChange">
 
       <!-- ========== Tab1: 报名须知 ========== -->
       <el-tab-pane label="报名须知" name="notice">
         <div class="tab-body">
-          <h3>编辑报名须知</h3>
+          <div class="section-label">编辑报名须知</div>
           <el-form label-width="90px" style="max-width:600px">
             <el-form-item label="标题">
               <el-input v-model="notice.title" maxlength="50" show-word-limit />
@@ -49,7 +49,39 @@
         </div>
       </el-tab-pane>
 
-      <!-- ========== Tab2: 班级管理 ========== -->
+      <!-- ========== Tab2: 类别管理 ========== -->
+      <el-tab-pane label="类别管理" name="category">
+        <div class="tab-body">
+          <div class="toolbar">
+            <el-button type="primary" @click="showCategoryDialog(null)">新增类别</el-button>
+          </div>
+          <el-table :data="allCategories" border stripe style="width:400px">
+            <el-table-column prop="id" label="ID" width="80" />
+            <el-table-column prop="name" label="类别名称" />
+            <el-table-column label="操作" width="150">
+              <template #default="{ row }">
+                <el-button text type="primary" size="small" @click="showCategoryDialog(row)">编辑</el-button>
+                <el-button text type="danger" size="small" @click="onDeleteCategory(row.id)">删除</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
+      </el-tab-pane>
+
+      <!-- 类别编辑弹窗 -->
+      <el-dialog v-model="categoryDialogVisible" :title="categoryDialogTitle" width="400px">
+        <el-form label-width="80px">
+          <el-form-item label="类别名称">
+            <el-input v-model="categoryForm.name" maxlength="20" show-word-limit />
+          </el-form-item>
+        </el-form>
+        <template #footer>
+          <el-button @click="categoryDialogVisible=false">取消</el-button>
+          <el-button type="primary" :loading="categorySaving" @click="onSaveCategory">保存</el-button>
+        </template>
+      </el-dialog>
+
+      <!-- ========== Tab3: 班级管理 ========== -->
       <el-tab-pane label="班级管理" name="classes">
         <div class="tab-body">
           <div class="toolbar">
@@ -61,8 +93,13 @@
             <el-table-column prop="period" label="报名时间段" min-width="160" />
             <el-table-column prop="quota" label="名额" width="70" />
             <el-table-column prop="enrolled" label="已报名" width="80" />
-            <el-table-column prop="category" label="班级类别" width="120">
-              <template #default="{ row }">{{ row.category || '—' }}</template>
+            <el-table-column label="班级类别" width="160">
+              <template #default="{ row }">
+                <template v-if="row.categoryNames && row.categoryNames.length">
+                  <el-tag v-for="n in row.categoryNames" :key="n" size="small" style="margin-right:4px">{{ n }}</el-tag>
+                </template>
+                <span v-else>—</span>
+              </template>
             </el-table-column>
             <el-table-column label="状态" width="80">
               <template #default="{ row }">
@@ -90,7 +127,7 @@
         </div>
       </el-tab-pane>
 
-      <!-- ========== Tab3: 报名查询 ========== -->
+      <!-- ========== Tab4: 报名查询 ========== -->
       <el-tab-pane label="报名查询" name="query">
         <div class="tab-body">
           <!-- 筛选区 -->
@@ -118,6 +155,7 @@
             <el-table-column prop="gender" label="性别" width="60" />
             <el-table-column prop="phone" label="手机号" width="120" />
             <el-table-column prop="className" label="班级" min-width="180" show-overflow-tooltip />
+            <el-table-column prop="appliedCategory" label="班级类别" width="90" />
             <el-table-column prop="status" label="状态" width="80">
               <template #default="{ row }">
                 <el-tag v-if="row.status==='1'" type="success" size="small">已报名</el-tag>
@@ -146,7 +184,7 @@
         </div>
       </el-tab-pane>
 
-      <!-- ========== Tab4: 录取配置 ========== -->
+      <!-- ========== Tab5: 录取配置 ========== -->
       <el-tab-pane label="录取配置" name="admit">
         <div class="tab-body">
           <div class="filter-bar">
@@ -154,6 +192,7 @@
               <el-option v-for="c in classes" :key="c.id" :label="c.name" :value="c.id" />
             </el-select>
             <el-button type="primary" @click="loadAdmitList">查询</el-button>
+            <el-button @click="admitQuery.classId=null; loadAdmitList()">重置</el-button>
           </div>
           <el-table :data="admitList" border stripe @selection-change="sel=>selectedAdmit=sel"
             style="width:100%" :scroll-x="true">
@@ -162,6 +201,7 @@
             <el-table-column prop="name" label="姓名" width="80" />
             <el-table-column prop="idCard" label="身份证号" width="160" />
             <el-table-column prop="className" label="班级" min-width="180" show-overflow-tooltip />
+            <el-table-column prop="appliedCategory" label="班级类别" width="90" />
             <el-table-column prop="status" label="状态" width="80">
               <template #default="{ row }">
                 <el-tag :type="row.status==='2'?'warning':'success'" size="small">
@@ -205,7 +245,9 @@
           <el-input v-model="classForm.description" type="textarea" :rows="3" />
         </el-form-item>
         <el-form-item label="班级类别">
-          <el-input v-model="classForm.category" placeholder="选填，如：理工类/经管类等" clearable />
+          <el-select v-model="classForm.categoryNames" multiple placeholder="选择类别（可多选）" clearable style="width:100%">
+            <el-option v-for="c in allCategories" :key="c.id" :label="c.name" :value="c.name" />
+          </el-select>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -224,6 +266,7 @@ import {
   fetchAdminClasses, createAdminClass, updateAdminClass, deleteAdminClass, restoreAdminClass,
   fetchAdminApplications, deleteAdminApplications, admitAdminApplications,
   fetchAdminConfig, updateAdminConfig,
+  fetchAdminCategories, createAdminCategory, updateAdminCategory, deleteAdminCategory,
 } from '../utils/api.js'
 
 const router = useRouter()
@@ -235,6 +278,11 @@ const notice = reactive({ title: '' })
 const noticeCondText = ref('')
 const noticeNoticesText = ref('')
 const noticeSaving = ref(false)
+
+function onTabChange(tab) {
+  if (tab === 'query') loadApplications()
+  if (tab === 'admit') loadAdmitList()
+}
 
 async function loadNotice() {
   try {
@@ -270,9 +318,58 @@ async function loadClasses() {
 
 const classDialogVisible = ref(false)
 const classDialogTitle = ref('')
-const classForm = reactive({ id: null, name: '', period: '', quota: 0, description: '', category: '' })
+const classForm = reactive({ id: null, name: '', period: '', quota: 0, description: '', categoryNames: [] })
 const periodRange = ref([])
 const classSaving = ref(false)
+
+// ==================== 类别管理 ====================
+const allCategories = ref([])
+async function loadCategories() {
+  const res = await fetchAdminCategories()
+  allCategories.value = res.data || []
+}
+
+const categoryDialogVisible = ref(false)
+const categoryDialogTitle = ref('')
+const categoryForm = reactive({ id: null, name: '' })
+const categorySaving = ref(false)
+
+function showCategoryDialog(row) {
+  if (row) {
+    categoryDialogTitle.value = '编辑类别'
+    Object.assign(categoryForm, { id: row.id, name: row.name })
+  } else {
+    categoryDialogTitle.value = '新增类别'
+    Object.assign(categoryForm, { id: null, name: '' })
+  }
+  categoryDialogVisible.value = true
+}
+async function onSaveCategory() {
+  if (!categoryForm.name.trim()) {
+    ElMessage.warning('类别名称不能为空')
+    return
+  }
+  categorySaving.value = true
+  try {
+    if (categoryForm.id) {
+      await updateAdminCategory(categoryForm.id, categoryForm.name)
+    } else {
+      await createAdminCategory(categoryForm.name)
+    }
+    categoryDialogVisible.value = false
+    loadCategories()
+    ElMessage.success('保存成功')
+  } catch { ElMessage.error('保存失败') }
+  finally { categorySaving.value = false }
+}
+async function onDeleteCategory(id) {
+  try {
+    await ElMessageBox.confirm('确定删除该类别？', '提示', { type: 'warning' })
+    await deleteAdminCategory(id)
+    loadCategories()
+    ElMessage.success('已删除')
+  } catch {}
+}
 
 /** 解析 "2026/09/01 - 2026/09/13" → ["2026/09/01", "2026/09/13"] */
 function parsePeriod(period) {
@@ -283,11 +380,11 @@ function parsePeriod(period) {
 function showClassDialog(row) {
   if (row) {
     classDialogTitle.value = '编辑班级'
-    Object.assign(classForm, { id: row.id, name: row.name, period: row.period, quota: row.quota, description: row.description, category: row.category || '' })
+    Object.assign(classForm, { id: row.id, name: row.name, period: row.period, quota: row.quota, description: row.description, categoryNames: row.categoryNames || [] })
     periodRange.value = parsePeriod(row.period)
   } else {
     classDialogTitle.value = '新增班级'
-    Object.assign(classForm, { id: null, name: '', period: '', quota: 0, description: '', category: '' })
+    Object.assign(classForm, { id: null, name: '', period: '', quota: 0, description: '', categoryNames: [] })
     periodRange.value = []
   }
   classDialogVisible.value = true
@@ -347,7 +444,7 @@ const selectedApps = ref([])
 async function loadApplications() {
   const params = { page: queryPage.value - 1, size: 20 }
   if (query.classId)  params.classId = query.classId
-  if (query.status != null) params.status = query.status
+  if (query.status !== null && query.status !== '') params.status = query.status
   if (query.idCard)    params.idCard = query.idCard
   if (query.name)      params.name = query.name
   try {
@@ -404,6 +501,7 @@ onMounted(() => {
   }
   loadNotice()
   loadClasses()
+  loadCategories()
   loadApplications()
   loadAdmitList()
 })
@@ -412,22 +510,35 @@ onMounted(() => {
 <style scoped>
 .admin-page { min-height: 100vh; background: #f0f2f5; }
 .admin-header {
-  background: #337eff;
+  background: #1a2b4a;
+  border-left: 4px solid #c9a84c;
   padding: 0 24px;
-  height: 56px;
+  height: 52px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
-  margin-bottom: 0;
 }
-.logo { font-size: 18px; font-weight: 600; color: #fff; }
+.logo { font-size: 16px; font-weight: 700; color: #fff; letter-spacing: 1px; }
 .header-right { display: flex; align-items: center; gap: 12px; }
-.admin-username { font-size: 13px; color: rgba(255,255,255,0.85); }
-:deep(.header-right .el-button) { color: #fff; }
-.admin-tabs { min-height: calc(100vh - 56px); }
+.admin-username { font-size: 13px; color: rgba(255,255,255,0.7); }
+:deep(.header-right .el-button) { color: rgba(255,255,255,0.7); }
+:deep(.header-right .el-button:hover) { color: #fff; }
+.admin-tabs { min-height: calc(100vh - 52px); }
 .tab-body { padding: 20px; }
-.toolbar { margin-bottom: 14px; }
+.section-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a2b4a;
+  border-left: 3px solid #c9a84c;
+  padding-left: 10px;
+  margin-bottom: 20px;
+  letter-spacing: 0.5px;
+}
+.toolbar {
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e8e8e8;
+  margin-bottom: 16px;
+}
 .filter-bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 14px; }
 .batch-bar { margin-top: 12px; display: flex; align-items: center; gap: 12px; font-size: 14px; color: #666; }
 .field-tip { margin-left: 8px; font-size: 12px; color: #999; }

@@ -45,8 +45,8 @@ public class Application {
     @Column(name = "class_id", nullable = false)
     private Integer classId;  // 申报班级 ID（外键，关联 classes.id）
 
-    @Column(name = "hd_sub_type", length = 20)
-    private String hdSubType; // 杭电班类别（仅 class_id=1 时有值，可为 null）
+    @Column(name = "applied_category", length = 20)
+    private String appliedCategory; // 班级类别（学生报名时选择）
 
     /**
      * 状态：
@@ -102,8 +102,8 @@ public class Application {
     public Integer getClassId() { return classId; }
     public void setClassId(Integer classId) { this.classId = classId; }
 
-    public String getHdSubType() { return hdSubType; }
-    public void setHdSubType(String hdSubType) { this.hdSubType = hdSubType; }
+    public String getAppliedCategory() { return appliedCategory; }
+    public void setAppliedCategory(String appliedCategory) { this.appliedCategory = appliedCategory; }
 
     public Integer getStatus() { return status; }
     public void setStatus(Integer status) { this.status = status; }

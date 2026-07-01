@@ -20,7 +20,7 @@ public class ApplicationDTO implements Serializable {
     private String hasEnglish;
     private Integer classId;
     private String className;     // 班级名（冗余字段，前端展示不用再查）
-    private String hdSubType;
+    private String appliedCategory;
     private String status;
     private LocalDateTime applyTime;
     /** 报名时返回的明文密码（仅一次性返回，之后查询不返回） */
@@ -33,7 +33,7 @@ public class ApplicationDTO implements Serializable {
     /** 全参构造器（Builder.build() 用） */
     public ApplicationDTO(Integer id, String name, String idCard, String gender,
                           String phone, String hasPhysics, String hasEnglish,
-                          Integer classId, String className, String hdSubType,
+                          Integer classId, String className, String appliedCategory,
                           String status, LocalDateTime applyTime, String plainPassword) {
         this.id = id;
         this.name = name;
@@ -44,7 +44,7 @@ public class ApplicationDTO implements Serializable {
         this.hasEnglish = hasEnglish;
         this.classId = classId;
         this.className = className;
-        this.hdSubType = hdSubType;
+        this.appliedCategory = appliedCategory;
         this.status = status;
         this.applyTime = applyTime;
         this.plainPassword = plainPassword;
@@ -79,8 +79,8 @@ public class ApplicationDTO implements Serializable {
     public String getClassName() { return className; }
     public void setClassName(String className) { this.className = className; }
 
-    public String getHdSubType() { return hdSubType; }
-    public void setHdSubType(String hdSubType) { this.hdSubType = hdSubType; }
+    public String getAppliedCategory() { return appliedCategory; }
+    public void setAppliedCategory(String appliedCategory) { this.appliedCategory = appliedCategory; }
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
@@ -108,7 +108,7 @@ public class ApplicationDTO implements Serializable {
         private String hasEnglish;
         private Integer classId;
         private String className;
-        private String hdSubType;
+        private String appliedCategory;
         private String status;
         private LocalDateTime applyTime;
         private String plainPassword;
@@ -122,14 +122,14 @@ public class ApplicationDTO implements Serializable {
         public Builder hasEnglish(String hasEnglish) { this.hasEnglish = hasEnglish; return this; }
         public Builder classId(Integer classId) { this.classId = classId; return this; }
         public Builder className(String className) { this.className = className; return this; }
-        public Builder hdSubType(String hdSubType) { this.hdSubType = hdSubType; return this; }
+        public Builder appliedCategory(String appliedCategory) { this.appliedCategory = appliedCategory; return this; }
         public Builder status(String status) { this.status = status; return this; }
         public Builder applyTime(LocalDateTime applyTime) { this.applyTime = applyTime; return this; }
         public Builder plainPassword(String plainPassword) { this.plainPassword = plainPassword; return this; }
 
         public ApplicationDTO build() {
             return new ApplicationDTO(id, name, idCard, gender, phone, hasPhysics, hasEnglish,
-                    classId, className, hdSubType, status, applyTime, plainPassword);
+                    classId, className, appliedCategory, status, applyTime, plainPassword);
         }
     }
 }

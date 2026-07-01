@@ -119,6 +119,7 @@ public class ApplicationService {
         app.setPhone((String) form.get("phone"));
         app.setHasPhysics((String) form.get("hasPhysics"));
         app.setHasEnglish((String) form.getOrDefault("hasEnglish", "否"));
+        app.setAppliedCategory((String) form.get("appliedCategory"));
         app.setClassId(classId);
         app.setStatus(STATUS_APPLIED);
         app.setIsAdmitted(0);

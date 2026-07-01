@@ -4,6 +4,7 @@ import com.enroll.server.entity.Application;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -60,6 +61,7 @@ public interface ApplicationRepository extends JpaRepository<Application, Intege
      * @param ids     报名记录 ID 列表
      * @param status  目标状态值
      */
+    @Modifying
     @Query("UPDATE Application a SET a.status = :status WHERE a.id IN :ids")
     void batchUpdateStatus(@Param("ids") List<Integer> ids, @Param("status") Integer status);
 
@@ -68,6 +70,7 @@ public interface ApplicationRepository extends JpaRepository<Application, Intege
      * @param ids          报名记录 ID 列表
      * @param isAdmitted   录取标志：0否 1是
      */
+    @Modifying
     @Query("UPDATE Application a SET a.isAdmitted = :isAdmitted WHERE a.id IN :ids")
     void batchUpdateAdmitted(@Param("ids") List<Integer> ids, @Param("isAdmitted") Integer isAdmitted);
 }

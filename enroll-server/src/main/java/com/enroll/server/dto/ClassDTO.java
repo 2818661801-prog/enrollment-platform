@@ -2,39 +2,25 @@ package com.enroll.server.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import java.io.Serializable;
+import java.util.List;
 
 /**
  * 班级 DTO（API 出参专用）
- *
- * Builder 让 Service 转换时用链式调用
  */
-@JsonInclude(JsonInclude.Include.ALWAYS) // null 字段也返回，保证前端能拿到 category
+@JsonInclude(JsonInclude.Include.ALWAYS)
 public class ClassDTO implements Serializable {
 
     private Integer id;
     private String name;
-    private String period;     // 当前有效时间段（后端计算后返回）
-    private String periods;    // 多轮时间段 JSON 数组
+    private String period;
+    private String periods;
     private Integer quota;
     private Integer enrolled;
     private String description;
     private Integer isDeleted; // 0正常 1已删除
-    private String category;  // 班级类别（管理员自定义）
+    private List<String> categoryNames; // 班级类别数组，如 ["杭电班","成电班"]
 
     public ClassDTO() {}
-
-    public ClassDTO(Integer id, String name, String period, String periods,
-                    Integer quota, Integer enrolled, String description, Integer isDeleted, String category) {
-        this.id = id;
-        this.name = name;
-        this.period = period;
-        this.periods = periods;
-        this.quota = quota;
-        this.enrolled = enrolled;
-        this.description = description;
-        this.isDeleted = isDeleted;
-        this.category = category;
-    }
 
     public Integer getId() { return id; }
     public void setId(Integer id) { this.id = id; }
@@ -60,8 +46,8 @@ public class ClassDTO implements Serializable {
     public Integer getIsDeleted() { return isDeleted; }
     public void setIsDeleted(Integer isDeleted) { this.isDeleted = isDeleted; }
 
-    public String getCategory() { return category; }
-    public void setCategory(String category) { this.category = category; }
+    public List<String> getCategoryNames() { return categoryNames; }
+    public void setCategoryNames(List<String> categoryNames) { this.categoryNames = categoryNames; }
 
     // ==================== Builder ====================
 
@@ -76,7 +62,7 @@ public class ClassDTO implements Serializable {
         private Integer enrolled;
         private String description;
         private Integer isDeleted;
-        private String category;
+        private List<String> categoryNames;
 
         public Builder id(Integer v) { this.id = v; return this; }
         public Builder name(String v) { this.name = v; return this; }
@@ -86,10 +72,20 @@ public class ClassDTO implements Serializable {
         public Builder enrolled(Integer v) { this.enrolled = v; return this; }
         public Builder description(String v) { this.description = v; return this; }
         public Builder isDeleted(Integer v) { this.isDeleted = v; return this; }
-        public Builder category(String v) { this.category = v; return this; }
+        public Builder categoryNames(List<String> v) { this.categoryNames = v; return this; }
 
         public ClassDTO build() {
-            return new ClassDTO(id, name, period, periods, quota, enrolled, description, isDeleted, category);
+            ClassDTO dto = new ClassDTO();
+            dto.setId(id);
+            dto.setName(name);
+            dto.setPeriod(period);
+            dto.setPeriods(periods);
+            dto.setQuota(quota);
+            dto.setEnrolled(enrolled);
+            dto.setDescription(description);
+            dto.setIsDeleted(isDeleted);
+            dto.setCategoryNames(categoryNames);
+            return dto;
         }
     }
 }

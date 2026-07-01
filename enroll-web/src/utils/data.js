@@ -16,7 +16,7 @@ export const initialForm = () => ({
   hasPhysics: '',  // 是否选考物理
   hasEnglish: '',  // 是否选考英语
   classId: null,   // 所选班级 ID
-  hdSubType: '',   // 杭电班子类别（仅 classId===1 时出现）
+  appliedCategory: '',   // 班级类别（学生报名时选择）
 })
 
 /**
@@ -66,7 +66,7 @@ export function parsePeriod(period) {
  */
 export function getClassTimeStatus(classInfo, now = null) {
   // ===== 测试开关 ===== 临时开放报名，测完改回 false
-  const isTestMode = false
+  const isTestMode = true
   if (isTestMode) {
     return { status: 'open', label: '报名中（测试模式）', canApply: true }
   }

@@ -44,9 +44,12 @@ public class ClassInfo {
     @Column(name = "is_deleted", nullable = false)
     private Integer isDeleted = 0;
 
-    /** 班级类别（管理员自定义，如：理工类/经管类/无类别） */
-    @Column(name = "category", length = 50)
-    private String category;
+    /**
+     * 班级类别 JSON 数组，如 ["杭电班","成电班"]
+     * 数据库存 TEXT，应用层解析为 List<String>
+     */
+    @Column(name = "category_names", columnDefinition = "TEXT")
+    private String categoryNames;  // JSON 字符串
 
     // ==================== getter / setter ====================
 
@@ -75,6 +78,6 @@ public class ClassInfo {
     public Integer getIsDeleted() { return isDeleted; }
     public void setIsDeleted(Integer isDeleted) { this.isDeleted = isDeleted; }
 
-    public String getCategory() { return category; }
-    public void setCategory(String category) { this.category = category; }
+    public String getCategoryNames() { return categoryNames; }
+    public void setCategoryNames(String categoryNames) { this.categoryNames = categoryNames; }
 }

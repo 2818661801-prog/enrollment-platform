@@ -575,7 +575,7 @@ const timelineItems = computed(() => {
   /* 移动端：横向滚动，每列 = 班级名(上) + 时间(下) + 标签 */
   .timeline-item {
     flex-shrink: 0;
-    width: 130px;            /* 每列固定宽度，避免挤在一起 */
+    width: 220px;            /* 每列固定宽度，避免挤在一起 */
     display: grid;
     grid-template-rows: auto auto auto;  /* 三行：班级名、时间、标签 */
     grid-template-columns: 1fr;
@@ -594,7 +594,7 @@ const timelineItems = computed(() => {
     grid-row: 1;     /* 第一行：班级名 */
   }
   .timeline-name {
-    font-size: 10px;
+    font-size: 11px;
     max-width: 100%;
     white-space: normal;
     overflow: visible;
@@ -602,7 +602,7 @@ const timelineItems = computed(() => {
     text-align: center;
   }
   .timeline-period {
-    font-size: 9px;
+    font-size: 10px;
     grid-row: 2;     /* 第二行：时间 */
     text-align: center;
   }

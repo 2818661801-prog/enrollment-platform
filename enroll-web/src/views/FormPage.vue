@@ -81,33 +81,18 @@
             </el-col>
           </el-row>
 
-          <!-- ===== 第四行：申报班级 ===== -->
-          <el-row :gutter="24" class="form-row">
-            <el-col :xs="24" :sm="24">
-              <el-form-item label="申报班级" prop="classId">
-                <el-select v-model="form.classId" placeholder="请选择特色班" style="width: 100%;" :disabled="!!route.params.classId">
-                  <el-option
-                    v-for="c in classes"
-                    :key="c.id"
-                    :value="c.id"
-                  >
-                    <span>{{ c.name }}</span>
-                    <el-tag v-if="c.category" size="small" type="primary" style="margin-left:6px;vertical-align:middle">
-                      {{ c.category }}
-                    </el-tag>
-                  </el-option>
-                </el-select>
-              </el-form-item>
-            </el-col>
-          </el-row>
+          <!-- 申报班级由 URL 参数直接指定，无需下拉选择 -->
 
-          <!-- ===== 第五行：杭电班类别（仅 classId===1 时显示） ===== -->
-          <el-row v-if="form.classId === 1" :gutter="24" class="form-row">
+          <!-- ===== 班级类别（单选，有配置才显示） ===== -->
+          <el-row v-if="selectedClass?.categoryNames?.length" :gutter="24" class="form-row">
             <el-col :xs="24" :sm="24">
-              <el-form-item label="杭电班类别" prop="hdSubType">
-                <el-radio-group v-model="form.hdSubType">
-                  <el-radio-button value="经管类">经管类</el-radio-button>
-                  <el-radio-button value="理工类">理工类</el-radio-button>
+              <el-form-item label="班级类别" prop="appliedCategory">
+                <el-radio-group v-model="form.appliedCategory">
+                  <el-radio-button
+                    v-for="cat in selectedClass.categoryNames"
+                    :key="cat"
+                    :value="cat"
+                  >{{ cat }}</el-radio-button>
                 </el-radio-group>
               </el-form-item>
             </el-col>
@@ -155,29 +140,7 @@
 
     <AppFooter />
 
-    <!-- 密码弹窗（报名成功后显示一次性密码） -->
-    <el-dialog
-      v-model="pwdDialogVisible"
-      title="报名成功！请保存您的查询密码"
-      width="90%"
-      :close-on-click-modal="false"
-      @close="onPwdDialogClose"
-    >
-      <div class="pwd-dialog-body">
-        <p class="pwd-tip">您的报名已提交成功！以下密码用于查询和撤回报名，请 <strong>截图保存</strong> 或 <strong>复制保存</strong>。</p>
-        <div class="pwd-display">
-          <span class="pwd-value">{{ pwdDialogData.plainPassword }}</span>
-          <el-button size="small" @click="copyPassword">
-            {{ copied ? '已复制' : '复制密码' }}
-          </el-button>
-        </div>
-        <p class="pwd-warn">⚠️ 密码仅显示这一次，之后无法再查看，请务必保存！</p>
-      </div>
-      <template #footer>
-        <el-button type="primary" @click="onPwdDialogClose">我已保存，前往首页</el-button>
-      </template>
-    </el-dialog>
-  </div>
+    </div>
 </template>
 
 <script setup>
@@ -200,11 +163,6 @@ const submitting = ref(false)
 const idCardValid = ref(false)
 const loading = ref(false)
 
-// 密码弹窗
-const pwdDialogVisible = ref(false)
-const pwdDialogData = ref({ plainPassword: '' })
-const copied = ref(false)
-
 // 班级列表：从后端 API 拿
 const classes = ref([])
 
@@ -216,7 +174,7 @@ onMounted(async () => {
   try {
     classes.value = await fetchClasses()
   } catch {
-    ElMessage.error('网络错误，无法加载班级')
+    ElMessage.error('网络错误，无法加载数据')
   } finally {
     loading.value = false
   }
@@ -280,11 +238,8 @@ const rules = computed(() => ({
   hasEnglish: [
     { validator: (_r, v, cb) => !v ? cb(new Error('请选择是否选考英语')) : cb(), trigger: 'change' },
   ],
-  classId: [
-    { validator: (_r, v, cb) => !v ? cb(new Error('请选择申报班级')) : cb(), trigger: 'change' },
-  ],
-  hdSubType: [
-    { validator: (_r, v, cb) => form.classId !== 1 || v ? cb() : cb(new Error('请选择杭电班类别')), trigger: 'change' },
+  appliedCategory: [
+    { validator: (_r, v, cb) => !selectedClass.value?.categoryNames?.length || v ? cb() : cb(new Error('请选择班级类别')), trigger: 'change' },
   ],
 }))
 
@@ -294,8 +249,8 @@ function goBack() {
 
 async function onSubmit() {
   // 1) 校验班级选择
-  if (!form.classId) {
-    ElMessage.warning('请先选择申报班级')
+  if (!selectedClass.value) {
+    ElMessage.warning('未指定申报班级，请从首页选择班级进入')
     return
   }
   if (!timeStatus.value?.canApply) {
@@ -325,24 +280,11 @@ async function onSubmit() {
   submitting.value = false
 
   if (result.success) {
-    pwdDialogData.value = { plainPassword: result.data?.plainPassword || '' }
-    pwdDialogVisible.value = true
+    ElMessage.success('报名提交成功！')
+    router.push('/home')
   } else {
     ElMessage.error(result.message || '提交失败')
   }
-}
-
-function copyPassword() {
-  navigator.clipboard.writeText(pwdDialogData.value.plainPassword).then(() => {
-    copied.value = true
-    setTimeout(() => { copied.value = false }, 2000)
-  }).catch(() => {
-    ElMessage.warning('复制失败，请手动截图保存')
-  })
-}
-
-function onPwdDialogClose() {
-  router.push('/home')
 }
 </script>
 
@@ -430,37 +372,14 @@ function onPwdDialogClose() {
   }
 }
 
-/* 密码弹窗 */
-.pwd-dialog-body {
-  text-align: center;
-}
-.pwd-tip {
-  font-size: 15px;
-  color: #333;
-  margin-bottom: 20px;
-  line-height: 1.6;
-}
-.pwd-display {
+.form-category-tags {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  background: #f0f5ff;
-  border: 2px dashed #337ffe;
-  border-radius: 8px;
-  padding: 16px 24px;
-  margin-bottom: 12px;
+  flex-wrap: wrap;
+  gap: 6px;
 }
-.pwd-value {
-  font-size: 32px;
-  font-weight: bold;
-  letter-spacing: 4px;
-  color: #337ffe;
-  font-family: monospace;
+.form-category-tags .el-tag {
+  font-size: 14px;
+  padding: 4px 12px;
 }
-.pwd-warn {
-  font-size: 13px;
-  color: #e6a23c;
-  margin-top: 8px;
-}
+
 </style>

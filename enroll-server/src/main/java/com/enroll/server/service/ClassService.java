@@ -5,6 +5,8 @@ import com.enroll.server.entity.ClassInfo;
 import com.enroll.server.exception.BusinessException;
 import com.enroll.server.dto.ResultCode;
 import com.enroll.server.repository.ClassInfoRepository;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -19,12 +21,16 @@ import java.util.stream.Collectors;
  * 多轮设计（periods JSON）：
  *   [{"round":1,"period":"2026/09/01 - 2026/09/13"},{"round":2,"period":"2026/09/15 - 2026/09/16"}]
  *   根据当前时间自动计算当前有效时间段
+ *
+ * 班级类别（category_names JSON）：
+ *   ["杭电班","成电班"]  存储在 classes.category_names 字段
  */
 @Service
 @Transactional(readOnly = true)
 public class ClassService {
 
     private static final Logger log = LoggerFactory.getLogger(ClassService.class);
+    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private final ClassInfoRepository classRepo;
 
@@ -78,7 +84,15 @@ public class ClassService {
         cls.setEnrolled(0);
         cls.setDescription((String) body.get("description"));
         cls.setIsDeleted(0);
-        cls.setCategory((String) body.get("category"));
+        // category_names：前端传 categoryNames List，转 JSON 存储
+        Object catNames = body.get("categoryNames");
+        if (catNames != null) {
+            try {
+                cls.setCategoryNames(MAPPER.writeValueAsString(catNames));
+            } catch (Exception ex) {
+                log.warn("categoryNames 序列化失败", ex);
+            }
+        }
         ClassInfo saved = classRepo.save(cls);
         log.info("新增班级: id={}, name={}", saved.getId(), saved.getName());
         return toDTO(saved);
@@ -105,7 +119,13 @@ public class ClassService {
         if (body.containsKey("quota"))       cls.setQuota((Integer) body.get("quota"));
         if (body.containsKey("description")) cls.setDescription((String) body.get("description"));
         if (body.containsKey("isDeleted"))  cls.setIsDeleted((Integer) body.get("isDeleted"));
-        if (body.containsKey("category")) cls.setCategory((String) body.get("category"));
+        if (body.containsKey("categoryNames")) {
+            try {
+                cls.setCategoryNames(MAPPER.writeValueAsString(body.get("categoryNames")));
+            } catch (Exception ex) {
+                log.warn("categoryNames 序列化失败", ex);
+            }
+        }
         ClassInfo saved = classRepo.save(cls);
         log.info("更新班级: id={}, name={}", saved.getId(), saved.getName());
         return toDTO(saved);
@@ -142,17 +162,31 @@ public class ClassService {
     // ==================== 内部：Entity → DTO ====================
 
     private ClassDTO toDTO(ClassInfo e) {
+        List<String> catNames = parseCategoryNames(e.getCategoryNames());
         return ClassDTO.builder()
                 .id(e.getId())
                 .name(e.getName())
-                .period(e.getPeriod())                    // 当前有效时间段
-                .periods(e.getPeriods())                  // 原始 periods JSON
+                .period(e.getPeriod())
+                .periods(e.getPeriods())
                 .quota(e.getQuota())
                 .enrolled(e.getEnrolled())
                 .description(e.getDescription())
                 .isDeleted(e.getIsDeleted() != null ? e.getIsDeleted() : 0)
-                .category(e.getCategory())
+                .categoryNames(catNames)
                 .build();
+    }
+
+    /**
+     * 解析 category_names JSON 字符串为 List<String>
+     */
+    private List<String> parseCategoryNames(String json) {
+        if (json == null || json.isBlank()) return List.of();
+        try {
+            return MAPPER.readValue(json, new TypeReference<List<String>>() {});
+        } catch (Exception ex) {
+            log.warn("category_names JSON 解析失败: {}", json);
+            return List.of();
+        }
     }
 
     /**
