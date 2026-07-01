@@ -30,4 +30,13 @@ const router = createRouter({
   routes,
 })
 
+// 路由守卫：管理端页面需登录 JWT
+router.beforeEach((to, from) => {
+  const isAdminRoute = to.path.startsWith('/admin')
+  const hasToken = !!localStorage.getItem('admin_token')
+  if (isAdminRoute && !hasToken && to.path !== '/admin/login') {
+    return '/admin/login'
+  }
+})
+
 export default router
