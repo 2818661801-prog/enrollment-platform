@@ -51,11 +51,25 @@ public class JwtUtil {
      * @return 签名的 JWT 字符串
      */
     public String generate(String idCard) {
+        return buildToken(idCard, "student");
+    }
+
+    /**
+     * 生成管理员 token
+     * @param phone 管理员手机号（作为 subject）
+     * @return 签名的 JWT 字符串
+     */
+    public String generateAdmin(String phone) {
+        return buildToken(phone, "admin");
+    }
+
+    /** 通用 buildToken */
+    private String buildToken(String subject, String role) {
         Map<String, Object> claims = new HashMap<>();
-        claims.put("role", "student");  // 角色：student / admin
+        claims.put("role", role);
         return Jwts.builder()
                 .claims(claims)
-                .subject(idCard)
+                .subject(subject)
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + expiration))
                 .signWith(getKey())

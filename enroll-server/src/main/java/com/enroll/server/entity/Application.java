@@ -6,6 +6,11 @@ import java.time.LocalDateTime;
 /**
  * 报名记录实体 — 对应数据库 applications 表
  *
+ * 状态机（status）：
+ *   1 = 已报名（正常，可撤回）
+ *   0 = 已撤回（学生主动撤回，视为软删除）
+ *   2 = 已录取（管理员批量录取）
+ *
  * 每行 = 一个学生的报名记录
  */
 @Entity
@@ -43,8 +48,23 @@ public class Application {
     @Column(name = "hd_sub_type", length = 20)
     private String hdSubType; // 杭电班类别（仅 class_id=1 时有值，可为 null）
 
-    @Column(nullable = false, length = 10)
-    private String status = "已报名"; // 状态：已报名 / 已录取 / 已撤回
+    /**
+     * 状态：
+     *   1 = 已报名
+     *   0 = 已撤回
+     *   2 = 已录取
+     * 数据库存 TINYINT，Java 用 Integer 对接
+     */
+    @Column(nullable = false)
+    private Integer status = 1;
+
+    /** 是否已录取：0否 1是 */
+    @Column(name = "is_admitted", nullable = false)
+    private Integer isAdmitted = 0;
+
+    /** 是否同意报名须知：0否 1是 */
+    @Column(name = "notice_agreed", nullable = false)
+    private Integer noticeAgreed = 0;
 
     @Column(name = "apply_time", nullable = false)
     private LocalDateTime applyTime = LocalDateTime.now(); // 报名时间
@@ -81,8 +101,14 @@ public class Application {
     public String getHdSubType() { return hdSubType; }
     public void setHdSubType(String hdSubType) { this.hdSubType = hdSubType; }
 
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
+    public Integer getStatus() { return status; }
+    public void setStatus(Integer status) { this.status = status; }
+
+    public Integer getIsAdmitted() { return isAdmitted; }
+    public void setIsAdmitted(Integer isAdmitted) { this.isAdmitted = isAdmitted; }
+
+    public Integer getNoticeAgreed() { return noticeAgreed; }
+    public void setNoticeAgreed(Integer noticeAgreed) { this.noticeAgreed = noticeAgreed; }
 
     public LocalDateTime getApplyTime() { return applyTime; }
     public void setApplyTime(LocalDateTime applyTime) { this.applyTime = applyTime; }

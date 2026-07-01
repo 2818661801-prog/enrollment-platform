@@ -10,9 +10,9 @@ import java.util.Map;
  * 报名 API 控制器（瘦控制器）
  *
  * RESTful：
- *   POST   /api/applications              — 提交报名
- *   GET    /api/applications/my?idCard=xx — 我的报名列表
- *   DELETE /api/applications/{id}         — 撤回报名
+ *   POST   /api/applications         — 提交报名
+ *   GET    /api/applications/my     — 我的报名（idCard 参数）
+ *   PUT    /api/applications/{id}/withdraw — 撤回报名（软删除）
  */
 @RestController
 @RequestMapping("/api/applications")
@@ -20,7 +20,6 @@ public class ApplicationController {
 
     private final ApplicationService applicationService;
 
-    /** 构造器注入（Spring 推荐，避免字段注入） */
     public ApplicationController(ApplicationService applicationService) {
         this.applicationService = applicationService;
     }
@@ -37,8 +36,8 @@ public class ApplicationController {
         return R.ok(applicationService.findMy(idCard));
     }
 
-    /** 撤回报名 */
-    @DeleteMapping("/{id}")
+    /** 撤回报名（软删除：status → 0） */
+    @PutMapping("/{id}/withdraw")
     public Map<String, Object> withdraw(@PathVariable Integer id) {
         applicationService.withdraw(id);
         return R.ok("已撤回", null);

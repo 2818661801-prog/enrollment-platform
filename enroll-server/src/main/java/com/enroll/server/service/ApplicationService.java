@@ -17,14 +17,23 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+
 /**
  * 报名业务层（核心）
  *
+ * 状态值（status）：
+ *   1 = 已报名（正常，可撤回）
+ *   0 = 已撤回（学生主动撤回，软删除）
+ *   2 = 已录取（管理员操作）
+ *
  * 业务规则：
- *   1. 防重复报名：同身份证 + 同班级 只能报一次
+ *   1. 防重复报名：同身份证 + 同班级 + status=1 只能有一条
  *   2. 校验名额：班级 enrolled >= quota 则拒绝
- *   3. 提交后自动 +1
- *   4. 撤回后自动 -1
+ *   3. 提交后 enrolled +1
+ *   4. 撤回后 enrolled -1（软删除，不删记录）
  *   5. 身份证脱敏：中间 8 位 → ********
  *
  * 事务边界：
@@ -36,6 +45,11 @@ import java.util.stream.Collectors;
 public class ApplicationService {
 
     private static final Logger log = LoggerFactory.getLogger(ApplicationService.class);
+
+    /** 状态常量 */
+    public static final int STATUS_APPLIED   = 1;  // 已报名
+    public static final int STATUS_WITHDRAWN = 0;  // 已撤回
+    public static final int STATUS_ENROLLED  = 2;  // 已录取
 
     private final ApplicationRepository appRepo;
     private final ClassInfoRepository classRepo;
@@ -50,21 +64,21 @@ public class ApplicationService {
 
     /**
      * 提交报名
-     * @param form 前端提交的表单 {name, idCard, gender, phone, ...}
+     * @param form 前端提交的表单 {name, idCard, gender, phone, hasPhysics, hasEnglish, classId, hdSubType, noticeAgreed}
      * @return 报名 DTO（含新分配的 ID）
      */
     @Transactional
     public ApplicationDTO submit(Map<String, Object> form) {
-        String idCard = (String) form.get("idCard");
+        String idCard  = (String) form.get("idCard");
         Integer classId = (Integer) form.get("classId");
 
-        // 1) 防重复
-        List<Application> existing = appRepo.findByIdCardAndClassId(idCard, classId);
+        // 1) 防重复报名（只查 status=1 的有效记录）
+        List<Application> existing = appRepo.findByIdCardAndClassIdAndStatus(idCard, classId, STATUS_APPLIED);
         if (!existing.isEmpty()) {
             throw new BusinessException(ResultCode.DUPLICATE_APPLICATION);
         }
 
-        // 2) 校验班级 + 名额
+        // 2) 校验班级存在 + 名额
         ClassInfo cls = classRepo.findById(classId)
                 .orElseThrow(() -> new BusinessException(ResultCode.CLASS_NOT_FOUND));
         if (cls.getEnrolled() >= cls.getQuota()) {
@@ -79,11 +93,14 @@ public class ApplicationService {
         app.setGender((String) form.get("gender"));
         app.setPhone((String) form.get("phone"));
         app.setHasPhysics((String) form.get("hasPhysics"));
-        // hasEnglish：只有 ACCA/CFA/智能财务 才会填，非这三类默认"否"
+        // hasEnglish：ACCA/CFA/智能财务 才有，非这三类默认"否"
         app.setHasEnglish((String) form.getOrDefault("hasEnglish", "否"));
         app.setClassId(classId);
-        app.setHdSubType((String) form.get("hdSubType"));
-        app.setStatus("已报名");
+        app.setStatus(STATUS_APPLIED);         // 1 = 已报名
+        app.setIsAdmitted(0);                  // 默认未录取
+        // noticeAgreed：前端传"true"/"1"则存1，否则存0
+        Object agreed = form.get("noticeAgreed");
+        app.setNoticeAgreed(parseFlag(agreed));
         app.setApplyTime(LocalDateTime.now());
         Application saved = appRepo.save(app);
 
@@ -95,10 +112,10 @@ public class ApplicationService {
         return toDTO(saved, cls.getName());
     }
 
-    // ==================== 撤回报名（写） ====================
+    // ==================== 撤回报名（软删除，写） ====================
 
     /**
-     * 撤回报名
+     * 撤回报名（软删除：将 status 改为 0，不删除记录）
      * @param id 报名记录 ID
      */
     @Transactional
@@ -106,23 +123,30 @@ public class ApplicationService {
         Application app = appRepo.findById(id)
                 .orElseThrow(() -> new BusinessException(ResultCode.APPLICATION_NOT_FOUND));
 
-        // 班级已报名人数 -1（保底不为负）
+        if (app.getStatus() == STATUS_WITHDRAWN) {
+            throw new BusinessException(ResultCode.PARAM_INVALID, "该报名已撤回，请勿重复操作");
+        }
+
+        // 软删除：status → 0
+        app.setStatus(STATUS_WITHDRAWN);
+        appRepo.save(app);
+
+        // 班级已报名人数 -1
         classRepo.findById(app.getClassId()).ifPresent(cls -> {
             cls.setEnrolled(Math.max(0, cls.getEnrolled() - 1));
             classRepo.save(cls);
         });
 
-        appRepo.delete(app);
         log.info("撤回报名: id={}, name={}", id, app.getName());
     }
 
-    // ==================== 我的报名（读） ====================
+    // ==================== 我的报名（读，只查有效记录） ====================
 
     /**
-     * 按身份证查我的报名列表
+     * 按身份证查我的报名列表（只查 status=1 已报名的）
      */
     public List<ApplicationDTO> findMy(String idCard) {
-        return appRepo.findByIdCard(idCard).stream()
+        return appRepo.findByIdCardAndStatus(idCard, STATUS_APPLIED).stream()
                 .map(app -> {
                     String className = classRepo.findById(app.getClassId())
                             .map(ClassInfo::getName)
@@ -130,6 +154,51 @@ public class ApplicationService {
                     return toDTO(app, className);
                 })
                 .collect(Collectors.toList());
+    }
+
+    // ==================== 管理端方法 ====================
+
+    /**
+     * 管理端分页查询报名记录
+     */
+    public Page<ApplicationDTO> adminSearch(Integer classId, Integer status,
+                                            String idCard, String name,
+                                            PageRequest pageable) {
+        return appRepo.adminSearch(classId, status, idCard, name, pageable)
+                .map(app -> {
+                    String className = classRepo.findById(app.getClassId())
+                            .map(ClassInfo::getName)
+                            .orElse("未知班级");
+                    return toDTO(app, className);
+                });
+    }
+
+    /**
+     * 批量更新 status（如批量撤回）
+     */
+    @Transactional
+    public void batchUpdateStatus(List<Integer> ids, int status) {
+        appRepo.batchUpdateStatus(ids, status);
+    }
+
+    /**
+     * 清空某班所有报名（软删除）
+     */
+    @Transactional
+    public void clearClass(Integer classId) {
+        appRepo.findByClassId(classId).forEach(app -> {
+            app.setStatus(STATUS_WITHDRAWN);
+            appRepo.save(app);
+        });
+    }
+
+    /**
+     * 批量录取（is_admitted=1，status=2）
+     */
+    @Transactional
+    public void batchAdmit(List<Integer> ids) {
+        appRepo.batchUpdateAdmitted(ids, 1);
+        appRepo.batchUpdateStatus(ids, STATUS_ENROLLED);
     }
 
     // ==================== 内部工具 ====================
@@ -140,20 +209,27 @@ public class ApplicationService {
         return idCard.replaceAll("(?<=^.{6}).{8}(?=.{4}$)", "********");
     }
 
-    /** Entity → DTO（隐藏完整身份证） */
+    /** 解析前端 checkbox/boolean 值 → 0/1 */
+    private Integer parseFlag(Object val) {
+        if (val == null) return 0;
+        if (val instanceof Boolean) return ((Boolean) val) ? 1 : 0;
+        String s = String.valueOf(val);
+        return "true".equalsIgnoreCase(s) || "1".equals(s) ? 1 : 0;
+    }
+
+    /** Entity → DTO */
     private ApplicationDTO toDTO(Application e, String className) {
         return ApplicationDTO.builder()
                 .id(e.getId())
                 .name(e.getName())
-                .idCard(e.getIdCardMasked())  // 返脱敏版
+                .idCard(e.getIdCardMasked())   // 返脱敏版
                 .gender(e.getGender())
                 .phone(e.getPhone())
                 .hasPhysics(e.getHasPhysics())
                 .hasEnglish(e.getHasEnglish())
                 .classId(e.getClassId())
                 .className(className)
-                .hdSubType(e.getHdSubType())
-                .status(e.getStatus())
+                .status(String.valueOf(e.getStatus()))
                 .applyTime(e.getApplyTime())
                 .build();
     }

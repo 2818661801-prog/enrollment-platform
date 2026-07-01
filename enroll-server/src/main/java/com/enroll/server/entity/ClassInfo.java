@@ -22,9 +22,6 @@ public class ClassInfo {
     @Column(nullable = false, length = 50)
     private String name;      // 班级名称
 
-    @Column(nullable = false, length = 20)
-    private String category;  // 类别：理工类 / 经管类
-
     @Column(nullable = false, length = 30)
     private String period;    // 报名时间段，如 "2026/07/01 - 2026/08/15"
 
@@ -34,11 +31,20 @@ public class ClassInfo {
     @Column(nullable = false)
     private Integer enrolled = 0; // 已报名人数（默认 0）
 
-    @Column(name = "need_physics") // 数据库用下划线，Java 用驼峰
-    private Boolean needPhysics;   // 是否要求选考物理（TINYINT → Boolean）
-
     @Column(columnDefinition = "TEXT")
     private String description;    // 班级简介（TEXT = 长文本）
+
+    /** 0=无第二轮 1=第一轮 2=第二轮（成电班有两轮） */
+    @Column(nullable = false)
+    private Integer round = 0;
+
+    /** 第一轮时间段（round=2 时使用，如 "2026/09/01 - 2026/09/13"） */
+    @Column(name = "round1_period", length = 50)
+    private String round1Period;
+
+    /** 软删除：0=正常 1=已删除 */
+    @Column(name = "is_deleted", nullable = false)
+    private Integer isDeleted = 0;
 
     // ==================== getter / setter ====================
 
@@ -47,9 +53,6 @@ public class ClassInfo {
 
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
-
-    public String getCategory() { return category; }
-    public void setCategory(String category) { this.category = category; }
 
     public String getPeriod() { return period; }
     public void setPeriod(String period) { this.period = period; }
@@ -60,9 +63,15 @@ public class ClassInfo {
     public Integer getEnrolled() { return enrolled; }
     public void setEnrolled(Integer enrolled) { this.enrolled = enrolled; }
 
-    public Boolean getNeedPhysics() { return needPhysics; }
-    public void setNeedPhysics(Boolean needPhysics) { this.needPhysics = needPhysics; }
-
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
+
+    public Integer getRound() { return round; }
+    public void setRound(Integer round) { this.round = round; }
+
+    public String getRound1Period() { return round1Period; }
+    public void setRound1Period(String round1Period) { this.round1Period = round1Period; }
+
+    public Integer getIsDeleted() { return isDeleted; }
+    public void setIsDeleted(Integer isDeleted) { this.isDeleted = isDeleted; }
 }

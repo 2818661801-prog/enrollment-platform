@@ -16,28 +16,30 @@ public class ClassDTO implements Serializable {
 
     private Integer id;
     private String name;
-    private String category;
     private String period;
+    private Integer round;         // 0无第二轮 1第一轮 2第二轮
+    private String round1Period;  // 第一轮时间段（round=2时用）
     private Integer quota;
     private Integer enrolled;
-    private Boolean needPhysics;
     private String description;
+    private Integer isDeleted;     // 0正常 1已删除
 
     // ==================== 构造器 ====================
 
     public ClassDTO() {}
 
-    /** 全参构造器（Builder.build() 用） */
-    public ClassDTO(Integer id, String name, String category, String period,
-                    Integer quota, Integer enrolled, Boolean needPhysics, String description) {
+    public ClassDTO(Integer id, String name, String period,
+                    Integer round, String round1Period,
+                    Integer quota, Integer enrolled, String description, Integer isDeleted) {
         this.id = id;
         this.name = name;
-        this.category = category;
         this.period = period;
+        this.round = round;
+        this.round1Period = round1Period;
         this.quota = quota;
         this.enrolled = enrolled;
-        this.needPhysics = needPhysics;
         this.description = description;
+        this.isDeleted = isDeleted;
     }
 
     // ==================== Getter / Setter ====================
@@ -48,11 +50,14 @@ public class ClassDTO implements Serializable {
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
 
-    public String getCategory() { return category; }
-    public void setCategory(String category) { this.category = category; }
-
     public String getPeriod() { return period; }
     public void setPeriod(String period) { this.period = period; }
+
+    public Integer getRound() { return round; }
+    public void setRound(Integer round) { this.round = round; }
+
+    public String getRound1Period() { return round1Period; }
+    public void setRound1Period(String round1Period) { this.round1Period = round1Period; }
 
     public Integer getQuota() { return quota; }
     public void setQuota(Integer quota) { this.quota = quota; }
@@ -60,40 +65,40 @@ public class ClassDTO implements Serializable {
     public Integer getEnrolled() { return enrolled; }
     public void setEnrolled(Integer enrolled) { this.enrolled = enrolled; }
 
-    public Boolean getNeedPhysics() { return needPhysics; }
-    public void setNeedPhysics(Boolean needPhysics) { this.needPhysics = needPhysics; }
-
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
 
-    // ==================== Builder（链式构建） ====================
+    public Integer getIsDeleted() { return isDeleted; }
+    public void setIsDeleted(Integer isDeleted) { this.isDeleted = isDeleted; }
 
-    /** 静态入口：ClassDTO.builder() 开始链式调用 */
-    public static Builder builder() {
-        return new Builder();
-    }
+    // ==================== Builder ====================
+
+    public static Builder builder() { return new Builder(); }
 
     public static class Builder {
         private Integer id;
         private String name;
-        private String category;
         private String period;
+        private Integer round;
+        private String round1Period;
         private Integer quota;
         private Integer enrolled;
-        private Boolean needPhysics;
         private String description;
+        private Integer isDeleted;
 
-        public Builder id(Integer id) { this.id = id; return this; }
-        public Builder name(String name) { this.name = name; return this; }
-        public Builder category(String category) { this.category = category; return this; }
-        public Builder period(String period) { this.period = period; return this; }
-        public Builder quota(Integer quota) { this.quota = quota; return this; }
-        public Builder enrolled(Integer enrolled) { this.enrolled = enrolled; return this; }
-        public Builder needPhysics(Boolean needPhysics) { this.needPhysics = needPhysics; return this; }
-        public Builder description(String description) { this.description = description; return this; }
+        public Builder id(Integer v) { this.id = v; return this; }
+        public Builder name(String v) { this.name = v; return this; }
+        public Builder period(String v) { this.period = v; return this; }
+        public Builder round(Integer v) { this.round = v; return this; }
+        public Builder round1Period(String v) { this.round1Period = v; return this; }
+        public Builder quota(Integer v) { this.quota = v; return this; }
+        public Builder enrolled(Integer v) { this.enrolled = v; return this; }
+        public Builder description(String v) { this.description = v; return this; }
+        public Builder isDeleted(Integer v) { this.isDeleted = v; return this; }
 
         public ClassDTO build() {
-            return new ClassDTO(id, name, category, period, quota, enrolled, needPhysics, description);
+            return new ClassDTO(id, name, period, round, round1Period,
+                    quota, enrolled, description, isDeleted);
         }
     }
 }

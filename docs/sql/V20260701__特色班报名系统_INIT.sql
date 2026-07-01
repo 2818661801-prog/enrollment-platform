@@ -1,0 +1,63 @@
+-- ============================================================
+-- 特色班报名系统 · 初始化 SQL（全新建表）
+-- 执行：直接全部跑一遍即可
+-- MySQL 8.0+
+-- ============================================================
+
+-- ---------- 1. classes 表 ----------
+CREATE TABLE `classes` (
+  `id`          INT         PRIMARY KEY AUTO_INCREMENT,
+  `name`        VARCHAR(200) NOT NULL                COMMENT '班级名称',
+  `period`      VARCHAR(50)  NOT NULL                COMMENT '报名时间段',
+  `round`       TINYINT(1)   DEFAULT 0              COMMENT '0无第二轮 1第一轮 2第二轮',
+  `round1_period` VARCHAR(50) DEFAULT NULL           COMMENT '第一轮时间段（round=2时用）',
+  `quota`       INT          DEFAULT 0              COMMENT '名额上限，-1不限',
+  `enrolled`    INT          DEFAULT 0              COMMENT '已报名人数',
+  `description` TEXT                                 COMMENT '班级说明',
+  `is_deleted`  TINYINT(1)   DEFAULT 0              COMMENT '软删除：0正常 1已删除'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='特色班表';
+
+-- ---------- 2. applications 表 ----------
+CREATE TABLE `applications` (
+  `id`             INT          PRIMARY KEY AUTO_INCREMENT,
+  `name`           VARCHAR(20)  NOT NULL                COMMENT '姓名',
+  `id_card`        VARCHAR(18)  NOT NULL                COMMENT '身份证号',
+  `id_card_masked` VARCHAR(18)  NOT NULL                COMMENT '脱敏身份证（中间8位***）',
+  `gender`         VARCHAR(2)   NOT NULL                COMMENT '性别',
+  `phone`          VARCHAR(11)  NOT NULL                COMMENT '联系电话',
+  `has_physics`    VARCHAR(2)   NOT NULL                COMMENT '是否选考物理',
+  `has_english`    VARCHAR(2)   NOT NULL                COMMENT '是否选考英语',
+  `class_id`       INT          NOT NULL                COMMENT '申报班级ID',
+  `status`         TINYINT(1)   DEFAULT 1               COMMENT '1已报名 0已撤回 2已录取',
+  `is_admitted`    TINYINT(1)   DEFAULT 0               COMMENT '是否已录取',
+  `notice_agreed`  TINYINT(1)   DEFAULT 0               COMMENT '是否同意报名须知',
+  `apply_time`     DATETIME     DEFAULT CURRENT_TIMESTAMP COMMENT '报名时间',
+  INDEX `idx_id_card`  (`id_card`),
+  INDEX `idx_class_id` (`class_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='报名记录表';
+
+-- ---------- 3. sys_config 表 ----------
+CREATE TABLE `sys_config` (
+  `id`         INT         PRIMARY KEY AUTO_INCREMENT,
+  `cfg_key`    VARCHAR(50) UNIQUE NOT NULL                COMMENT '配置键',
+  `cfg_value`  TEXT                                      COMMENT '配置值（JSON）',
+  `updated_at`  DATETIME    DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '最后修改时间',
+  `updated_by`  VARCHAR(50)  DEFAULT NULL               COMMENT '最后修改人'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='系统配置表';
+
+-- ---------- 4. 初始数据：7个班级 ----------
+INSERT INTO `classes` (`id`, `name`, `period`, `round`, `round1_period`, `quota`, `enrolled`, `description`) VALUES
+-- 成电班（round=2，两轮）
+(2, '2026级计算机科学与技术（成电联合培养·计算机学院成电班）', '2026/09/15 - 2026/09/16', 2, '2026/09/01 - 2026/09/13', 45, 0, '与电子科技大学联合培养，大二、大三赴电子科技大学学习'),
+(3, '2026级电子信息工程（成电联合培养·电子工程学院成电班）', '2026/09/15 - 2026/09/16', 2, '2026/09/01 - 2026/09/13', 35, 0, '与电子科技大学联合培养，嵌入式与通信技术方向'),
+-- 普通班（round=0，单轮）
+(1, '2026级拔尖创新人才实验班（杭电班）', '2026/09/01 - 2026/09/13', 0, NULL, 60, 0, '与杭州电子科技大学卓越学院"1+2+1"联合培养，下设理工实验班和经管实验班两类'),
+(4, '2026级会计学ACCA班', '2026/08/15 - 2026/09/16', 0, NULL, 50, 0, '与上海高顿教育合作，嵌入ACCA全部课程（F1~SBR）'),
+(5, '2026级金融学CFA班', '2026/08/15 - 2026/09/16', 0, NULL, 50, 0, '与上海高顿教育合作，CFA考试10门核心课程，中英文授课'),
+(6, '2026级会计学（智能财务）特色方向班', '2026/08/15 - 2026/08/25', 0, NULL, 39, 0, '结合电子信息特色，培养数智化财会人才'),
+(7, '2026级湖畔实验班（计算机）', '2026/08/05 - 2026/08/15', 0, NULL, 30, 0, '计算机专业校企合作实验班');
+
+-- ---------- 5. 初始数据：sys_config ----------
+INSERT INTO `sys_config` (`cfg_key`, `cfg_value`, `updated_by`) VALUES
+('notice',    '{"title":"报名须知","conditions":["报名者须为2026级新生","每人限报1个特色班","报名信息填写须真实有效"],"notices":["报名时间截止后不可修改","录取结果另行通知","如有疑问请联系教务处"]}', 'system'),
+('admin_phone', '***REMOVED***', 'system');
