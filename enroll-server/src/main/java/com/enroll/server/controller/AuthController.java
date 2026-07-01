@@ -3,7 +3,6 @@ package com.enroll.server.controller;
 import com.enroll.server.dto.ResultCode;
 import com.enroll.server.dto.R;
 import com.enroll.server.security.JwtUtil;
-import com.enroll.server.service.AuthService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.*;
@@ -13,11 +12,8 @@ import java.util.Map;
 /**
  * 管理员认证控制器
  *
- * RESTful：
- *   POST /api/auth/login/send-code — 发送验证码（手机号）
- *   POST /api/auth/login/verify    — 验证验证码 → 返 JWT
- *
- * 验证码：6位数字，5分钟有效，存内存 Map
+ * 账号密码登录（固定账号，无需数据库）：
+ *   POST /api/auth/login  — {username, password} → JWT
  *
  * 注意：此接口不在 /api/admin/** 下，不走 JWT 拦截器
  */
@@ -26,48 +22,34 @@ import java.util.Map;
 public class AuthController {
 
     private static final Logger log = LoggerFactory.getLogger(AuthController.class);
-
-    private final AuthService authService;
     private final JwtUtil jwtUtil;
 
-    public AuthController(AuthService authService, JwtUtil jwtUtil) {
-        this.authService = authService;
+    // 固定管理员账号（后续可扩展为数据库存储）
+    private static final String ADMIN_USER = "***REMOVED***";
+    private static final String ADMIN_PWD  = "***REMOVED***";
+
+    public AuthController(JwtUtil jwtUtil) {
         this.jwtUtil = jwtUtil;
     }
 
     /**
-     * 发送验证码
+     * 账号密码登录 → 返 JWT
      */
-    @PostMapping("/login/send-code")
-    public Map<String, Object> sendCode(@RequestBody Map<String, String> body) {
-        String phone = body.get("phone");
-        if (phone == null || phone.length() != 11) {
-            return R.fail(ResultCode.PARAM_INVALID, "手机号格式不正确");
-        }
-        authService.sendCode(phone);
-        return R.ok("验证码已发送（请查看服务器控制台）", null);
-    }
+    @PostMapping("/login")
+    public Map<String, Object> login(@RequestBody Map<String, String> body) {
+        String username = body.get("username");
+        String password = body.get("password");
 
-    /**
-     * 验证验证码 → 返 JWT
-     */
-    @PostMapping("/login/verify")
-    public Map<String, Object> verify(@RequestBody Map<String, String> body) {
-        String phone = body.get("phone");
-        String code = body.get("code");
-
-        if (phone == null || code == null) {
-            return R.fail(ResultCode.PARAM_INVALID, "手机号和验证码不能为空");
+        if (username == null || password == null) {
+            return R.fail(ResultCode.PARAM_INVALID, "账号和密码不能为空");
         }
 
-        // 验证码校验
-        if (!authService.verifyCode(phone, code)) {
-            return R.fail(ResultCode.PARAM_INVALID, "验证码错误或已过期");
+        if (!ADMIN_USER.equals(username) || !ADMIN_PWD.equals(password)) {
+            return R.fail(ResultCode.PARAM_INVALID, "账号或密码错误");
         }
 
-        // 生成管理员 JWT（role=admin）
-        String token = jwtUtil.generateAdmin(phone);
-        log.info("管理员登录成功：phone={}", phone);
-        return R.ok("登录成功", Map.of("token", token, "phone", phone));
+        String token = jwtUtil.generateAdmin(username);
+        log.info("管理员登录成功：username={}", username);
+        return R.ok("登录成功", Map.of("token", token, "username", username));
     }
 }

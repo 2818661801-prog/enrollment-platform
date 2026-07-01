@@ -82,18 +82,11 @@ export const fetchMyApplications = async (idCard) => {
 
 // ==================== 认证 API ====================
 
-/** 发送验证码 */
-export const sendLoginCode = (phone) =>
-  request('/api/auth/login/send-code', {
+/** 管理员账号密码登录 → 返 token */
+export const adminLoginAPI = (username, password) =>
+  request('/api/auth/login', {
     method: 'POST',
-    body: JSON.stringify({ phone }),
-  })
-
-/** 验证验证码 → 返 token */
-export const verifyLoginCode = (phone, code) =>
-  request('/api/auth/login/verify', {
-    method: 'POST',
-    body: JSON.stringify({ phone, code }),
+    body: JSON.stringify({ username, password }),
   })
 
 // ==================== 管理端 API（需 JWT）====================

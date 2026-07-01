@@ -8,7 +8,7 @@
     <div class="admin-header">
       <span class="logo">管理后台</span>
       <div class="header-right">
-        <span class="admin-phone">{{ adminPhone }}</span>
+        <span class="admin-username">{{ adminUsername }}</span>
         <el-button text @click="onLogout">退出</el-button>
       </div>
     </div>
@@ -210,7 +210,7 @@ import {
 
 const router = useRouter()
 const activeTab = ref('notice')
-const adminPhone = localStorage.getItem('admin_phone') || ''
+const adminUsername = localStorage.getItem('admin_username') || ''
 
 // ==================== 报名须知 ====================
 const notice = reactive({ title: '' })
@@ -237,7 +237,7 @@ async function onSaveNotice() {
       conditions: noticeCondText.value.split('\n').filter(s => s.trim()),
       notices: noticeNoticesText.value.split('\n').filter(s => s.trim()),
     })
-    await updateAdminConfig('notice', json, adminPhone)
+    await updateAdminConfig('notice', json, adminUsername)
     ElMessage.success('保存成功')
   } catch { ElMessage.error('保存失败') }
   finally { noticeSaving.value = false }
@@ -343,7 +343,7 @@ async function onBatchAdmit() {
 // ==================== 退出 ====================
 function onLogout() {
   localStorage.removeItem('admin_token')
-  localStorage.removeItem('admin_phone')
+  localStorage.removeItem('admin_username')
   router.push('/admin/login')
 }
 
@@ -373,7 +373,7 @@ onMounted(() => {
 }
 .logo { font-size: 18px; font-weight: 600; color: #fff; }
 .header-right { display: flex; align-items: center; gap: 12px; }
-.admin-phone { font-size: 13px; color: rgba(255,255,255,0.85); }
+.admin-username { font-size: 13px; color: rgba(255,255,255,0.85); }
 :deep(.header-right .el-button) { color: #fff; }
 .admin-tabs { min-height: calc(100vh - 56px); }
 .tab-body { padding: 20px; }
