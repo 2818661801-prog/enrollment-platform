@@ -10,7 +10,7 @@
         <h1>2026 特色班报名通道已开启</h1>
         <p>杭州电子科技大学信息工程学院 · {{ classes.length }} 个特色班级供你选择</p>
         <el-button type="primary" class="notice-link" @click="showNotice = true">
-          📋 查看报名须知
+          <img src="@/assets/images/checklist.svg" class="icon-svg" />查看报名须知
         </el-button>
       </div>
     </div>
@@ -55,7 +55,7 @@
 
       <!-- ===== 右侧时间轴 ===== -->
       <aside class="home-timeline">
-        <h4 class="timeline-title">📅 报名时间轴</h4>
+        <h4 class="timeline-title"><img src="@/assets/images/calendar(1).svg" class="icon-svg" />报名时间轴</h4>
         <div class="timeline">
           <div v-for="(item, i) in timelineItems" :key="i" class="timeline-item">
             <div class="timeline-left">
@@ -71,7 +71,7 @@
     <!-- ===== 报名须知弹窗（进入时自动弹出） ===== -->
     <el-dialog
       v-model="showNotice"
-      title="📋 杭州电子科技大学 2026 级特色班报名须知"
+      title="杭州电子科技大学 2026 级特色班报名须知"
       width="720px"
       :close-on-click-modal="true"
       :destroy-on-close="false"
@@ -295,6 +295,14 @@ const timelineItems = computed(() => {
   padding: 0 60px 0 24px;
   flex: 1;
   width: 100%;
+}
+/* SVG 图标通用样式 */
+.icon-svg {
+  display: inline-block;
+  width: 1.2em;
+  height: 1.2em;
+  vertical-align: middle;
+  margin-right: 4px;
 }
 
 /* ===== 主区 ===== */
