@@ -139,16 +139,6 @@
             style="margin-bottom: 8px;"
           />
 
-          <!-- 物理要求提示 -->
-          <el-alert
-            v-if="selectedClass && selectedClass.needPhysics && form.hasPhysics === '否'"
-            title="该班级要求选考物理，请确认是否符合条件"
-            type="warning"
-            show-icon
-            :closable="false"
-            style="margin-bottom: 20px;"
-          />
-
           <!-- ===== 按钮组 ===== -->
           <div class="submit-btn-wrap">
             <el-button type="primary" size="large" class="submit-btn" @click="onSubmit" :loading="submitting" :disabled="submitting">

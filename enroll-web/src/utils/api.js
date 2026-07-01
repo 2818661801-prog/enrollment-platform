@@ -40,13 +40,13 @@ export const fetchClasses = async () => {
   } catch {
     // 后端未启动时用兜底 mock 数据（时间全开放，供前端调试）
     return [
-      { id: 1, name: '2026级拔尖创新人才实验班（杭电班）', category: '经管类', period: '2026/01/01 - 2026/12/31', needPhysics: false },
-      { id: 2, name: '2026级计算机科学与技术（成电联合培养）', category: '理工类', period: '2026/01/01 - 2026/12/31', needPhysics: true },
-      { id: 3, name: '2026级电子信息工程（成电联合培养）', category: '理工类', period: '2026/01/01 - 2026/12/31', needPhysics: true },
-      { id: 4, name: '2026级会计学ACCA班', category: '经管类', period: '2026/01/01 - 2026/12/31', needPhysics: false },
-      { id: 5, name: '2026级金融学CFA班', category: '经管类', period: '2026/01/01 - 2026/12/31', needPhysics: false },
-      { id: 6, name: '2026级会计学（智能财务）特色方向班', category: '经管类', period: '2026/01/01 - 2026/12/31', needPhysics: false },
-      { id: 7, name: '2026级湖畔实验班（计算机）', category: '理工类', period: '2026/01/01 - 2026/12/31', needPhysics: true },
+      { id: 1, name: '2026级拔尖创新人才实验班（杭电班）', period: '2026/01/01 - 2026/12/31', round: 0 },
+      { id: 2, name: '2026级计算机科学与技术（成电联合培养）', period: '2026/01/01 - 2026/12/31', round: 1 },
+      { id: 3, name: '2026级电子信息工程（成电联合培养）', period: '2026/01/01 - 2026/12/31', round: 1 },
+      { id: 4, name: '2026级会计学ACCA班', period: '2026/01/01 - 2026/12/31', round: 0 },
+      { id: 5, name: '2026级金融学CFA班', period: '2026/01/01 - 2026/12/31', round: 0 },
+      { id: 6, name: '2026级会计学（智能财务）特色方向班', period: '2026/01/01 - 2026/12/31', round: 0 },
+      { id: 7, name: '2026级湖畔实验班（计算机）', period: '2026/01/01 - 2026/12/31', round: 0 },
     ]
   }
 }
