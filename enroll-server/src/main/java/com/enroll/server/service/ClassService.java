@@ -78,6 +78,7 @@ public class ClassService {
         cls.setEnrolled(0);
         cls.setDescription((String) body.get("description"));
         cls.setIsDeleted(0);
+        cls.setCategory((String) body.get("category"));
         ClassInfo saved = classRepo.save(cls);
         log.info("新增班级: id={}, name={}", saved.getId(), saved.getName());
         return toDTO(saved);
@@ -104,6 +105,7 @@ public class ClassService {
         if (body.containsKey("quota"))       cls.setQuota((Integer) body.get("quota"));
         if (body.containsKey("description")) cls.setDescription((String) body.get("description"));
         if (body.containsKey("isDeleted"))  cls.setIsDeleted((Integer) body.get("isDeleted"));
+        if (body.containsKey("category")) cls.setCategory((String) body.get("category"));
         ClassInfo saved = classRepo.save(cls);
         log.info("更新班级: id={}, name={}", saved.getId(), saved.getName());
         return toDTO(saved);
@@ -149,6 +151,7 @@ public class ClassService {
                 .enrolled(e.getEnrolled())
                 .description(e.getDescription())
                 .isDeleted(e.getIsDeleted() != null ? e.getIsDeleted() : 0)
+                .category(e.getCategory())
                 .build();
     }
 

@@ -61,12 +61,8 @@
             <el-table-column prop="period" label="报名时间段" min-width="160" />
             <el-table-column prop="quota" label="名额" width="70" />
             <el-table-column prop="enrolled" label="已报名" width="80" />
-            <el-table-column prop="isDeleted" label="状态" width="80">
-              <template #default="{ row }">
-                <el-tag :type="row.isDeleted === 1 ? 'danger' : 'success'" size="small">
-                  {{ row.isDeleted === 1 ? '已删除' : '正常' }}
-                </el-tag>
-              </template>
+            <el-table-column prop="category" label="班级类别" width="120">
+              <template #default="{ row }">{{ row.category || '—' }}</template>
             </el-table-column>
             <el-table-column label="操作" width="200" fixed="right">
               <template #default="{ row }">
@@ -192,6 +188,9 @@
         <el-form-item label="班级说明">
           <el-input v-model="classForm.description" type="textarea" :rows="3" />
         </el-form-item>
+        <el-form-item label="班级类别">
+          <el-input v-model="classForm.category" placeholder="选填，如：理工类/经管类等" clearable />
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="classDialogVisible=false">取消</el-button>
@@ -255,7 +254,7 @@ async function loadClasses() {
 
 const classDialogVisible = ref(false)
 const classDialogTitle = ref('')
-const classForm = reactive({ id: null, name: '', period: '', quota: 0, description: '' })
+const classForm = reactive({ id: null, name: '', period: '', quota: 0, description: '', category: '' })
 const periodRange = ref([])
 const classSaving = ref(false)
 
@@ -268,11 +267,11 @@ function parsePeriod(period) {
 function showClassDialog(row) {
   if (row) {
     classDialogTitle.value = '编辑班级'
-    Object.assign(classForm, { id: row.id, name: row.name, period: row.period, quota: row.quota, description: row.description })
+    Object.assign(classForm, { id: row.id, name: row.name, period: row.period, quota: row.quota, description: row.description, category: row.category || '' })
     periodRange.value = parsePeriod(row.period)
   } else {
     classDialogTitle.value = '新增班级'
-    Object.assign(classForm, { id: null, name: '', period: '', quota: 0, description: '' })
+    Object.assign(classForm, { id: null, name: '', period: '', quota: 0, description: '', category: '' })
     periodRange.value = []
   }
   classDialogVisible.value = true

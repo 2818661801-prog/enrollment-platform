@@ -44,6 +44,10 @@ public class ClassInfo {
     @Column(name = "is_deleted", nullable = false)
     private Integer isDeleted = 0;
 
+    /** 班级类别（管理员自定义，如：理工类/经管类/无类别） */
+    @Column(name = "category", length = 50)
+    private String category;
+
     // ==================== getter / setter ====================
 
     public Integer getId() { return id; }
@@ -70,4 +74,7 @@ public class ClassInfo {
 
     public Integer getIsDeleted() { return isDeleted; }
     public void setIsDeleted(Integer isDeleted) { this.isDeleted = isDeleted; }
+
+    public String getCategory() { return category; }
+    public void setCategory(String category) { this.category = category; }
 }

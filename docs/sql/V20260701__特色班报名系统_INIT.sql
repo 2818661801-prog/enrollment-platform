@@ -14,7 +14,8 @@ CREATE TABLE `classes` (
   `quota`       INT          DEFAULT 0              COMMENT '名额上限，-1不限',
   `enrolled`    INT          DEFAULT 0              COMMENT '已报名人数',
   `description` TEXT                                 COMMENT '班级说明',
-  `is_deleted`  TINYINT(1)   DEFAULT 0              COMMENT '软删除：0正常 1已删除'
+  `is_deleted`  TINYINT(1)   DEFAULT 0              COMMENT '软删除：0正常 1已删除',
+  `category`   VARCHAR(50)  DEFAULT NULL               COMMENT '班级类别（管理员自定义）'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='特色班表';
 
 -- ---------- 2. applications 表 ----------

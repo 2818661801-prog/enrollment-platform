@@ -17,11 +17,12 @@ public class ClassDTO implements Serializable {
     private Integer enrolled;
     private String description;
     private Integer isDeleted; // 0正常 1已删除
+    private String category;  // 班级类别（管理员自定义）
 
     public ClassDTO() {}
 
     public ClassDTO(Integer id, String name, String period, String periods,
-                    Integer quota, Integer enrolled, String description, Integer isDeleted) {
+                    Integer quota, Integer enrolled, String description, Integer isDeleted, String category) {
         this.id = id;
         this.name = name;
         this.period = period;
@@ -30,6 +31,7 @@ public class ClassDTO implements Serializable {
         this.enrolled = enrolled;
         this.description = description;
         this.isDeleted = isDeleted;
+        this.category = category;
     }
 
     public Integer getId() { return id; }
@@ -56,6 +58,9 @@ public class ClassDTO implements Serializable {
     public Integer getIsDeleted() { return isDeleted; }
     public void setIsDeleted(Integer isDeleted) { this.isDeleted = isDeleted; }
 
+    public String getCategory() { return category; }
+    public void setCategory(String category) { this.category = category; }
+
     // ==================== Builder ====================
 
     public static Builder builder() { return new Builder(); }
@@ -69,6 +74,7 @@ public class ClassDTO implements Serializable {
         private Integer enrolled;
         private String description;
         private Integer isDeleted;
+        private String category;
 
         public Builder id(Integer v) { this.id = v; return this; }
         public Builder name(String v) { this.name = v; return this; }
@@ -78,9 +84,10 @@ public class ClassDTO implements Serializable {
         public Builder enrolled(Integer v) { this.enrolled = v; return this; }
         public Builder description(String v) { this.description = v; return this; }
         public Builder isDeleted(Integer v) { this.isDeleted = v; return this; }
+        public Builder category(String v) { this.category = v; return this; }
 
         public ClassDTO build() {
-            return new ClassDTO(id, name, period, periods, quota, enrolled, description, isDeleted);
+            return new ClassDTO(id, name, period, periods, quota, enrolled, description, isDeleted, category);
         }
     }
 }
