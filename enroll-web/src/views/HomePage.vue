@@ -208,9 +208,26 @@ watch(showNotice, async (val) => {
   }
 })
 
+/**
+ * 卡片列表：先按 searchKeyword 过滤，再按报名开始时间升序
+ * 为什么排序：主人要求"按时间最早排前面"
+ */
 const displayClasses = computed(() => {
-  if (!searchKeyword.value) return classes.value
-  return classes.value.filter(c => c.id === searchKeyword.value)
+  // 1. 过滤（保留原逻辑）
+  const filtered = searchKeyword.value
+    ? classes.value.filter(c => c.id === searchKeyword.value)
+    : classes.value
+
+  // 2. 按报名开始时间升序排序
+  return [...filtered].sort((a, b) => {
+    try {
+      const aStart = parsePeriod(a.period).start.getTime()
+      const bStart = parsePeriod(b.period).start.getTime()
+      return aStart - bStart
+    } catch {
+      return 0  // 解析失败保持原序
+    }
+  })
 })
 
 /**

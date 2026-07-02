@@ -19,6 +19,7 @@ public class ApplicationDTO implements Serializable {
     private LocalDateTime applyTime;
     private String auditComment;
     private String classPeriods;  // 班级多轮时间段 JSON（前端算"第几轮"用）
+    private String source;        // 数据来源：student/admin/sync（2026-07-02 新增）
 
     public ApplicationDTO() {}
 
@@ -26,7 +27,7 @@ public class ApplicationDTO implements Serializable {
                           String phone, String hasPhysics, String hasEnglish,
                           Integer classId, String className, String appliedCategory,
                           String status, LocalDateTime applyTime, String auditComment,
-                          String classPeriods) {
+                          String classPeriods, String source) {
         this.id = id;
         this.name = name;
         this.idCard = idCard;
@@ -41,6 +42,7 @@ public class ApplicationDTO implements Serializable {
         this.applyTime = applyTime;
         this.auditComment = auditComment;
         this.classPeriods = classPeriods;
+        this.source = source;
     }
 
     // ==================== Getter / Setter ====================
@@ -87,6 +89,9 @@ public class ApplicationDTO implements Serializable {
     public String getClassPeriods() { return classPeriods; }
     public void setClassPeriods(String classPeriods) { this.classPeriods = classPeriods; }
 
+    public String getSource() { return source; }
+    public void setSource(String source) { this.source = source; }
+
     // ==================== Builder ====================
 
     public static Builder builder() { return new Builder(); }
@@ -106,6 +111,7 @@ public class ApplicationDTO implements Serializable {
         private LocalDateTime applyTime;
         private String auditComment;
         private String classPeriods;
+        private String source;
 
         public Builder id(Integer id) { this.id = id; return this; }
         public Builder name(String name) { this.name = name; return this; }
@@ -121,10 +127,11 @@ public class ApplicationDTO implements Serializable {
         public Builder applyTime(LocalDateTime applyTime) { this.applyTime = applyTime; return this; }
         public Builder auditComment(String auditComment) { this.auditComment = auditComment; return this; }
         public Builder classPeriods(String classPeriods) { this.classPeriods = classPeriods; return this; }
+        public Builder source(String source) { this.source = source; return this; }
 
         public ApplicationDTO build() {
             return new ApplicationDTO(id, name, idCard, gender, phone, hasPhysics, hasEnglish,
-                    classId, className, appliedCategory, status, applyTime, auditComment, classPeriods);
+                    classId, className, appliedCategory, status, applyTime, auditComment, classPeriods, source);
         }
     }
 }

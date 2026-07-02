@@ -73,6 +73,15 @@ public class Application {
     @Column(name = "apply_time", nullable = false)
     private LocalDateTime applyTime;
 
+    /**
+     * 数据来源（2026-07-02 内外网架构新增）
+     *   student — 学生自报（默认值，存量数据全部 backfill 为 student）
+     *   admin   — 管理员代录
+     *   sync    — 内网低代码平台同步
+     */
+    @Column(name = "source", nullable = false, length = 20)
+    private String source = "student";
+
     // ==================== 生命周期回调 ====================
 
     @PrePersist
@@ -125,4 +134,7 @@ public class Application {
 
     public LocalDateTime getApplyTime() { return applyTime; }
     public void setApplyTime(LocalDateTime applyTime) { this.applyTime = applyTime; }
+
+    public String getSource() { return source; }
+    public void setSource(String source) { this.source = source; }
 }

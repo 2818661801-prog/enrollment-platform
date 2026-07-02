@@ -383,8 +383,8 @@ public class ApplicationService {
         return "true".equalsIgnoreCase(s) || "1".equals(s) ? 1 : 0;
     }
 
-    /** Entity → DTO */
-    ApplicationDTO toDTO(Application e, String className) {
+    /** Entity → DTO（admin 端用，public 暴露方便 AdminController 调） */
+    public ApplicationDTO toDTO(Application e, String className) {
         return ApplicationDTO.builder()
                 .id(e.getId())
                 .name(e.getName())
@@ -400,6 +400,7 @@ public class ApplicationService {
                 .applyTime(e.getApplyTime())
                 .auditComment(e.getAuditComment())
                 .classPeriods(classRepo.findById(e.getClassId()).map(ClassInfo::getPeriods).orElse(null))
+                .source(e.getSource() != null ? e.getSource() : "student")
                 .build();
     }
 }

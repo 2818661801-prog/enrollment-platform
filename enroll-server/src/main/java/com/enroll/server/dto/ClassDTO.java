@@ -19,6 +19,7 @@ public class ClassDTO implements Serializable {
     private String description;
     private Integer isDeleted; // 0正常 1已删除
     private List<String> categoryNames; // 班级类别数组，如 ["杭电班","成电班"]
+    private String source; // 数据来源：admin/sync/student（2026-07-02 新增）
 
     public ClassDTO() {}
 
@@ -49,6 +50,9 @@ public class ClassDTO implements Serializable {
     public List<String> getCategoryNames() { return categoryNames; }
     public void setCategoryNames(List<String> categoryNames) { this.categoryNames = categoryNames; }
 
+    public String getSource() { return source; }
+    public void setSource(String source) { this.source = source; }
+
     // ==================== Builder ====================
 
     public static Builder builder() { return new Builder(); }
@@ -63,6 +67,7 @@ public class ClassDTO implements Serializable {
         private String description;
         private Integer isDeleted;
         private List<String> categoryNames;
+        private String source;
 
         public Builder id(Integer v) { this.id = v; return this; }
         public Builder name(String v) { this.name = v; return this; }
@@ -73,6 +78,7 @@ public class ClassDTO implements Serializable {
         public Builder description(String v) { this.description = v; return this; }
         public Builder isDeleted(Integer v) { this.isDeleted = v; return this; }
         public Builder categoryNames(List<String> v) { this.categoryNames = v; return this; }
+        public Builder source(String v) { this.source = v; return this; }
 
         public ClassDTO build() {
             ClassDTO dto = new ClassDTO();
@@ -85,6 +91,7 @@ public class ClassDTO implements Serializable {
             dto.setDescription(description);
             dto.setIsDeleted(isDeleted);
             dto.setCategoryNames(categoryNames);
+            dto.setSource(source);
             return dto;
         }
     }

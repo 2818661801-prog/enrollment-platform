@@ -51,6 +51,15 @@ public class ClassInfo {
     @Column(name = "category_names", columnDefinition = "TEXT")
     private String categoryNames;  // JSON 字符串
 
+    /**
+     * 数据来源（2026-07-02 内外网架构新增）
+     *   admin  — 管理员通过 AdminDashboard 创建
+     *   sync   — 内网低代码平台同步过来
+     *   student — 学生自建（极少，通常班级由管理员建）
+     */
+    @Column(name = "source", nullable = false, length = 20)
+    private String source = "admin";  // 默认 admin（保守起见）
+
     // ==================== getter / setter ====================
 
     public Integer getId() { return id; }
@@ -80,4 +89,7 @@ public class ClassInfo {
 
     public String getCategoryNames() { return categoryNames; }
     public void setCategoryNames(String categoryNames) { this.categoryNames = categoryNames; }
+
+    public String getSource() { return source; }
+    public void setSource(String source) { this.source = source; }
 }

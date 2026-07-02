@@ -15,12 +15,15 @@ import java.util.Map;
 /**
  * 报名 API 控制器（瘦控制器）
  *
- * RESTful：
+ * 2026-07-02 重构：所有"改数据库"接口统一改为 POST（主人规则：动数据库=POST，查数据库=GET）
+ *
+ * 接口列表：
  *   POST   /api/applications           — 提交报名
+ *   POST   /api/applications/update    — 修改报名信息
+ *   POST   /api/applications/withdraw  — 撤回报名
  *   GET    /api/applications/my        — 我的报名（idCard 参数）
- *   POST   /api/applications/my-verify — 密码查询
  *   GET    /api/applications/me        — 我的报名（JWT 认证，手机号自动提取）
- *   PUT    /api/applications/{id}/withdraw — 撤回报名（软删除）
+ *   POST   /api/applications/my-verify — 密码查询
  */
 @RestController
 @RequestMapping("/api/applications")
@@ -48,16 +51,26 @@ public class ApplicationController {
         return R.ok(applicationService.findMy(idCard));
     }
 
-    /** 撤回报名（软删除：status → 0） */
-    @PutMapping("/{id}/withdraw")
-    public Map<String, Object> withdraw(@PathVariable Integer id) {
+    /** 撤回报名（软删除：status → 0）
+     *  2026-07-02 重构：PUT → POST（主人规则） */
+    @PostMapping("/withdraw")
+    public Map<String, Object> withdraw(@RequestBody Map<String, Object> body) {
+        Integer id = (Integer) body.get("id");
+        if (id == null) {
+            return R.fail(ResultCode.PARAM_INVALID, "id 不能为空");
+        }
         applicationService.withdraw(id);
         return R.ok("已撤回", null);
     }
 
-    /** 修改报名信息（姓名/电话/选科） */
-    @PutMapping("/{id}")
-    public Map<String, Object> update(@PathVariable Integer id, @RequestBody Map<String, Object> body) {
+    /** 修改报名信息（姓名/电话/选科）
+     *  2026-07-02 重构：PUT → POST（主人规则） */
+    @PostMapping("/update")
+    public Map<String, Object> update(@RequestBody Map<String, Object> body) {
+        Integer id = (Integer) body.get("id");
+        if (id == null) {
+            return R.fail(ResultCode.PARAM_INVALID, "id 不能为空");
+        }
         applicationService.updateApp(id, body);
         return R.ok("修改成功", null);
     }

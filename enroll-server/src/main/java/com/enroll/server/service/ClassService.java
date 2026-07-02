@@ -173,6 +173,7 @@ public class ClassService {
                 .description(e.getDescription())
                 .isDeleted(e.getIsDeleted() != null ? e.getIsDeleted() : 0)
                 .categoryNames(catNames)
+                .source(e.getSource() != null ? e.getSource() : "admin")
                 .build();
     }
 
