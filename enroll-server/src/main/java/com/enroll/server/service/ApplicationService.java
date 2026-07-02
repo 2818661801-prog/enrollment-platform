@@ -86,14 +86,16 @@ public class ApplicationService {
             throw new BusinessException(ResultCode.PARAM_INVALID, "该班级当前不在报名时间内");
         }
 
-        // 3) 全局唯一报名：检查该学生是否有 status=1（已报名）的记录
-        List<Application> globalDup = appRepo.findByIdCardAndStatus(idCard, STATUS_APPLIED);
+        // 3) 全局唯一报名：检查该学生是否有 status != 0 and != 2 的记录（即已报名/已录取/未录取状态，不能再报）
+        List<Application> globalDup = appRepo.findByIdCardAndStatusIn(
+                idCard, List.of(STATUS_APPLIED, STATUS_ENROLLED, STATUS_REJECTED));
         if (!globalDup.isEmpty()) {
             throw new BusinessException(ResultCode.DUPLICATE_APPLICATION, "您已报名其他特色班，不可重复报名");
         }
 
-        // 4) 本轮防重复：同身份证 + 同班级 + 本轮 不能重复（status=1=已报名）
-        List<Application> roundDup = findRoundRecord(idCard, classId, currentRound);
+        // 4) 本轮防重复：同身份证 + 同班级 + 本轮，不能有 status != 0 and != 2 的记录
+        List<Application> roundDup = appRepo.findByIdCardAndClassIdAndStatusIn(
+                idCard, classId, List.of(STATUS_APPLIED, STATUS_ENROLLED, STATUS_REJECTED));
         if (!roundDup.isEmpty()) {
             throw new BusinessException(ResultCode.DUPLICATE_APPLICATION);
         }
@@ -236,6 +238,9 @@ public class ApplicationService {
 
         if (app.getStatus() == STATUS_WITHDRAWN) {
             throw new BusinessException(ResultCode.PARAM_INVALID, "该报名已撤回，请勿重复操作");
+        }
+        if (app.getStatus() == STATUS_ENROLLED) {
+            throw new BusinessException(ResultCode.PARAM_INVALID, "已录取的报名无法撤回");
         }
 
         // 软删除：status → 0

@@ -61,7 +61,7 @@ spring:
 #   jwt.enabled = false → 学生匿名（问卷式）
 #   jwt.enabled = true  → 强制鉴权（生产或加管理员后台时）
 jwt:
-  enabled: ${JWT_ENABLED:false}                # 默认关闭（问卷式免登录）
+  enabled: ${JWT_ENABLED:true}                 # 默认开启（生产必须为 true）
   secret: ${JWT_SECRET:***REMOVED***}
   expiration: ${JWT_EXPIRATION:86400000}       # 24 小时（毫秒）
   header: Authorization

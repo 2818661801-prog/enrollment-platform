@@ -28,6 +28,9 @@ public interface ApplicationRepository extends JpaRepository<Application, Intege
     /** 按身份证号 + status 查（查某状态下的报名） */
     List<Application> findByIdCardAndStatus(String idCard, Integer status);
 
+    /** 按身份证号 + status列表 查（全局唯一报名检查：已报名/已录取/未录取状态不能重复报） */
+    List<Application> findByIdCardAndStatusIn(String idCard, List<Integer> statuses);
+
     /** 按班级 ID 查该班的所有报名 */
     List<Application> findByClassId(Integer classId);
 
