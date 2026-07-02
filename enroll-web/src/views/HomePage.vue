@@ -414,7 +414,7 @@ const timelineItems = computed(() => {
   position: relative;
   padding-left: 16px;
   border-left: 2px solid var(--divider);
-  max-height: 420px;      /* 约7-8行，超出滚动 */
+  max-height: 600px;      /* 约10行，超出滚动 */
   overflow-y: auto;        /* 垂直滚动条 */
   scrollbar-width: thin;   /* Firefox 细滚动条 */
 }

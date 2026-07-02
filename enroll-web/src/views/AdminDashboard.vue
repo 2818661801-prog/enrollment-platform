@@ -223,7 +223,7 @@
     </el-tabs>
 
     <!-- 班级编辑弹窗 -->
-    <el-dialog v-model="classDialogVisible" :title="classDialogTitle" width="500px">
+    <el-dialog v-model="classDialogVisible" :title="classDialogTitle" width="500px" @close="dialogClosedManually || ElMessage.info('已取消')">
       <el-form label-width="100px">
         <el-form-item label="班级名称">
           <el-input v-model="classForm.name" />
@@ -331,6 +331,7 @@ const classDialogTitle = ref('')
 const classForm = reactive({ id: null, name: '', quota: 0, description: '', categoryNames: [] })
 const classRounds = ref([])   // [{period: "2026/09/01 - 2026/09/13"}, ...]
 const classSaving = ref(false)
+const dialogClosedManually = ref(false)  // true=用户手动关闭/取消，false=保存成功关闭
 
 // ==================== 类别管理 ====================
 const allCategories = ref([])
@@ -378,7 +379,9 @@ async function onDeleteCategory(id) {
     await deleteAdminCategory(id)
     loadCategories()
     ElMessage.success('已删除')
-  } catch {}
+  } catch (e) {
+    if (e) ElMessage.info('已取消')
+  }
 }
 
 function showClassDialog(row) {
@@ -399,6 +402,7 @@ function showClassDialog(row) {
     Object.assign(classForm, { id: null, name: '', quota: 0, description: '', categoryNames: [] })
     classRounds.value = [{ period: '' }]
   }
+  dialogClosedManually.value = false
   classDialogVisible.value = true
 }
 async function onSaveClass() {
@@ -432,6 +436,7 @@ async function onSaveClass() {
     } else {
       await createAdminClass(payload)
     }
+    dialogClosedManually.value = true
     classDialogVisible.value = false
     loadClasses()
     ElMessage.success('保存成功')
@@ -445,8 +450,7 @@ async function onDeleteClass(id) {
     loadClasses()
     ElMessage.success('已删除')
   } catch (e) {
-    // 用户取消 confirm 时 e 为空，不提示
-    if (e) ElMessage.error(e.message || '删除失败')
+    if (e) ElMessage.info('已取消')
   }
 }
 async function onRestoreClass(id) {
@@ -456,7 +460,7 @@ async function onRestoreClass(id) {
     loadClasses()
     ElMessage.success('已恢复')
   } catch (e) {
-    if (e) ElMessage.error(e.message || '恢复失败')
+    if (e) ElMessage.info('已取消')
   }
 }
 
