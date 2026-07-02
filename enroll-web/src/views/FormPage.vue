@@ -371,6 +371,9 @@ async function onVerifyAndNext() {
 }
 
 async function onSubmit() {
+  // 防抖：正在提交中，拒绝重复调用
+  if (submitting.value) return
+
   // 1) 校验班级选择
   if (!selectedClass.value) {
     ElMessage.warning('未指定申报班级，请从首页选择班级进入')
@@ -383,31 +386,31 @@ async function onSubmit() {
 
   // 2) 校验表单
   if (!formRef.value) return
+  let valid = false
   try {
-    await formRef.value.validate()
+    valid = await formRef.value.validate()
   } catch {
+    valid = false
+  }
+  if (!valid) {
     ElMessage.warning('请检查表单填写是否正确')
     return
   }
 
   // 3) 实际提交
-  if (!timeStatus.value?.canApply) {
-    ElMessage.error(`该班级${timeStatus.value?.label || '已不在报名期内'}，无法提交`)
-    return
-  }
-
   submitting.value = true
-  await new Promise(resolve => setTimeout(resolve, 800))
-
-  const result = await submitApplication({ ...form })
-  submitting.value = false
-
-  if (result.success) {
-    ElMessage.success('报名提交成功！')
-    // 跳到"我的报名"（已登录态，可直接看到记录）
-    router.push('/my-applications')
-  } else {
-    ElMessage.error(result.message || '提交失败')
+  try {
+    const result = await submitApplication({ ...form })
+    if (result.success) {
+      ElMessage.success('报名提交成功！')
+      router.push('/my-applications')
+    } else {
+      ElMessage.error(result.message || '提交失败')
+    }
+  } catch {
+    ElMessage.error('网络错误，请稍后重试')
+  } finally {
+    submitting.value = false
   }
 }
 </script>

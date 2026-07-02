@@ -279,7 +279,7 @@
       </el-form>
       <template #footer>
         <el-button @click="admitDialogVisible=false; ElMessage.info('已取消')">取消</el-button>
-        <el-button type="success" @click="onConfirmAdmit">确认录取</el-button>
+        <el-button type="success" @click="onConfirmAdmit" :loading="admitLoading">确认录取</el-button>
       </template>
     </el-dialog>
 
@@ -292,7 +292,7 @@
       </el-form>
       <template #footer>
         <el-button @click="rejectDialogVisible=false; ElMessage.info('已取消')">取消</el-button>
-        <el-button type="warning" @click="onConfirmReject">确认未录取</el-button>
+        <el-button type="warning" @click="onConfirmReject" :loading="rejectLoading">确认未录取</el-button>
       </template>
     </el-dialog>
   </div>
@@ -521,6 +521,8 @@ const admitDialogVisible = ref(false)
 const admitComment = ref('')
 const rejectDialogVisible = ref(false)
 const rejectComment = ref('')
+const admitLoading = ref(false)   // 批量录取防抖
+const rejectLoading = ref(false)  // 批量未录取防抖
 
 async function loadAdmitList() {
   const params = { page: 0, size: 200 }
@@ -534,7 +536,9 @@ async function loadAdmitList() {
   } catch {}
 }
 async function onConfirmAdmit() {
+  if (admitLoading.value) return
   const ids = selectedAdmit.value.map(s => s.id)
+  admitLoading.value = true
   try {
     await admitAdminApplications(ids, admitComment.value)
     admitDialogVisible.value = false
@@ -542,9 +546,12 @@ async function onConfirmAdmit() {
     loadAdmitList()
     ElMessage.success('已录取')
   } catch { ElMessage.error('操作失败') }
+  finally { admitLoading.value = false }
 }
 async function onConfirmReject() {
+  if (rejectLoading.value) return
   const ids = selectedAdmit.value.map(s => s.id)
+  rejectLoading.value = true
   try {
     await rejectAdminApplications(ids, rejectComment.value)
     rejectDialogVisible.value = false
@@ -552,6 +559,7 @@ async function onConfirmReject() {
     loadAdmitList()
     ElMessage.success('已设置未录取')
   } catch { ElMessage.error('操作失败') }
+  finally { rejectLoading.value = false }
 }
 
 // ==================== 退出 ====================
