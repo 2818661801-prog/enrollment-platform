@@ -1,54 +1,26 @@
 <!--
-  HomePage.vue · 报名首页（移动端适配 + 进入时弹出报名须知）
-  问卷式报名：学生扫码进入 → 弹窗须知 → 选班 → 填表 → 提交
+  HomePage.vue · 报名首页（V2.0 · Banner 轮播 + 筛选栏）
+  流程：学生扫码进入 → 弹窗须知 → 选班 → 填表 → 提交
 -->
 <template>
   <div class="home-page">
-    <!-- ===== Banner：放在 home-body 外面，方便移动端用 order 置顶 ===== -->
-    <div class="banner">
-      <div class="banner-content">
-        <h1>2026 特色班报名通道已开启</h1>
-        <p>杭州电子科技大学信息工程学院 · {{ classes.length }} 个特色班级供你选择</p>
-        <el-button type="primary" class="notice-link" @click="showNotice = true">
-          <img src="@/assets/images/checklist.svg" class="icon-svg" />查看报名须知
-        </el-button>
-      </div>
-    </div>
-
     <div class="home-body">
+      <!-- ===== Banner 轮播区（与主体内容共享 1200px 容器 + 边距） ===== -->
+      <HeroBanner
+        :classes-count="classes.length"
+        :classes="classes"
+        @cta-click="showNotice = true"
+      />
+
       <!-- ===== 主区 ===== -->
       <main class="home-main">
-        <!-- 搜索栏 -->
-        <div class="search-bar">
-          <el-select
-            v-model="searchKeyword"
-            placeholder="搜索班级名称..."
-            filterable
-            clearable
-            size="large"
-            style="width:320px"
-          >
-            <el-option
-              v-for="c in classes"
-              :key="c.id"
-              :label="c.name"
-              :value="c.id"
-            />
-          </el-select>
-          <el-button size="large" @click="searchKeyword=null">重置</el-button>
-
-          <!-- 我的报名入口：带图标的胶囊按钮（右上角） -->
-          <button
-            type="button"
-            class="my-apps-pill"
-            @click="router.push('/my-applications')"
-            aria-label="我的报名"
-          >
-            <img :src="folderIcon" alt="" class="my-apps-icon" />
-            <span class="my-apps-text">我的报名</span>
-            <span class="my-apps-arrow" aria-hidden="true">→</span>
-          </button>
-        </div>
+        <!-- 筛选栏：自定义下拉 + 重置 + 登录 + 我的报名 -->
+        <FilterBar
+          v-model="searchKeyword"
+          :classes="classes"
+          :is-logged-in="isLoggedIn"
+          @reset="searchKeyword = null"
+        />
 
         <!-- 卡片 -->
         <el-empty v-if="displayClasses.length === 0" description="暂无匹配班级" />
@@ -91,7 +63,7 @@
       <section class="nd-section">
         <h3>二、特色班简介</h3>
         <div class="nd-table-wrap">
-          <el-table :data="classes" border size="small">
+          <el-table :data="sortedClassesByPeriod" border size="small">
             <el-table-column label="班级名称" align="center" width="260">
               <template #default="{ row }">
                 <span class="class-name-full">{{ row.name }}</span>
@@ -132,14 +104,17 @@
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import folderIcon from '../assets/images/folder.svg'
-import { getClassTimeStatus } from '../utils/data.js'
+import { getClassTimeStatus, parsePeriod } from '../utils/data.js'
 import { fetchClasses, fetchNotice } from '../utils/api.js'
 import AppFooter from '../components/AppFooter.vue'
 import ClassCard from '../components/ClassCard.vue'
+import HeroBanner from '../components/HeroBanner.vue'
+import FilterBar from '../components/FilterBar.vue'
 
 const router = useRouter()
 const searchKeyword = ref(null)
+// 是否已登录（学生端 JWT）
+const isLoggedIn = ref(false)
 // 班级列表：从后端 API 拿
 const classes = ref([])
 const loading = ref(false)
@@ -154,6 +129,9 @@ const noticeData = ref({ conditions: [], notices: [] })
 let pollTimer = null
 
 onMounted(async () => {
+  // 检测学生端登录态（有 student_token 视为已登录）
+  isLoggedIn.value = !!localStorage.getItem('student_token')
+
   if (!sessionStorage.getItem('notice_shown')) {
     showNotice.value = true
     sessionStorage.setItem('notice_shown', '1')
@@ -235,6 +213,23 @@ const displayClasses = computed(() => {
   return classes.value.filter(c => c.id === searchKeyword.value)
 })
 
+/**
+ * 班级列表按报名开始时间升序
+ * 为什么排序：主人担心班级乱了，报名须知表格应按时间顺序展示
+ * 用 parsePeriod 解析 period 字符串 → start Date → 升序
+ */
+const sortedClassesByPeriod = computed(() => {
+  return [...classes.value].sort((a, b) => {
+    try {
+      const aStart = parsePeriod(a.period).start.getTime()
+      const bStart = parsePeriod(b.period).start.getTime()
+      return aStart - bStart
+    } catch {
+      return 0  // 解析失败保持原序
+    }
+  })
+})
+
 async function goFormDirect(classId) {
   const c = classes.value.find(c => c.id === classId)
   if (!c) return
@@ -280,29 +275,22 @@ function parsePeriodsArray(periodsJson, fallbackPeriod) {
   flex-direction: column;
   /* padding-top: 0; */  /* header 改为普通流，banner 自然紧贴下方 */
 }
-/* Banner：独立元素，桌面端作为 home-page 顶部最大宽度块 */
-.banner {
-  max-width: 1400px;
-  width: calc(100% - 68px);
-  margin: 20px auto 0;
-  padding: 0 0 0 0;
-}
-.home-body {
+/* ===== 主体容器 ===== */
+.home-page {
+  /* 整体页面背景 */
+  background: #f5f6fa;
+  min-height: 100vh;
   display: flex;
-  gap: 32px;
-  max-width: 1400px;
-  margin: 20px auto 0;
-  padding: 0 60px 0 24px;
-  flex: 1;
-  width: 100%;
+  flex-direction: column;
 }
-/* SVG 图标通用样式 */
-.icon-svg {
-  display: inline-block;
-  width: 1.2em;
-  height: 1.2em;
-  vertical-align: middle;
-  margin-right: 4px;
+
+/* Banner + 主体内容统一包在 home-body 里，最大宽度 1200px 居中 */
+.home-body {
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 16px 16px 32px;             /* 上下左右都留 16px 间距 */
+  flex: 1;
 }
 
 /* ===== 主区 ===== */
@@ -310,92 +298,18 @@ function parsePeriodsArray(periodsJson, fallbackPeriod) {
   flex: 1;
   min-width: 0;
 }
-.banner {
-  min-height: 160px;
-  border-radius: var(--radius-lg);
-  background: linear-gradient(135deg, #337eff 0%, #6366f1 100%);
-  display: flex;
-  align-items: center;
-  padding: 28px 40px;
-  margin-bottom: 0;
-}
-.banner-content h1 {
-  color: #fff;
-  font-size: 26px;
-  margin-bottom: 8px;
-}
-.banner-content p {
-  color: rgba(255, 255, 255, 0.8);
-  font-size: 14px;
-  margin-bottom: 16px;
-}
-.notice-link {
-  background: rgba(255,255,255,0.2) !important;
-  border-color: rgba(255,255,255,0.5) !important;
-  color: #fff !important;
-  margin-left: 12px;
-  font-size: 13px;
-}
-.notice-link:hover {
-  background: rgba(255,255,255,0.35) !important;
-  border-color: #fff !important;
-}
-.search-bar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  align-items: center;
-  margin-bottom: 16px;
-}
 
-/* ===== "我的报名" 胶囊按钮（右上角入口） ===== */
-.my-apps-pill {
-  margin-left: auto;                   /* 推到最右 */
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  height: 40px;
-  padding: 0 16px 0 14px;
-  background: #fff;
-  color: #1d4ed8;                       /* 深蓝（hover 后变白） */
-  border: 1px solid #337eff;            /* 主题蓝边框 */
-  border-radius: 999px;                 /* 胶囊 */
-  font-size: 14px;
-  font-weight: 600;
-  font-family: inherit;
-  cursor: pointer;
-  transition: background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
-  user-select: none;
-  white-space: nowrap;
-}
-.my-apps-pill:hover {
-  background: #337eff;                  /* hover：填充主题蓝 */
-  color: #fff;
-  box-shadow: 0 2px 8px rgba(51, 126, 255, 0.25);
-}
-.my-apps-pill:active {
-  transform: translateY(1px);           /* 按下轻微下沉 */
-}
-.my-apps-icon {
-  width: 16px;
-  height: 16px;
-  flex-shrink: 0;
-}
-.my-apps-text {
-  line-height: 1;
-}
-.my-apps-arrow {
-  font-size: 14px;
-  line-height: 1;
-  transition: transform 0.18s ease;
-}
-.my-apps-pill:hover .my-apps-arrow {
-  transform: translateX(2px);           /* hover 时箭头右移 */
-}
+/* ===== 卡片网格 ===== */
 .card-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 16px;
+  margin-top: 16px;
+}
+
+/* ===== Banner 下边距（web 端，移动端不动） ===== */
+:deep(.hero-banner) {
+  margin-bottom: 24px;
 }
 
 /* ===== 报名须知弹窗样式 ===== */
@@ -430,43 +344,15 @@ function parsePeriodsArray(periodsJson, fallbackPeriod) {
 /* ==================== 响应式：平板 ==================== */
 @media (max-width: 1100px) {
   .card-grid { grid-template-columns: repeat(2, 1fr); }
-  .banner { min-height: 160px; padding: 24px 28px; }
-  .banner-content h1 { font-size: 22px; }
-  .banner-content p { font-size: 13px; }
 }
 
 /* ==================== 响应式：手机 ==================== */
 @media (max-width: 768px) {
-  .home-page { padding-top: 0; }  /* header 已改为普通流，不需要占位 */
-  /* Banner 已经在 home-page 顶部，自然排第一 */
-  .banner {
-    min-height: auto;
-    padding: 12px 16px;
-    margin: 12px 12px 0;
-    width: auto;
-  }
   .home-body {
-    flex-direction: column;
-    gap: 12px;
+    padding: 0 12px 24px;
     margin-top: 12px;
-    padding: 0 12px;
   }
-  .home-main {
-    order: -1;
-  }
-  .banner-content h1 { font-size: 18px; }
-  .banner-content p { font-size: 12px; margin-bottom: 12px; }
   .card-grid { grid-template-columns: 1fr; gap: 12px; }
-  .notice-link { display: block; margin-left: 0; margin-top: 8px; }
-
-  /* 移动端："我的报名" pill 移到下一行，高度略小 */
-  .my-apps-pill {
-    margin-left: auto;
-    height: 36px;
-    padding: 0 14px 0 12px;
-    font-size: 13px;
-  }
-  .my-apps-icon { width: 14px; height: 14px; }
 
   .nd-section h3 {
     font-size: 14px;

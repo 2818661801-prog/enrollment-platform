@@ -1,7 +1,12 @@
 <!--
-  FormPage.vue · 报名表单页（移动端适配）
-  el-steps 进度条 + el-form 8 字段 + 联动校验
-  移动端：步骤条紧凑 + 表单字段纵向堆叠
+  FormPage.vue · 报名表单页（V2.0 · 2 步流程）
+  流程：
+    Step 1: 手机号+验证码（未登录时）— 复用 usePhoneCode composable
+    Step 2: 原表单详情（姓名/身份证/性别/选科/类别）— 提交即登录态
+  设计要点：
+    - 已登录用户（有 student_token）跳过 Step 1，直接进 Step 2
+    - 提交成功后跳 /my-applications（已登录态，可直接看自己的报名）
+    - 移动端：步骤指示器紧凑 + 表单字段纵向堆叠
 -->
 <template>
   <div class="form-page">
@@ -12,8 +17,81 @@
         返回
       </el-button>
 
-      <!-- 表单容器 -->
-      <el-card class="form-card">
+      <!-- 步骤指示器 -->
+      <div class="step-indicator">
+        <div class="step-item" :class="{ 'is-active': step === 1, 'is-done': step > 1 }">
+          <div class="step-dot">1</div>
+          <div class="step-label">手机验证</div>
+        </div>
+        <div class="step-line" :class="{ 'is-done': step > 1 }" />
+        <div class="step-item" :class="{ 'is-active': step === 2 }">
+          <div class="step-dot">2</div>
+          <div class="step-label">填写报名</div>
+        </div>
+      </div>
+
+      <!-- ==================== Step 1: 手机号+验证码 ==================== -->
+      <el-card v-if="step === 1" class="step-card">
+        <template #header>
+          <div class="card-header">
+            <el-icon size="20" color="#337eff"><Iphone /></el-icon>
+            <span>请先验证手机号</span>
+          </div>
+        </template>
+        <p class="step-desc">验证手机号后即可提交报名，并自动登录查看报名记录</p>
+
+        <el-form
+          ref="phoneFormRef"
+          :model="{ phone: phoneCode.phone.value }"
+          label-position="top"
+          @submit.prevent
+        >
+          <el-form-item label="手机号">
+            <el-input
+              v-model="phoneCode.phone.value"
+              placeholder="请输入11位手机号"
+              maxlength="11"
+              @keyup.enter="phoneCode.onSendCode"
+            >
+              <template #prefix>
+                <span class="phone-prefix">+86</span>
+              </template>
+            </el-input>
+          </el-form-item>
+
+          <el-button
+            type="primary"
+            class="send-btn"
+            :disabled="phoneCode.countdown.value > 0"
+            :loading="phoneCode.sending.value"
+            @click="phoneCode.onSendCode"
+          >
+            {{ phoneCode.countdown.value > 0 ? `${phoneCode.countdown.value}秒后重发` : '发送验证码' }}
+          </el-button>
+
+          <el-form-item v-if="phoneCode.codeSent.value" label="验证码" class="code-item">
+            <el-input
+              v-model="phoneCode.code.value"
+              placeholder="请输入6位验证码"
+              maxlength="6"
+              @keyup.enter="onVerifyAndNext"
+            />
+          </el-form-item>
+
+          <el-button
+            v-if="phoneCode.codeSent.value"
+            type="primary"
+            class="next-btn"
+            :loading="phoneCode.logging.value"
+            @click="onVerifyAndNext"
+          >
+            下一步
+          </el-button>
+        </el-form>
+      </el-card>
+
+      <!-- ==================== Step 2: 表单详情 ==================== -->
+      <el-card v-else-if="step === 2" class="form-card">
         <el-form
           ref="formRef"
           :model="form"
@@ -24,6 +102,16 @@
           validateOnMount="false"
           @submit.prevent
         >
+          <!-- 已登录身份提示 -->
+          <el-alert
+            v-if="verifiedPhone"
+            :title="`已用手机号 ${verifiedPhone} 登录`"
+            type="success"
+            show-icon
+            :closable="false"
+            style="margin-bottom: 16px;"
+          />
+
           <!-- ===== 第一行：姓名 + 身份证号 ===== -->
           <el-row :gutter="24" class="form-row">
             <el-col :xs="24" :sm="12">
@@ -139,29 +227,35 @@
     </div>
 
     <AppFooter />
-
-    </div>
+  </div>
 </template>
 
 <script setup>
 import { ref, reactive, computed, watch, onMounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { SuccessFilled, ArrowLeft } from '@element-plus/icons-vue'
+import { SuccessFilled, ArrowLeft, Iphone } from '@element-plus/icons-vue'
 import { initialForm, getClassTimeStatus } from '../utils/data.js'
 import { fetchClasses } from '../utils/api.js'
 import { validateIdCard, validatePhone, validateName, inferGender } from '../utils/validate.js'
 import { useApplication } from '../composables/useApplication.js'
+import { usePhoneCode } from '../composables/usePhoneCode.js'
 import AppFooter from '../components/AppFooter.vue'
 
 const route = useRoute()
 const router = useRouter()
 const { submitApplication } = useApplication()
+const phoneCode = usePhoneCode()  // 共享的"发码+验证+登录"逻辑
 
 const formRef = ref(null)
 const submitting = ref(false)
 const idCardValid = ref(false)
 const loading = ref(false)
+
+// 步骤：1=验证码 / 2=表单详情
+const step = ref(1)
+// 验证通过的手机号（提交时写回 form.phone）
+const verifiedPhone = ref('')
 
 // 班级列表：从后端 API 拿
 const classes = ref([])
@@ -178,6 +272,16 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
+
+  // 检查是否已登录（已有 student_token）→ 跳过 Step 1
+  const existingToken = localStorage.getItem('student_token')
+  const existingPhone = localStorage.getItem('student_phone')
+  if (existingToken && existingPhone) {
+    // 已登录：直接进 Step 2
+    verifiedPhone.value = existingPhone
+    step.value = 2
+  }
+
   // 进入页面时清除所有校验提示（不自动校验）
   nextTick(() => formRef.value?.clearValidate())
 })
@@ -244,7 +348,26 @@ const rules = computed(() => ({
 }))
 
 function goBack() {
+  // Step 2 → Step 1：返回上一步
+  if (step.value === 2 && !localStorage.getItem('student_token')) {
+    step.value = 1
+    return
+  }
   router.push('/home')
+}
+
+/**
+ * Step 1 → Step 2：验证手机号成功后进入表单
+ */
+async function onVerifyAndNext() {
+  const ok = await phoneCode.onLogin()
+  if (!ok) return
+  verifiedPhone.value = phoneCode.phone.value
+  // 把验证过的手机号回填到表单（用户可改）
+  form.phone = phoneCode.phone.value
+  // 跳到 Step 2
+  step.value = 2
+  nextTick(() => formRef.value?.clearValidate())
 }
 
 async function onSubmit() {
@@ -281,7 +404,8 @@ async function onSubmit() {
 
   if (result.success) {
     ElMessage.success('报名提交成功！')
-    router.push('/home')
+    // 跳到"我的报名"（已登录态，可直接看到记录）
+    router.push('/my-applications')
   } else {
     ElMessage.error(result.message || '提交失败')
   }
@@ -309,6 +433,109 @@ async function onSubmit() {
 .back-btn:hover {
   color: var(--brand-primary);
 }
+
+/* ==================== 步骤指示器 ==================== */
+.step-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  margin: 0 auto 24px;
+  max-width: 360px;
+}
+.step-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.step-dot {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #f1f5f9;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 600;
+  border: 2px solid #e2e8f0;
+  transition: all 0.2s;
+}
+.step-item.is-active .step-dot {
+  background: #337eff;
+  color: #fff;
+  border-color: #337eff;
+  box-shadow: 0 0 0 4px rgba(51, 126, 255, 0.12);
+}
+.step-item.is-done .step-dot {
+  background: #22c55e;
+  border-color: #22c55e;
+  color: #fff;
+}
+.step-label {
+  font-size: 12px;
+  color: #94a3b8;
+  font-weight: 500;
+}
+.step-item.is-active .step-label,
+.step-item.is-done .step-label {
+  color: #0f172a;
+}
+.step-line {
+  flex: 1;
+  height: 2px;
+  background: #e2e8f0;
+  margin: 0 12px;
+  margin-bottom: 22px;
+  transition: background 0.2s;
+}
+.step-line.is-done {
+  background: #22c55e;
+}
+
+/* ==================== Step 1: 手机验证 ==================== */
+.step-card {
+  border-radius: 8px;
+}
+.step-card :deep(.el-card__header) {
+  padding: 16px 20px;
+}
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #0f172a;
+}
+.step-desc {
+  margin: 0 0 20px;
+  font-size: 13px;
+  color: #64748b;
+}
+.phone-prefix {
+  font-size: 14px;
+  color: #94a3b8;
+  padding: 0 4px;
+}
+.send-btn {
+  width: 100%;
+  margin-bottom: 16px;
+}
+.code-item {
+  margin-top: 8px;
+}
+.next-btn {
+  width: 100%;
+  height: 44px;
+  font-size: 15px;
+  margin-top: 8px;
+}
+
+/* ==================== Step 2: 表单详情 ==================== */
 .submit-btn-wrap {
   margin-top: 24px;
   text-align: center;
@@ -344,10 +571,12 @@ async function onSubmit() {
     margin: 12px auto;
     padding: 0 8px;
   }
-  .form-card {
+  .form-card,
+  .step-card {
     padding: 0;
   }
-  .form-card :deep(.el-card__body) {
+  .form-card :deep(.el-card__body),
+  .step-card :deep(.el-card__body) {
     padding: 14px;
   }
   /* 表单项标签改为顶部对齐（省横向空间） */
@@ -381,5 +610,4 @@ async function onSubmit() {
   font-size: 14px;
   padding: 4px 12px;
 }
-
 </style>

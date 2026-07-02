@@ -1,6 +1,7 @@
 <!--
-  StudentLogin.vue · 学生手机验证码登录页
+  StudentLogin.vue · 学生手机验证码登录页（V2.0 · 复用 usePhoneCode）
   流程：输入手机号 → 发送验证码 → 填验证码 → 登录 → JWT 存 localStorage → 跳转 /my-applications
+  关键：登录逻辑全部抽到 usePhoneCode composable，本文件只负责 UI
 -->
 <template>
   <div class="login-page">
@@ -12,53 +13,48 @@
       </div>
 
       <!-- 手机号输入 -->
-      <el-form ref="phoneFormRef" :model="phoneForm" :rules="phoneRules" label-position="top">
-        <el-form-item label="手机号" prop="phone">
-          <el-input
-            v-model="phoneForm.phone"
-            placeholder="请输入手机号"
-            maxlength="11"
-            @keyup.enter="onSendCode"
-          >
-            <template #prefix>
-              <span class="phone-prefix">+86</span>
-            </template>
-          </el-input>
-        </el-form-item>
-      </el-form>
+      <el-input
+        v-model="phoneCode.phone.value"
+        placeholder="请输入手机号"
+        maxlength="11"
+        class="phone-input"
+        @keyup.enter="phoneCode.onSendCode"
+      >
+        <template #prefix>
+          <span class="phone-prefix">+86</span>
+        </template>
+      </el-input>
 
       <!-- 发送验证码按钮 -->
       <el-button
         type="primary"
         class="send-btn"
-        :disabled="countdown > 0"
-        :loading="sending"
-        @click="onSendCode"
+        :disabled="phoneCode.countdown.value > 0"
+        :loading="phoneCode.sending.value"
+        @click="phoneCode.onSendCode"
       >
-        {{ countdown > 0 ? `${countdown}秒后重发` : '发送验证码' }}
+        {{ phoneCode.countdown.value > 0 ? `${phoneCode.countdown.value}秒后重发` : '发送验证码' }}
       </el-button>
 
-      <!-- 验证码输入 + 登录 -->
-      <div v-if="codeSent" class="login-form">
-        <el-form ref="codeFormRef" :model="codeForm" :rules="codeRules" label-position="top">
-          <el-form-item label="验证码" prop="code">
-            <el-input
-              v-model="codeForm.code"
-              placeholder="请输入6位验证码"
-              maxlength="6"
-              @keyup.enter="onLogin"
-            />
-          </el-form-item>
-        </el-form>
+      <!-- 验证码输入 + 登录（发码后才显示） -->
+      <template v-if="phoneCode.codeSent.value">
+        <el-input
+          v-model="phoneCode.code.value"
+          placeholder="请输入6位验证码"
+          maxlength="6"
+          class="code-input"
+          @keyup.enter="onLogin"
+        />
+
         <el-button
           type="primary"
           class="login-btn"
-          :loading="logging"
+          :loading="phoneCode.logging.value"
           @click="onLogin"
         >
           登录
         </el-button>
-      </div>
+      </template>
 
       <!-- 返回首页 -->
       <div class="back-home">
@@ -69,113 +65,19 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { usePhoneCode } from '../composables/usePhoneCode.js'
 
 const router = useRouter()
+const phoneCode = usePhoneCode()  // 共享的"发码+验证+登录"逻辑
 
-// ==================== 状态 ====================
-const phoneFormRef = ref(null)
-const codeFormRef  = ref(null)
-const sending   = ref(false)
-const logging   = ref(false)
-const countdown = ref(0)
-const codeSent  = ref(false)
-let timer = null
-
-// ==================== 手机号表单 ====================
-const phoneForm = reactive({ phone: '' })
-const phoneRules = {
-  phone: [
-    { required: true, message: '请输入手机号', trigger: 'blur' },
-    {
-      validator: (_r, v, cb) =>
-        /^1[3-9]\d{9}$/.test(v) ? cb() : cb(new Error('手机号格式不正确')),
-      trigger: 'blur',
-    },
-  ],
-}
-
-// ==================== 验证码表单 ====================
-const codeForm = reactive({ code: '' })
-const codeRules = {
-  code: [
-    { required: true, message: '请输入验证码', trigger: 'blur' },
-    {
-      validator: (_r, v, cb) =>
-        /^\d{6}$/.test(v) ? cb() : cb(new Error('验证码为6位数字')),
-      trigger: 'blur',
-    },
-  ],
-}
-
-// ==================== 发送验证码 ====================
-async function onSendCode() {
-  try {
-    await phoneFormRef.value.validate()
-  } catch {
-    return
-  }
-
-  sending.value = true
-  try {
-    const res = await fetch('/api/auth/send-code', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone: phoneForm.phone }),
-    })
-    const data = await res.json()
-    if (data.code !== 200) {
-      ElMessage.error(data.message || '发送失败')
-      return
-    }
-    ElMessage.success('验证码已发送')
-    codeSent.value = true
-    // 启动 60s 倒计时
-    countdown.value = 60
-    timer = setInterval(() => {
-      countdown.value--
-      if (countdown.value <= 0) clearInterval(timer)
-    }, 1000)
-  } catch (e) {
-    ElMessage.error('网络错误，请稍后重试')
-  } finally {
-    sending.value = false
-  }
-}
-
-// ==================== 登录 ====================
+/**
+ * 登录成功后跳转
+ */
 async function onLogin() {
-  try {
-    await codeFormRef.value.validate()
-  } catch {
-    return
-  }
-
-  logging.value = true
-  try {
-    const res = await fetch('/api/auth/login/sms', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone: phoneForm.phone, code: codeForm.code }),
-    })
-    const data = await res.json()
-    if (data.code !== 200) {
-      ElMessage.error(data.message || '登录失败')
-      return
-    }
-    const { token, phone } = data.data
-    // 存 localStorage
-    localStorage.setItem('student_token', token)
-    localStorage.setItem('student_phone', phone)
-    ElMessage.success('登录成功')
-    clearInterval(timer)
+  const ok = await phoneCode.onLogin()
+  if (ok) {
     router.push('/my-applications')
-  } catch (e) {
-    ElMessage.error('网络错误，请稍后重试')
-  } finally {
-    logging.value = false
   }
 }
 
@@ -214,9 +116,8 @@ function goHome() {
   font-size: 13px;
   color: #999;
 }
-:deep(.el-form-item__label) {
-  font-weight: 500;
-  padding-bottom: 4px !important;
+.phone-input {
+  margin-bottom: 12px;
 }
 .phone-prefix {
   font-size: 14px;
@@ -226,8 +127,8 @@ function goHome() {
   width: 100%;
   margin-bottom: 20px;
 }
-.login-form {
-  margin-top: 4px;
+.code-input {
+  margin-bottom: 12px;
 }
 .login-btn {
   width: 100%;

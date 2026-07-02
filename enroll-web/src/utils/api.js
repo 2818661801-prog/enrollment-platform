@@ -110,6 +110,20 @@ export const adminLoginAPI = (username, password) =>
     body: JSON.stringify({ username, password }),
   })
 
+/** 学生端：发送手机验证码（Mock 模式验证码会打在日志里） */
+export const sendCodeAPI = (phone) =>
+  request('/api/auth/send-code', {
+    method: 'POST',
+    body: JSON.stringify({ phone }),
+  })
+
+/** 学生端：验证码登录 → 返 {token, phone, hasRegistration, status} */
+export const loginByCodeAPI = (phone, code) =>
+  request('/api/auth/login/sms', {
+    method: 'POST',
+    body: JSON.stringify({ phone, code }),
+  })
+
 // ==================== 管理端 API（需 JWT）====================
 
 /** 通用带 JWT 的 fetch */
