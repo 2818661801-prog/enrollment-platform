@@ -2,12 +2,15 @@ package com.enroll.server.controller;
 
 import com.enroll.server.dto.ResultCode;
 import com.enroll.server.dto.R;
+import com.enroll.server.entity.Application;
+import com.enroll.server.repository.ApplicationRepository;
 import com.enroll.server.security.JwtUtil;
 import com.enroll.server.service.AuthService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -18,7 +21,7 @@ import java.util.Map;
  *
  * 学生（手机验证码）：
  *   POST /api/auth/send-code  — {phone} → 发送验证码
- *   POST /api/auth/login/sms  — {phone, code} → JWT
+ *   POST /api/auth/login/sms  — {phone, code} → JWT + 报名状态
  *
  * 注意：此接口不在 /api/admin/** 下，不走管理员 JWT 拦截器
  */
@@ -30,14 +33,16 @@ public class AuthController {
 
     private final JwtUtil jwtUtil;
     private final AuthService authService;
+    private final ApplicationRepository appRepo;
 
     // 固定管理员账号
     private static final String ADMIN_USER = "***REMOVED***";
     private static final String ADMIN_PWD  = "***REMOVED***";
 
-    public AuthController(JwtUtil jwtUtil, AuthService authService) {
+    public AuthController(JwtUtil jwtUtil, AuthService authService, ApplicationRepository appRepo) {
         this.jwtUtil = jwtUtil;
         this.authService = authService;
+        this.appRepo = appRepo;
     }
 
     /** 管理员账号密码登录 → 返 JWT */
@@ -66,12 +71,31 @@ public class AuthController {
         return R.ok("验证码已发送", null);
     }
 
-    /** 学生验证码登录 → 返 JWT */
+    /**
+     * 学生验证码登录 → 返 JWT + 报名状态
+     * status=4 表示未报名（登录后无记录）
+     */
     @PostMapping("/login/sms")
     public Map<String, Object> loginSms(@RequestBody Map<String, String> body) {
         String phone = body.get("phone");
         String code  = body.get("code");
         String token = authService.verifyCodeAndLogin(phone, code);
-        return R.ok("登录成功", Map.of("token", token, "phone", phone));
+
+        // 查该手机号是否有有效报名记录（status=1/2/3/4）
+        List<Application> apps = appRepo.findByPhoneAndStatusIn(phone, List.of(1, 2, 3, 4));
+        if (apps.isEmpty()) {
+            // 无记录 → status=0，未报名
+            return R.ok("登录成功", Map.of("token", token, "phone", phone,
+                    "hasRegistration", false, "status", 0));
+        }
+        Application app = apps.get(0);
+        return R.ok("登录成功", Map.of(
+                "token", token,
+                "phone", phone,
+                "hasRegistration", true,
+                "status", app.getStatus(),
+                "classId", app.getClassId(),
+                "applyTime", app.getApplyTime().toString()
+        ));
     }
 }

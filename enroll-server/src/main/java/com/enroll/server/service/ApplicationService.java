@@ -24,15 +24,17 @@ import org.springframework.data.domain.PageRequest;
  * 报名业务层（核心）
  *
  * 状态值（status）：
- *   1 = 已报名（正常，可撤回）
- *   0 = 已撤回（学生主动撤回，软删除）
- *   2 = 已录取（管理员操作）
+ *   0 = 未报名（登录后无记录）
+ *   1 = 已报名（学生提交，待审核）
+ *   2 = 已撤回（学生主动撤回）
+ *   3 = 已录取（管理员录取，永久锁定）
+ *   4 = 未录取（管理员驳回）
  *
  * 业务规则：
- *   1. 防重复报名：同身份证 + 同班级 + status=1 只能有一条
+ *   1. 全局唯一报名：同学生只能有一条 status=1（已报名）的记录
  *   2. 校验名额：班级 enrolled >= quota 则拒绝
  *   3. 提交后 enrolled +1
- *   4. 撤回后 enrolled -1（软删除，不删记录）
+ *   4. 撤回后 enrolled -1
  *   5. 身份证脱敏：中间 8 位 → ********
  *
  * 事务边界：
@@ -46,9 +48,11 @@ public class ApplicationService {
     private static final Logger log = LoggerFactory.getLogger(ApplicationService.class);
 
     /** 状态常量 */
+    public static final int STATUS_NONE      = 0;  // 未报名（登录后无记录）
     public static final int STATUS_APPLIED   = 1;  // 已报名
-    public static final int STATUS_WITHDRAWN = 0;  // 已撤回
-    public static final int STATUS_ENROLLED  = 2;  // 已录取
+    public static final int STATUS_WITHDRAWN = 2;  // 已撤回
+    public static final int STATUS_ENROLLED  = 3;  // 已录取
+    public static final int STATUS_REJECTED  = 4;  // 未录取
 
     private final ApplicationRepository appRepo;
     private final ClassInfoRepository classRepo;
@@ -82,13 +86,19 @@ public class ApplicationService {
             throw new BusinessException(ResultCode.PARAM_INVALID, "该班级当前不在报名时间内");
         }
 
-        // 3) 本轮防重复：同身份证 + 同班级 + 本轮 不能重复
+        // 3) 全局唯一报名：检查该学生是否有 status=1（已报名）的记录
+        List<Application> globalDup = appRepo.findByIdCardAndStatus(idCard, STATUS_APPLIED);
+        if (!globalDup.isEmpty()) {
+            throw new BusinessException(ResultCode.DUPLICATE_APPLICATION, "您已报名其他特色班，不可重复报名");
+        }
+
+        // 4) 本轮防重复：同身份证 + 同班级 + 本轮 不能重复（status=1=已报名）
         List<Application> roundDup = findRoundRecord(idCard, classId, currentRound);
         if (!roundDup.isEmpty()) {
             throw new BusinessException(ResultCode.DUPLICATE_APPLICATION);
         }
 
-        // 4) 第二轮（currentRound=2）：必须先有第一轮记录才能报
+        // 5) 第二轮（currentRound=2）：必须先有第一轮记录才能报
         if (currentRound == 2) {
             // 从 periods JSON 判断是否真的有第二轮
             boolean hasRound2 = hasRound(cls.getPeriods(), 2);
@@ -100,12 +110,12 @@ public class ApplicationService {
             }
         }
 
-        // 5) 名额校验（quota=-1 不限）
+        // 6) 名额校验（quota=-1 不限）
         if (cls.getQuota() != -1 && cls.getEnrolled() >= cls.getQuota()) {
             throw new BusinessException(ResultCode.CLASS_FULL);
         }
 
-        // 6) 构造报名记录
+        // 7) 构造报名记录
         Application app = new Application();
         app.setName((String) form.get("name"));
         app.setIdCard(idCard);
@@ -117,13 +127,12 @@ public class ApplicationService {
         app.setAppliedCategory((String) form.get("appliedCategory"));
         app.setClassId(classId);
         app.setStatus(STATUS_APPLIED);
-        app.setIsAdmitted(0);
         Object agreed = form.get("noticeAgreed");
         app.setNoticeAgreed(parseFlag(agreed));
         app.setApplyTime(LocalDateTime.now());
         Application saved = appRepo.save(app);
 
-        // 7) 班级已报名人数 +1
+        // 8) 班级已报名人数 +1
         cls.setEnrolled(cls.getEnrolled() + 1);
         classRepo.save(cls);
 
@@ -333,11 +342,10 @@ public class ApplicationService {
     }
 
     /**
-     * 批量录取（is_admitted=1，status=2）
+     * 批量录取（status=2）
      */
     @Transactional
     public void batchAdmit(List<Integer> ids) {
-        appRepo.batchUpdateAdmitted(ids, 1);
         appRepo.batchUpdateStatus(ids, STATUS_ENROLLED);
     }
 
@@ -346,8 +354,23 @@ public class ApplicationService {
      */
     @Transactional
     public void batchAdmit(List<Integer> ids, String auditComment) {
-        appRepo.batchUpdateAdmitted(ids, 1);
         appRepo.batchUpdateStatusAndComment(ids, STATUS_ENROLLED, auditComment);
+    }
+
+    /**
+     * 批量未录取（status=3）
+     */
+    @Transactional
+    public void batchReject(List<Integer> ids) {
+        appRepo.batchUpdateStatus(ids, STATUS_REJECTED);
+    }
+
+    /**
+     * 批量未录取（带审核意见）
+     */
+    @Transactional
+    public void batchReject(List<Integer> ids, String auditComment) {
+        appRepo.batchUpdateStatusAndComment(ids, STATUS_REJECTED, auditComment);
     }
 
     // ==================== 内部工具 ====================
@@ -376,6 +399,7 @@ public class ApplicationService {
                 .status(String.valueOf(e.getStatus()))
                 .applyTime(e.getApplyTime())
                 .auditComment(e.getAuditComment())
+                .classPeriods(classRepo.findById(e.getClassId()).map(ClassInfo::getPeriods).orElse(null))
                 .build();
     }
 }

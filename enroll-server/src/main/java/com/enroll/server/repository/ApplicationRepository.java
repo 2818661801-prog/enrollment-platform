@@ -31,7 +31,7 @@ public interface ApplicationRepository extends JpaRepository<Application, Intege
     /** 按班级 ID 查该班的所有报名 */
     List<Application> findByClassId(Integer classId);
 
-    /** 按身份证号 + 班级 ID 查（防止重复报名，只查 status=1 的） */
+    /** 按身份证号 + 班级 ID 查（防止重复报名，只查 status=0 的） */
     List<Application> findByIdCardAndClassIdAndStatus(String idCard, Integer classId, Integer status);
 
     /** 按身份证号 + 班级 ID + status列表 查（查某几状态的报名） */
@@ -39,6 +39,9 @@ public interface ApplicationRepository extends JpaRepository<Application, Intege
 
     /** 按手机号 + status 查（学生端 JWT 认证查询） */
     List<Application> findByPhoneAndStatus(String phone, Integer status);
+
+    /** 按手机号 + status列表 查（登录时判断是否有有效报名） */
+    List<Application> findByPhoneAndStatusIn(String phone, List<Integer> statuses);
 
     /**
      * 管理员分页查询（支持多条件组合）
@@ -66,16 +69,7 @@ public interface ApplicationRepository extends JpaRepository<Application, Intege
     void batchUpdateStatus(@Param("ids") List<Integer> ids, @Param("status") Integer status);
 
     /**
-     * 批量更新 is_admitted（录取）
-     * @param ids          报名记录 ID 列表
-     * @param isAdmitted   录取标志：0否 1是
-     */
-    @Modifying
-    @Query("UPDATE Application a SET a.isAdmitted = :isAdmitted WHERE a.id IN :ids")
-    void batchUpdateAdmitted(@Param("ids") List<Integer> ids, @Param("isAdmitted") Integer isAdmitted);
-
-    /**
-     * 批量更新 status + auditComment（录取时写入审核意见）
+     * 批量更新 status + auditComment（如批量录取/未录取时写入审核意见）
      * @param ids           报名记录 ID 列表
      * @param status        目标状态值
      * @param auditComment  审核意见

@@ -18,13 +18,15 @@ public class ApplicationDTO implements Serializable {
     private String status;
     private LocalDateTime applyTime;
     private String auditComment;
+    private String classPeriods;  // 班级多轮时间段 JSON（前端算"第几轮"用）
 
     public ApplicationDTO() {}
 
     public ApplicationDTO(Integer id, String name, String idCard, String gender,
                           String phone, String hasPhysics, String hasEnglish,
                           Integer classId, String className, String appliedCategory,
-                          String status, LocalDateTime applyTime, String auditComment) {
+                          String status, LocalDateTime applyTime, String auditComment,
+                          String classPeriods) {
         this.id = id;
         this.name = name;
         this.idCard = idCard;
@@ -38,6 +40,7 @@ public class ApplicationDTO implements Serializable {
         this.status = status;
         this.applyTime = applyTime;
         this.auditComment = auditComment;
+        this.classPeriods = classPeriods;
     }
 
     // ==================== Getter / Setter ====================
@@ -81,6 +84,9 @@ public class ApplicationDTO implements Serializable {
     public String getAuditComment() { return auditComment; }
     public void setAuditComment(String auditComment) { this.auditComment = auditComment; }
 
+    public String getClassPeriods() { return classPeriods; }
+    public void setClassPeriods(String classPeriods) { this.classPeriods = classPeriods; }
+
     // ==================== Builder ====================
 
     public static Builder builder() { return new Builder(); }
@@ -99,6 +105,7 @@ public class ApplicationDTO implements Serializable {
         private String status;
         private LocalDateTime applyTime;
         private String auditComment;
+        private String classPeriods;
 
         public Builder id(Integer id) { this.id = id; return this; }
         public Builder name(String name) { this.name = name; return this; }
@@ -113,10 +120,11 @@ public class ApplicationDTO implements Serializable {
         public Builder status(String status) { this.status = status; return this; }
         public Builder applyTime(LocalDateTime applyTime) { this.applyTime = applyTime; return this; }
         public Builder auditComment(String auditComment) { this.auditComment = auditComment; return this; }
+        public Builder classPeriods(String classPeriods) { this.classPeriods = classPeriods; return this; }
 
         public ApplicationDTO build() {
             return new ApplicationDTO(id, name, idCard, gender, phone, hasPhysics, hasEnglish,
-                    classId, className, appliedCategory, status, applyTime, auditComment);
+                    classId, className, appliedCategory, status, applyTime, auditComment, classPeriods);
         }
     }
 }

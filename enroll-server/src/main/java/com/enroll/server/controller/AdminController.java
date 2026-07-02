@@ -65,7 +65,7 @@ public class AdminController {
      * @param page     页码（从0开始）
      * @param size     每页条数
      * @param classId  按班级ID筛选（可选）
-     * @param status   按状态筛选（可选，1已报/0撤回/2录取）
+     * @param status   按状态筛选（可选，0已报/1撤回/2录取/3未录取）
      * @param idCard   身份证号模糊搜索（可选）
      * @param name     姓名模糊搜索（可选）
      */
@@ -110,7 +110,7 @@ public class AdminController {
     }
 
     /**
-     * 批量录取（is_admitted=1）
+     * 批量录取（status=2）
      */
     @Transactional
     @PutMapping("/applications/admit/batch")
@@ -127,6 +127,25 @@ public class AdminController {
         applicationService.batchAdmit(idList, auditComment);
         log.info("批量录取: ids={}, auditComment={}", idList, auditComment);
         return R.ok("已录取 " + idList.size() + " 名学生", null);
+    }
+
+    /**
+     * 批量未录取（status=3）
+     */
+    @Transactional
+    @PutMapping("/applications/reject/batch")
+    public Map<String, Object> batchReject(@RequestBody Map<String, Object> body) {
+        Object idsObj = body.get("ids");
+        List<Integer> idList;
+        if (idsObj instanceof List) {
+            idList = ((List<?>) idsObj).stream().map(i -> ((Number) i).intValue()).toList();
+        } else {
+            idList = parseIds(String.valueOf(idsObj));
+        }
+        String auditComment = (String) body.getOrDefault("auditComment", "");
+        applicationService.batchReject(idList, auditComment);
+        log.info("批量未录取: ids={}, auditComment={}", idList, auditComment);
+        return R.ok("已设置 " + idList.size() + " 名学生为未录取", null);
     }
 
     // ==================== 班级管理 ====================

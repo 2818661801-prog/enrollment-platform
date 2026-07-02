@@ -7,9 +7,11 @@ import java.time.LocalDateTime;
  * 报名记录实体 — 对应数据库 applications 表
  *
  * 状态机（status）：
- *   1 = 已报名（正常，可撤回）
- *   0 = 已撤回（学生主动撤回，视为软删除）
- *   2 = 已录取（管理员批量录取）
+ *   0 = 未报名（学生登录后无任何记录，默认值）
+ *   1 = 已报名（学生提交报名，待审核）
+ *   2 = 已撤回（学生主动撤回，可重新报名）
+ *   3 = 已录取（管理员录取，永久锁定）
+ *   4 = 未录取（管理员驳回，可报名其他班）
  *
  * 每行 = 一个学生的报名记录
  */
@@ -50,28 +52,35 @@ public class Application {
 
     /**
      * 状态：
-     *   1 = 已报名
-     *   0 = 已撤回
-     *   2 = 已录取
-     * 数据库存 TINYINT，Java 用 Integer 对接
+     *   0 = 未报名（登录后无记录）
+     *   1 = 已报名（学生提交）
+     *   2 = 已撤回
+     *   3 = 已录取
+     *   4 = 未录取
+     * 数据库存 INT，Java 用 Integer 对接
      */
     @Column(nullable = false)
-    private Integer status = 1;
-
-    /** 是否已录取：0否 1是 */
-    @Column(name = "is_admitted", nullable = false)
-    private Integer isAdmitted = 0;
+    private Integer status;  // 默认值由 @PrePersist 设置为 0（未报名）
 
     /** 是否同意报名须知：0否 1是 */
     @Column(name = "notice_agreed", nullable = false)
-    private Integer noticeAgreed = 0;
+    private Integer noticeAgreed;
 
     /** 审核意见（管理员填写，通过/驳回原因） */
     @Column(name = "audit_comment", length = 500)
     private String auditComment;
 
     @Column(name = "apply_time", nullable = false)
-    private LocalDateTime applyTime = LocalDateTime.now(); // 报名时间
+    private LocalDateTime applyTime;
+
+    // ==================== 生命周期回调 ====================
+
+    @PrePersist
+    void onCreate() {
+        if (this.status == null) this.status = 0;       // 默认 0 = 未报名
+        if (this.noticeAgreed == null) this.noticeAgreed = 0;
+        if (this.applyTime == null) this.applyTime = LocalDateTime.now();
+    }
 
     // ==================== getter / setter ====================
 
@@ -107,9 +116,6 @@ public class Application {
 
     public Integer getStatus() { return status; }
     public void setStatus(Integer status) { this.status = status; }
-
-    public Integer getIsAdmitted() { return isAdmitted; }
-    public void setIsAdmitted(Integer isAdmitted) { this.isAdmitted = isAdmitted; }
 
     public Integer getNoticeAgreed() { return noticeAgreed; }
     public void setNoticeAgreed(Integer noticeAgreed) { this.noticeAgreed = noticeAgreed; }
