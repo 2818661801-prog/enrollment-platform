@@ -155,6 +155,13 @@ export const admitAdminApplications = (ids, auditComment = '') =>
     body: JSON.stringify({ ids, auditComment }),
   })
 
+/** 管理员：批量未录取（可选审核意见） */
+export const rejectAdminApplications = (ids, auditComment = '') =>
+  adminRequest('/api/admin/applications/reject/batch', {
+    method: 'PUT',
+    body: JSON.stringify({ ids, auditComment }),
+  })
+
 /** 管理员：班级列表 */
 export const fetchAdminClasses = () => adminRequest('/api/admin/classes')
 

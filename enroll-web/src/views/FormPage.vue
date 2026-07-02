@@ -295,7 +295,7 @@ async function onSubmit() {
   flex-direction: column;
 }
 .form-body {
-  max-width: 860px;
+  max-width: 680px;
   margin: 24px auto;
   padding: 0 20px;
   flex: 1;

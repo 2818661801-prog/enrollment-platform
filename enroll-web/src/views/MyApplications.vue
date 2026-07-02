@@ -41,12 +41,19 @@
         <el-table :data="records" border stripe>
           <el-table-column prop="name" label="姓名" width="80" />
           <el-table-column prop="className" label="申报班级" min-width="200" show-overflow-tooltip />
+          <el-table-column label="轮次" width="80">
+            <template #default="{ row }">
+              <el-tag size="small">第{{ getCurrentRound(row.classPeriods) }}轮</el-tag>
+            </template>
+          </el-table-column>
           <el-table-column prop="idCard" label="身份证号" width="160" />
           <el-table-column prop="status" label="状态" width="90">
             <template #default="{ row }">
-              <el-tag :type="row.status==='1'?'warning':'info'" size="small">
-                {{ row.status === '1' ? '审核中' : (row.status === '2' ? '已录取' : '已撤回') }}
-              </el-tag>
+              <el-tag v-if="row.status==='1'" type="success" size="small">已报名</el-tag>
+              <el-tag v-else-if="row.status==='2'" type="info" size="small">已撤回</el-tag>
+              <el-tag v-else-if="row.status==='3'" type="warning" size="small">已录取</el-tag>
+              <el-tag v-else-if="row.status==='4'" type="danger" size="small">未录取</el-tag>
+              <el-tag v-else type="info" size="small">未报名</el-tag>
             </template>
           </el-table-column>
           <el-table-column prop="applyTime" label="报名时间" width="160" />
@@ -111,6 +118,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { ArrowLeft, User, Loading } from '@element-plus/icons-vue'
 import { withdrawApplicationAPI, updateApplicationAPI } from '../utils/api.js'
+import { getCurrentRound } from '../utils/data.js'
 import AppFooter from '../components/AppFooter.vue'
 
 const router = useRouter()

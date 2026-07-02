@@ -137,8 +137,9 @@
             </el-select>
             <el-select v-model="query.status" placeholder="按状态" clearable size="default" style="width:140px">
               <el-option label="已报名" :value="1" />
-              <el-option label="已撤回" :value="0" />
-              <el-option label="已录取" :value="2" />
+              <el-option label="已撤回" :value="2" />
+              <el-option label="已录取" :value="3" />
+              <el-option label="未录取" :value="4" />
             </el-select>
             <el-input v-model="query.idCard" placeholder="身份证号" clearable size="default" style="width:160px" />
             <el-input v-model="query.name" placeholder="姓名" clearable size="default" style="width:120px" />
@@ -158,8 +159,9 @@
             <el-table-column prop="status" label="状态" min-width="70">
               <template #default="{ row }">
                 <el-tag v-if="row.status==='1'" type="success" size="small">已报名</el-tag>
-                <el-tag v-else-if="row.status==='0'" type="info" size="small">已撤回</el-tag>
-                <el-tag v-else type="warning" size="small">已录取</el-tag>
+                <el-tag v-else-if="row.status==='2'" type="info" size="small">已撤回</el-tag>
+                <el-tag v-else-if="row.status==='3'" type="warning" size="small">已录取</el-tag>
+                <el-tag v-else-if="row.status==='4'" type="danger" size="small">未录取</el-tag>
               </template>
             </el-table-column>
             <el-table-column prop="applyTime" label="报名时间" min-width="150" />
@@ -186,8 +188,9 @@
             </el-select>
             <el-select v-model="admitQuery.status" placeholder="按状态" clearable style="width:140px">
               <el-option label="已报名" :value="1" />
-              <el-option label="已撤回" :value="0" />
-              <el-option label="已录取" :value="2" />
+              <el-option label="已撤回" :value="2" />
+              <el-option label="已录取" :value="3" />
+              <el-option label="未录取" :value="4" />
             </el-select>
             <el-input v-model="admitQuery.idCard" placeholder="身份证号" clearable style="width:160px" />
             <el-input v-model="admitQuery.name" placeholder="姓名" clearable style="width:120px" />
@@ -207,14 +210,15 @@
             <el-table-column prop="status" label="状态" min-width="70">
               <template #default="{ row }">
                 <el-tag v-if="row.status==='1'" type="success" size="small">已报名</el-tag>
-                <el-tag v-else-if="row.status==='0'" type="info" size="small">已撤回</el-tag>
-                <el-tag v-else type="warning" size="small">已录取</el-tag>
+                <el-tag v-else-if="row.status==='2'" type="info" size="small">已撤回</el-tag>
+                <el-tag v-else-if="row.status==='3'" type="warning" size="small">已录取</el-tag>
+                <el-tag v-else-if="row.status==='4'" type="danger" size="small">未录取</el-tag>
               </template>
             </el-table-column>
           </el-table>
           <div class="batch-bar" v-if="selectedAdmit.length">
             <span>已选 {{ selectedAdmit.length }} 名学生</span>
-            <el-button type="danger" size="small" @click="onBatchWithdrawAdmit">批量撤回</el-button>
+            <el-button type="warning" @click="rejectDialogVisible=true; rejectComment=''">批量未录取</el-button>
             <el-button type="success" @click="admitDialogVisible=true; admitComment=''">批量录取</el-button>
           </div>
         </div>
@@ -278,6 +282,19 @@
         <el-button type="success" @click="onConfirmAdmit">确认录取</el-button>
       </template>
     </el-dialog>
+
+    <!-- 批量未录取弹窗 -->
+    <el-dialog v-model="rejectDialogVisible" title="批量未录取" width="450px">
+      <el-form>
+        <el-form-item label="审核意见">
+          <el-input v-model="rejectComment" type="textarea" :rows="3" placeholder="填写驳回原因（可不填）" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="rejectDialogVisible=false; ElMessage.info('已取消')">取消</el-button>
+        <el-button type="warning" @click="onConfirmReject">确认未录取</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -287,7 +304,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   fetchAdminClasses, createAdminClass, updateAdminClass, deleteAdminClass, restoreAdminClass,
-  fetchAdminApplications, withdrawAdminApplications, admitAdminApplications,
+  fetchAdminApplications, withdrawAdminApplications, admitAdminApplications, rejectAdminApplications,
   fetchAdminConfig, updateAdminConfig,
   fetchAdminCategories, createAdminCategory, updateAdminCategory, deleteAdminCategory,
 } from '../utils/api.js'
@@ -502,6 +519,8 @@ const admitList = ref([])
 const selectedAdmit = ref([])
 const admitDialogVisible = ref(false)
 const admitComment = ref('')
+const rejectDialogVisible = ref(false)
+const rejectComment = ref('')
 
 async function loadAdmitList() {
   const params = { page: 0, size: 200 }
@@ -524,14 +543,15 @@ async function onConfirmAdmit() {
     ElMessage.success('已录取')
   } catch { ElMessage.error('操作失败') }
 }
-async function onBatchWithdrawAdmit() {
+async function onConfirmReject() {
   const ids = selectedAdmit.value.map(s => s.id)
   try {
-    await withdrawAdminApplications(ids)
+    await rejectAdminApplications(ids, rejectComment.value)
+    rejectDialogVisible.value = false
     selectedAdmit.value = []
     loadAdmitList()
-    ElMessage.success('已撤回')
-  } catch { ElMessage.error('撤回失败') }
+    ElMessage.success('已设置未录取')
+  } catch { ElMessage.error('操作失败') }
 }
 
 // ==================== 退出 ====================

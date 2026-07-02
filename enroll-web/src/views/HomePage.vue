@@ -36,9 +36,18 @@
             />
           </el-select>
           <el-button size="large" @click="searchKeyword=null">重置</el-button>
-          <el-button text type="primary" @click="router.push('/my-applications')" style="margin-left:auto">
-            我的报名 →
-          </el-button>
+
+          <!-- 我的报名入口：带图标的胶囊按钮（右上角） -->
+          <button
+            type="button"
+            class="my-apps-pill"
+            @click="router.push('/my-applications')"
+            aria-label="我的报名"
+          >
+            <img :src="folderIcon" alt="" class="my-apps-icon" />
+            <span class="my-apps-text">我的报名</span>
+            <span class="my-apps-arrow" aria-hidden="true">→</span>
+          </button>
         </div>
 
         <!-- 卡片 -->
@@ -52,23 +61,6 @@
           />
         </div>
       </main>
-
-      <!-- ===== 右侧时间轴 ===== -->
-      <aside class="home-timeline">
-        <h4 class="timeline-title"><img src="@/assets/images/calendar(1).svg" class="icon-svg" />报名时间轴</h4>
-        <div class="timeline">
-          <div v-for="(item, i) in timelineItems" :key="i" class="timeline-item">
-            <div class="timeline-left">
-              <div class="timeline-name" :title="item.name">
-                <span v-if="item.roundLabel" class="round-badge">{{ item.roundLabel }}</span>
-                {{ item.name }}
-              </div>
-              <div class="timeline-period">{{ item.period }}</div>
-            </div>
-            <el-tag :type="item.tagType" size="small" class="timeline-tag">{{ item.tagText }}</el-tag>
-          </div>
-        </div>
-      </aside>
     </div>
 
     <!-- ===== 报名须知弹窗（进入时自动弹出） ===== -->
@@ -140,6 +132,7 @@
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import folderIcon from '../assets/images/folder.svg'
 import { getClassTimeStatus } from '../utils/data.js'
 import { fetchClasses, fetchNotice } from '../utils/api.js'
 import AppFooter from '../components/AppFooter.vue'
@@ -278,44 +271,6 @@ function parsePeriodsArray(periodsJson, fallbackPeriod) {
   } catch {}
   return [{ round: 1, period: fallbackPeriod || '' }]
 }
-
-const timelineItems = computed(() => {
-  const result = []
-  // 按班级 id 排序（保证同一班级的两轮相邻）
-  const sorted = [...classes.value].sort((a, b) => a.id - b.id)
-
-  for (const c of sorted) {
-    const periods = parsePeriodsArray(c.periods, c.period)
-
-    if (periods.length > 1 || isChengDian(c)) {
-      // 成电班（多轮）：每轮一行
-      for (const p of periods) {
-        const { status, label } = getClassTimeStatus({ period: p.period })
-        const roundLabel = p.round === 2 ? '第二轮' : '第一轮'
-        result.push({
-          name: c.name,
-          period: p.period,
-          roundLabel,
-          active: status === 'open',
-          tagType: status === 'open' ? 'success' : status === 'not_started' ? 'warning' : 'info',
-          tagText: label,
-        })
-      }
-    } else {
-      // 普通班：一行
-      const { status, label } = getClassTimeStatus(c)
-      result.push({
-        name: c.name,
-        period: c.period,
-        roundLabel: null,
-        active: status === 'open',
-        tagType: status === 'open' ? 'success' : status === 'not_started' ? 'warning' : 'info',
-        tagText: label,
-      })
-    }
-  }
-  return result
-})
 </script>
 
 <style scoped>
@@ -392,101 +347,55 @@ const timelineItems = computed(() => {
   align-items: center;
   margin-bottom: 16px;
 }
+
+/* ===== "我的报名" 胶囊按钮（右上角入口） ===== */
+.my-apps-pill {
+  margin-left: auto;                   /* 推到最右 */
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 16px 0 14px;
+  background: #fff;
+  color: #1d4ed8;                       /* 深蓝（hover 后变白） */
+  border: 1px solid #337eff;            /* 主题蓝边框 */
+  border-radius: 999px;                 /* 胶囊 */
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+  user-select: none;
+  white-space: nowrap;
+}
+.my-apps-pill:hover {
+  background: #337eff;                  /* hover：填充主题蓝 */
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(51, 126, 255, 0.25);
+}
+.my-apps-pill:active {
+  transform: translateY(1px);           /* 按下轻微下沉 */
+}
+.my-apps-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+.my-apps-text {
+  line-height: 1;
+}
+.my-apps-arrow {
+  font-size: 14px;
+  line-height: 1;
+  transition: transform 0.18s ease;
+}
+.my-apps-pill:hover .my-apps-arrow {
+  transform: translateX(2px);           /* hover 时箭头右移 */
+}
 .card-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 16px;
-}
-
-/* ===== 右侧时间轴 ===== */
-.home-timeline {
-  width: 260px;
-  flex-shrink: 0;
-  margin-left: 15px;
-}
-.timeline-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 16px;
-}
-.timeline {
-  position: relative;
-  padding-left: 16px;
-  border-left: 2px solid var(--divider);
-  max-height: 600px;      /* 约10行，超出滚动 */
-  overflow-y: auto;        /* 垂直滚动条 */
-  scrollbar-width: thin;   /* Firefox 细滚动条 */
-}
-/* 滚动条样式（Chrome/Safari） */
-.timeline::-webkit-scrollbar { width: 4px; }
-.timeline::-webkit-scrollbar-thumb { background: #dcdfe6; border-radius: 2px; }
-
-/* 成电班第几轮标签 */
-.round-badge {
-  display: inline-block;
-  font-size: 10px;
-  color: #fff;
-  background: #e6a23c;
-  border-radius: 3px;
-  padding: 0 4px;
-  margin-right: 4px;
-  vertical-align: middle;
-  line-height: 16px;
-}
-/* 两行布局：上行班级名，下行报名时间，右侧状态标签（桌面端） */
-.timeline-item {
-  position: relative;
-  margin-bottom: 16px;
-  margin-left: -23px;
-  padding-left: 23px;
-  display: grid;
-  grid-template-columns: 1fr auto;
-  grid-template-rows: auto auto;
-  row-gap: 4px;
-}
-.timeline-dot {
-  position: absolute;
-  left: -6px;
-  top: 4px;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: #c0c4cc;
-  border: 2px solid #fff;
-}
-.timeline-dot.active {
-  background: var(--success);
-}
-.timeline-left {
-  grid-column: 1;
-  grid-row: 1 / 3;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  min-width: 0;
-}
-.timeline-name {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-primary);
-  line-height: 1.4;
-  white-space: normal;
-  overflow: visible;
-  text-overflow: unset;
-  max-width: 160px;
-  word-break: break-all;
-}
-.timeline-period {
-  font-size: 11px;
-  color: var(--text-tertiary);
-  margin-top: 2px;
-}
-.timeline-tag {
-  grid-column: 2;
-  grid-row: 1 / 3;
-  flex-shrink: 0;
-  align-self: center;
 }
 
 /* ===== 报名须知弹窗样式 ===== */
@@ -520,13 +429,10 @@ const timelineItems = computed(() => {
 
 /* ==================== 响应式：平板 ==================== */
 @media (max-width: 1100px) {
-  .home-timeline { width: 200px; }
   .card-grid { grid-template-columns: repeat(2, 1fr); }
   .banner { min-height: 160px; padding: 24px 28px; }
   .banner-content h1 { font-size: 22px; }
   .banner-content p { font-size: 13px; }
-  .timeline-name { font-size: 11px; }
-  .timeline-period { font-size: 10px; }
 }
 
 /* ==================== 响应式：手机 ==================== */
@@ -545,13 +451,6 @@ const timelineItems = computed(() => {
     margin-top: 12px;
     padding: 0 12px;
   }
-  /* 移动端顺序：时间轴(-3) → 卡片(-1) */
-  .home-timeline {
-    width: 100%;
-    margin-top: 0;
-    margin-left: 0;
-    order: -3;
-  }
   .home-main {
     order: -1;
   }
@@ -560,58 +459,14 @@ const timelineItems = computed(() => {
   .card-grid { grid-template-columns: 1fr; gap: 12px; }
   .notice-link { display: block; margin-left: 0; margin-top: 8px; }
 
-  .timeline {
-    display: flex;
-    flex-wrap: nowrap;       /* 不换行，横向滚动 */
-    gap: 8px;
-    padding-left: 5px;
-    border-left: none;
-    border-top: 2px solid var(--divider);
-    padding-top: 15px;
-    padding-bottom: 15px;
-    overflow-x: auto;         /* 水平滚动条 */
-    -webkit-overflow-scrolling: touch;
+  /* 移动端："我的报名" pill 移到下一行，高度略小 */
+  .my-apps-pill {
+    margin-left: auto;
+    height: 36px;
+    padding: 0 14px 0 12px;
+    font-size: 13px;
   }
-  /* 移动端：横向滚动，每列 = 班级名(上) + 时间(下) + 标签 */
-  .timeline-item {
-    flex-shrink: 0;
-    width: 220px;            /* 每列固定宽度，避免挤在一起 */
-    display: grid;
-    grid-template-rows: auto auto auto;  /* 三行：班级名、时间、标签 */
-    grid-template-columns: 1fr;
-    row-gap: 2px;
-    margin-left: 0;
-    margin-bottom: 0;
-    padding-left: 0;
-    background: #f8fafc;
-    border-radius: 6px;
-    padding: 6px 4px;
-  }
-  .timeline-dot { display: none; }
-  .timeline-left {
-    width: 100%;
-    grid-column: 1;
-    grid-row: 1;     /* 第一行：班级名 */
-  }
-  .timeline-name {
-    font-size: 11px;
-    max-width: 100%;
-    white-space: normal;
-    overflow: visible;
-    text-overflow: unset;
-    text-align: center;
-  }
-  .timeline-period {
-    font-size: 10px;
-    grid-row: 2;     /* 第二行：时间 */
-    text-align: center;
-  }
-  .timeline-tag {
-    grid-column: 1;
-    grid-row: 3;     /* 第三行：标签 */
-    justify-self: center;
-    margin-top: 0;
-  }
+  .my-apps-icon { width: 14px; height: 14px; }
 
   .nd-section h3 {
     font-size: 14px;

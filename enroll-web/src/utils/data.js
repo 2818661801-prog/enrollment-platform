@@ -99,3 +99,25 @@ export function getClassTimeStatus(classInfo, now = null) {
     canApply: true,
   }
 }
+
+/**
+ * 根据当前时间从 periods JSON 中算出"第几轮"
+ * @param {string} periodsJson - 后端存的 JSON 数组
+ * @returns {number} 轮次号（1, 2, ...），无匹配或单轮返回 1
+ */
+export function getCurrentRound(periodsJson) {
+  if (!periodsJson) return 1
+  try {
+    const list = JSON.parse(periodsJson)
+    if (!Array.isArray(list) || list.length === 0) return 1
+    const now = new Date()
+    for (const item of list) {
+      const { start, end } = parsePeriod(item.period)
+      if (now >= start && now <= end) return item.round || 1
+    }
+    // 不在任何一轮时，按 periods 里最新的轮次号返回
+    return list[list.length - 1].round || 1
+  } catch {
+    return 1
+  }
+}

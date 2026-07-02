@@ -50,8 +50,8 @@ import logoImg from '../assets/images/logo.png' // Vite 自动处理图片路径
 .app-footer {
   background: #1e293b;
   color: #cbd5e1;
-  padding: 32px 32px 0;
-  margin-top: 48px;
+  padding: 16px 32px 0;
+  margin-top: 24px;
 }
 
 .footer-inner {
@@ -112,8 +112,8 @@ import logoImg from '../assets/images/logo.png' // Vite 自动处理图片路径
 
 .footer-bottom {
   text-align: center;
-  padding: 18px 0;
-  margin-top: 24px;
+  padding: 10px 0;
+  margin-top: 12px;
   border-top: 1px solid #334155;
   font-size: 12px;
   color: #64748b;
