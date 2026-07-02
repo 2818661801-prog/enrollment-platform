@@ -48,12 +48,6 @@ public class ApplicationController {
         return R.ok(applicationService.findMy(idCard));
     }
 
-    /** 验证查询密码后查询报名（身份证+密码双因子，POST body 防 URL 暴露密码） */
-    @PostMapping("/my-verify")
-    public Map<String, Object> myApplicationsWithPwd(@RequestBody Map<String, String> body) {
-        return R.ok(applicationService.findMyWithPwd(body.get("idCard"), body.get("password")));
-    }
-
     /** 撤回报名（软删除：status → 0） */
     @PutMapping("/{id}/withdraw")
     public Map<String, Object> withdraw(@PathVariable Integer id) {

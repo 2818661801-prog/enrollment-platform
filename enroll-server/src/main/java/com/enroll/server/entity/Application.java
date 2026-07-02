@@ -66,10 +66,6 @@ public class Application {
     @Column(name = "notice_agreed", nullable = false)
     private Integer noticeAgreed = 0;
 
-    /** 查询密码（SHA256存储），提交报名时生成返回给学生 */
-    @Column(nullable = false, length = 64)
-    private String password = "";
-
     @Column(name = "apply_time", nullable = false)
     private LocalDateTime applyTime = LocalDateTime.now(); // 报名时间
 
@@ -116,7 +112,4 @@ public class Application {
 
     public LocalDateTime getApplyTime() { return applyTime; }
     public void setApplyTime(LocalDateTime applyTime) { this.applyTime = applyTime; }
-
-    public String getPassword() { return password; }
-    public void setPassword(String password) { this.password = password; }
 }

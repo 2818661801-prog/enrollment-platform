@@ -142,28 +142,27 @@
             </el-select>
             <el-input v-model="query.idCard" placeholder="身份证号" clearable size="default" style="width:160px" />
             <el-input v-model="query.name" placeholder="姓名" clearable size="default" style="width:120px" />
-            <el-button type="primary" @click="loadApplications">查询</el-button>
-            <el-button @click="query={classId:null,status:null,idCard:'',name:''};loadApplications()">重置</el-button>
+            <el-button type="primary" @click="queryPage=1;loadApplications()">查询</el-button>
+            <el-button @click="query.classId=null;query.status=null;query.idCard='';query.name='';queryPage=1;loadApplications()">重置</el-button>
           </div>
 
-          <el-table :data="appList" border stripe @selection-change="sel=>selectedApps=sel"
+          <el-table :data="appList" border stripe
             style="width:100%" :scroll-x="true">
-            <el-table-column type="selection" width="45" />
-            <el-table-column prop="id" label="ID" width="60" />
-            <el-table-column prop="name" label="姓名" width="80" />
-            <el-table-column prop="idCard" label="身份证号" width="160" />
-            <el-table-column prop="gender" label="性别" width="60" />
-            <el-table-column prop="phone" label="手机号" width="120" />
-            <el-table-column prop="className" label="班级" min-width="180" show-overflow-tooltip />
-            <el-table-column prop="appliedCategory" label="班级类别" width="90" />
-            <el-table-column prop="status" label="状态" width="80">
+            <el-table-column prop="id" label="ID" min-width="50" />
+            <el-table-column prop="name" label="姓名" min-width="70" />
+            <el-table-column prop="idCard" label="身份证号" min-width="140" />
+            <el-table-column prop="gender" label="性别" min-width="50" />
+            <el-table-column prop="phone" label="手机号" min-width="110" />
+            <el-table-column prop="className" label="班级" min-width="200" show-overflow-tooltip />
+            <el-table-column prop="appliedCategory" label="班级类别" min-width="80" />
+            <el-table-column prop="status" label="状态" min-width="70">
               <template #default="{ row }">
                 <el-tag v-if="row.status==='1'" type="success" size="small">已报名</el-tag>
                 <el-tag v-else-if="row.status==='0'" type="info" size="small">已撤回</el-tag>
                 <el-tag v-else type="warning" size="small">已录取</el-tag>
               </template>
             </el-table-column>
-            <el-table-column prop="applyTime" label="报名时间" width="160" />
+            <el-table-column prop="applyTime" label="报名时间" min-width="150" />
           </el-table>
 
           <!-- 分页 -->
@@ -175,12 +174,6 @@
             style="margin-top:12px"
             @current-change="loadApplications"
           />
-
-          <!-- 批量操作 -->
-          <div class="batch-bar" v-if="selectedApps.length">
-            <span>已选 {{ selectedApps.length }} 条</span>
-            <el-button type="danger" size="small" @click="onBatchDelete">批量删除</el-button>
-          </div>
         </div>
       </el-tab-pane>
 
@@ -191,27 +184,37 @@
             <el-select v-model="admitQuery.classId" placeholder="按班级" clearable style="width:200px">
               <el-option v-for="c in classes" :key="c.id" :label="c.name" :value="c.id" />
             </el-select>
+            <el-select v-model="admitQuery.status" placeholder="按状态" clearable style="width:140px">
+              <el-option label="已报名" :value="1" />
+              <el-option label="已撤回" :value="0" />
+              <el-option label="已录取" :value="2" />
+            </el-select>
+            <el-input v-model="admitQuery.idCard" placeholder="身份证号" clearable style="width:160px" />
+            <el-input v-model="admitQuery.name" placeholder="姓名" clearable style="width:120px" />
             <el-button type="primary" @click="loadAdmitList">查询</el-button>
-            <el-button @click="admitQuery.classId=null; loadAdmitList()">重置</el-button>
+            <el-button @click="admitQuery.classId=null; admitQuery.status=null; admitQuery.idCard=''; admitQuery.name=''; loadAdmitList()">重置</el-button>
           </div>
           <el-table :data="admitList" border stripe @selection-change="sel=>selectedAdmit=sel"
             style="width:100%" :scroll-x="true">
             <el-table-column type="selection" width="45" />
-            <el-table-column prop="id" label="ID" width="60" />
-            <el-table-column prop="name" label="姓名" width="80" />
-            <el-table-column prop="idCard" label="身份证号" width="160" />
-            <el-table-column prop="className" label="班级" min-width="180" show-overflow-tooltip />
-            <el-table-column prop="appliedCategory" label="班级类别" width="90" />
-            <el-table-column prop="status" label="状态" width="80">
+            <el-table-column prop="id" label="ID" min-width="50" />
+            <el-table-column prop="name" label="姓名" min-width="70" />
+            <el-table-column prop="gender" label="性别" min-width="50" />
+            <el-table-column prop="idCard" label="身份证号" min-width="140" />
+            <el-table-column prop="phone" label="手机号" min-width="110" />
+            <el-table-column prop="className" label="班级" min-width="200" show-overflow-tooltip />
+            <el-table-column prop="appliedCategory" label="班级类别" min-width="80" />
+            <el-table-column prop="status" label="状态" min-width="70">
               <template #default="{ row }">
-                <el-tag :type="row.status==='2'?'warning':'success'" size="small">
-                  {{ row.status==='2'?'已录取':'已报名' }}
-                </el-tag>
+                <el-tag v-if="row.status==='1'" type="success" size="small">已报名</el-tag>
+                <el-tag v-else-if="row.status==='0'" type="info" size="small">已撤回</el-tag>
+                <el-tag v-else type="warning" size="small">已录取</el-tag>
               </template>
             </el-table-column>
           </el-table>
           <div class="batch-bar" v-if="selectedAdmit.length">
             <span>已选 {{ selectedAdmit.length }} 名学生</span>
+            <el-button type="danger" size="small" @click="onBatchWithdrawAdmit">批量撤回</el-button>
             <el-button type="success" @click="onBatchAdmit">批量录取</el-button>
           </div>
         </div>
@@ -225,17 +228,24 @@
         <el-form-item label="班级名称">
           <el-input v-model="classForm.name" />
         </el-form-item>
-        <el-form-item label="报名时间段">
-          <el-date-picker
-            v-model="periodRange"
-            type="daterange"
-            range-separator="至"
-            start-placeholder="开始日期"
-            end-placeholder="结束日期"
-            format="YYYY/MM/DD"
-            value-format="YYYY/MM/DD"
-            style="width:100%"
-          />
+        <el-form-item label="报名轮次">
+          <div class="rounds-list">
+            <div v-for="(r, idx) in classRounds" :key="idx" class="round-row">
+              <span class="round-label">第 {{ idx + 1 }} 轮</span>
+              <el-date-picker
+                v-model="classRounds[idx].period"
+                type="daterange"
+                range-separator="至"
+                start-placeholder="开始日期"
+                end-placeholder="结束日期"
+                format="YYYY/MM/DD"
+                value-format="YYYY/MM/DD"
+                style="width:260px"
+              />
+              <el-button text type="danger" @click="classRounds.splice(idx, 1)" :disabled="classRounds.length <= 1">删除</el-button>
+            </div>
+            <el-button text type="primary" @click="classRounds.push({ period: '' })">+ 添加轮次</el-button>
+          </div>
         </el-form-item>
         <el-form-item label="名额上限">
           <el-input-number v-model="classForm.quota" :min="-1" :step="10" />
@@ -264,7 +274,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   fetchAdminClasses, createAdminClass, updateAdminClass, deleteAdminClass, restoreAdminClass,
-  fetchAdminApplications, deleteAdminApplications, admitAdminApplications,
+  fetchAdminApplications, withdrawAdminApplications, admitAdminApplications,
   fetchAdminConfig, updateAdminConfig,
   fetchAdminCategories, createAdminCategory, updateAdminCategory, deleteAdminCategory,
 } from '../utils/api.js'
@@ -318,15 +328,15 @@ async function loadClasses() {
 
 const classDialogVisible = ref(false)
 const classDialogTitle = ref('')
-const classForm = reactive({ id: null, name: '', period: '', quota: 0, description: '', categoryNames: [] })
-const periodRange = ref([])
+const classForm = reactive({ id: null, name: '', quota: 0, description: '', categoryNames: [] })
+const classRounds = ref([])   // [{period: "2026/09/01 - 2026/09/13"}, ...]
 const classSaving = ref(false)
 
 // ==================== 类别管理 ====================
 const allCategories = ref([])
 async function loadCategories() {
   const res = await fetchAdminCategories()
-  allCategories.value = res.data || []
+  allCategories.value = (res.data || []).sort((a, b) => a.id - b.id)
 }
 
 const categoryDialogVisible = ref(false)
@@ -371,40 +381,56 @@ async function onDeleteCategory(id) {
   } catch {}
 }
 
-/** 解析 "2026/09/01 - 2026/09/13" → ["2026/09/01", "2026/09/13"] */
-function parsePeriod(period) {
-  if (!period) return []
-  return period.split(' - ').map(s => s.trim())
-}
-
 function showClassDialog(row) {
   if (row) {
     classDialogTitle.value = '编辑班级'
-    Object.assign(classForm, { id: row.id, name: row.name, period: row.period, quota: row.quota, description: row.description, categoryNames: row.categoryNames || [] })
-    periodRange.value = parsePeriod(row.period)
+    Object.assign(classForm, { id: row.id, name: row.name, quota: row.quota, description: row.description, categoryNames: row.categoryNames || [] })
+    // 解析 periods JSON 回显（period 字符串转 date-range 需要的数组格式）
+    try {
+      const list = JSON.parse(row.periods || '[]')
+      classRounds.value = list.length
+        ? list.map(item => ({ period: item.period.split(' - ') }))
+        : [{ period: '' }]
+    } catch {
+      classRounds.value = [{ period: '' }]
+    }
   } else {
     classDialogTitle.value = '新增班级'
-    Object.assign(classForm, { id: null, name: '', period: '', quota: 0, description: '', categoryNames: [] })
-    periodRange.value = []
+    Object.assign(classForm, { id: null, name: '', quota: 0, description: '', categoryNames: [] })
+    classRounds.value = [{ period: '' }]
   }
   classDialogVisible.value = true
 }
 async function onSaveClass() {
   classSaving.value = true
   try {
-    // 日期范围选择器 → period 字符串
-    if (periodRange.value?.length === 2) {
-      classForm.period = periodRange.value.join(' - ')
-    }
-    // period 不能为空（由前端或后端强制校验）
-    if (!classForm.period) {
-      ElMessage.warning('请选择报名时间段')
+    // 过滤空轮次，按顺序编号；period 可能是数组（date-range 返回）或字符串
+    const validRounds = classRounds.value
+      .map((r, i) => {
+        const p = Array.isArray(r.period) ? r.period.join(' - ') : (r.period || '')
+        return { round: i + 1, period: p }
+      })
+      .filter(r => r.period.trim())
+    if (validRounds.length === 0) {
+      ElMessage.warning('请至少填写一轮报名时间段')
       return
     }
+    // 构建 periods JSON
+    const periodsJson = JSON.stringify(validRounds)
+    // period 字段取第一轮（兼容旧字段）
+    const period = validRounds[0].period
+    const payload = {
+      name: classForm.name,
+      quota: classForm.quota,
+      period,
+      periods: periodsJson,
+      description: classForm.description,
+      categoryNames: classForm.categoryNames,
+    }
     if (classForm.id) {
-      await updateAdminClass(classForm.id, { ...classForm })
+      await updateAdminClass(classForm.id, payload)
     } else {
-      await createAdminClass({ ...classForm })
+      await createAdminClass(payload)
     }
     classDialogVisible.value = false
     loadClasses()
@@ -439,7 +465,6 @@ const query = reactive({ classId: null, status: null, idCard: '', name: '' })
 const queryPage = ref(1)
 const appList = ref([])
 const appTotal = ref(0)
-const selectedApps = ref([])
 
 async function loadApplications() {
   const params = { page: queryPage.value - 1, size: 20 }
@@ -453,27 +478,21 @@ async function loadApplications() {
     appTotal.value = res.data.total || 0
   } catch {}
 }
-async function onBatchDelete() {
-  const ids = selectedApps.value.map(s => s.id)
-  try {
-    await deleteAdminApplications(ids)
-    selectedApps.value = []
-    loadApplications()
-    ElMessage.success('已删除')
-  } catch { ElMessage.error('删除失败') }
-}
 
 // ==================== 录取配置 ====================
-const admitQuery = reactive({ classId: null })
+const admitQuery = reactive({ classId: null, status: null, idCard: '', name: '' })
 const admitList = ref([])
 const selectedAdmit = ref([])
 
 async function loadAdmitList() {
-  const params = { page: 0, size: 200, status: 1 }
-  if (admitQuery.classId) params.classId = admitQuery.classId
+  const params = { page: 0, size: 200 }
+  if (admitQuery.classId)       params.classId = admitQuery.classId
+  if (admitQuery.status !== null && admitQuery.status !== '') params.status = admitQuery.status
+  if (admitQuery.idCard)        params.idCard = admitQuery.idCard
+  if (admitQuery.name)          params.name = admitQuery.name
   try {
     const res = await fetchAdminApplications(params)
-    admitList.value = (res.data.list || []).filter(a => a.status === '1')
+    admitList.value = res.data.list || []
   } catch {}
 }
 async function onBatchAdmit() {
@@ -484,6 +503,15 @@ async function onBatchAdmit() {
     loadAdmitList()
     ElMessage.success('已录取')
   } catch { ElMessage.error('操作失败') }
+}
+async function onBatchWithdrawAdmit() {
+  const ids = selectedAdmit.value.map(s => s.id)
+  try {
+    await withdrawAdminApplications(ids)
+    selectedAdmit.value = []
+    loadAdmitList()
+    ElMessage.success('已撤回')
+  } catch { ElMessage.error('撤回失败') }
 }
 
 // ==================== 退出 ====================
@@ -542,4 +570,7 @@ onMounted(() => {
 .filter-bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 14px; }
 .batch-bar { margin-top: 12px; display: flex; align-items: center; gap: 12px; font-size: 14px; color: #666; }
 .field-tip { margin-left: 8px; font-size: 12px; color: #999; }
+.rounds-list { display: flex; flex-direction: column; gap: 10px; }
+.round-row { display: flex; align-items: center; gap: 8px; }
+.round-label { font-size: 13px; color: #666; min-width: 50px; }
 </style>

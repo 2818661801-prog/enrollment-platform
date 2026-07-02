@@ -12,7 +12,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.security.MessageDigest;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -106,15 +105,11 @@ public class ApplicationService {
             throw new BusinessException(ResultCode.CLASS_FULL);
         }
 
-        // 6) 生成查询密码（明文 + SHA256 存储）
-        String plainPwd = generatePassword();
-        String hashedPwd = sha256(plainPwd);
-
-        // 7) 构造报名记录
+        // 6) 构造报名记录
         Application app = new Application();
         app.setName((String) form.get("name"));
         app.setIdCard(idCard);
-        app.setIdCardMasked(maskIdCard(idCard));
+        app.setIdCardMasked(idCard == null || idCard.length() != 18 ? idCard : idCard.replaceAll("(?<=^.{6}).{8}(?=.{4}$)", "********"));
         app.setGender((String) form.get("gender"));
         app.setPhone((String) form.get("phone"));
         app.setHasPhysics((String) form.get("hasPhysics"));
@@ -125,16 +120,15 @@ public class ApplicationService {
         app.setIsAdmitted(0);
         Object agreed = form.get("noticeAgreed");
         app.setNoticeAgreed(parseFlag(agreed));
-        app.setPassword(hashedPwd);
         app.setApplyTime(LocalDateTime.now());
         Application saved = appRepo.save(app);
 
-        // 8) 班级已报名人数 +1
+        // 7) 班级已报名人数 +1
         cls.setEnrolled(cls.getEnrolled() + 1);
         classRepo.save(cls);
 
         log.info("报名成功: id={}, name={}, classId={}, round={}", saved.getId(), saved.getName(), classId, currentRound);
-        return toDTO(saved, cls.getName(), plainPwd);
+        return toDTO(saved, cls.getName());
         } catch (Exception e) {
             log.error("submit 异常: form={}", form, e);
             throw e;
@@ -265,33 +259,6 @@ public class ApplicationService {
     }
 
     /**
-     * 验证密码后查我的报名（身份证+密码双因子）
-     * @param idCard  身份证号
-     * @param password 明文密码（与 DB 中 SHA256 比对）
-     * @return 报名列表（验证失败抛异常）
-     */
-    public List<ApplicationDTO> findMyWithPwd(String idCard, String password) {
-        String hashed = sha256(password);
-        List<Application> apps = appRepo.findByIdCardAndStatus(idCard, STATUS_APPLIED);
-        if (apps.isEmpty()) {
-            throw new BusinessException(ResultCode.APPLICATION_NOT_FOUND, "未找到报名记录");
-        }
-        // 密码匹配校验（任意一条匹配即可，说明是本人）
-        boolean matched = apps.stream().anyMatch(a -> hashed.equals(a.getPassword()));
-        if (!matched) {
-            throw new BusinessException(ResultCode.PARAM_INVALID, "密码错误，请重新输入");
-        }
-        return apps.stream()
-                .map(app -> {
-                    String className = classRepo.findById(app.getClassId())
-                            .map(ClassInfo::getName)
-                            .orElse("未知班级");
-                    return toDTO(app, className);
-                })
-                .collect(Collectors.toList());
-    }
-
-    /**
      * 按手机号查我的报名（JWT 认证，学生登录后直接查询）
      * @param phone 登录手机号（来自 JWT sub）
      * @return 报名列表（只查已报名 status=1 的）
@@ -376,12 +343,6 @@ public class ApplicationService {
 
     // ==================== 内部工具 ====================
 
-    /** 身份证脱敏：保留前 6 后 4，中间 8 位换 * */
-    private String maskIdCard(String idCard) {
-        if (idCard == null || idCard.length() != 18) return idCard;
-        return idCard.replaceAll("(?<=^.{6}).{8}(?=.{4}$)", "********");
-    }
-
     /** 解析前端 checkbox/boolean 值 → 0/1 */
     private Integer parseFlag(Object val) {
         if (val == null) return 0;
@@ -390,17 +351,12 @@ public class ApplicationService {
         return "true".equalsIgnoreCase(s) || "1".equals(s) ? 1 : 0;
     }
 
-    /** Entity → DTO（无密码，用于查询列表） */
-    private ApplicationDTO toDTO(Application e, String className) {
-        return toDTO(e, className, null);
-    }
-
-    /** Entity → DTO（带明文密码，仅提交报名时调用一次） */
-    private ApplicationDTO toDTO(Application e, String className, String plainPassword) {
+    /** Entity → DTO */
+    ApplicationDTO toDTO(Application e, String className) {
         return ApplicationDTO.builder()
                 .id(e.getId())
                 .name(e.getName())
-                .idCard(e.getIdCardMasked())   // 返脱敏版
+                .idCard(e.getIdCardMasked())
                 .gender(e.getGender())
                 .phone(e.getPhone())
                 .hasPhysics(e.getHasPhysics())
@@ -410,29 +366,6 @@ public class ApplicationService {
                 .appliedCategory(e.getAppliedCategory())
                 .status(String.valueOf(e.getStatus()))
                 .applyTime(e.getApplyTime())
-                .plainPassword(plainPassword)  // 仅提交时有值
                 .build();
-    }
-
-    // ==================== 密码工具 ====================
-
-    /** 生成 8 位随机数字密码 */
-    private String generatePassword() {
-        java.security.SecureRandom r = new java.security.SecureRandom();
-        int pwd = r.nextInt(90000000) + 10000000; // 8 位，10000000~99999999
-        return String.valueOf(pwd);
-    }
-
-    /** SHA256 哈希（用于存储） */
-    private String sha256(String input) {
-        try {
-            MessageDigest md = MessageDigest.getInstance("SHA-256");
-            byte[] hash = md.digest(input.getBytes(java.nio.charset.StandardCharsets.UTF_8));
-            StringBuilder sb = new StringBuilder();
-            for (byte b : hash) sb.append(String.format("%02x", b));
-            return sb.toString();
-        } catch (Exception e) {
-            throw new RuntimeException("SHA256 计算失败", e);
-        }
     }
 }

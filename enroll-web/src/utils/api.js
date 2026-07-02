@@ -140,8 +140,8 @@ export const fetchAdminApplications = (params) => {
   return adminRequest(`/api/admin/applications?${qs}`)
 }
 
-/** 管理员：批量删除报名 */
-export const deleteAdminApplications = (ids) =>
+/** 管理员：批量撤回报名 */
+export const withdrawAdminApplications = (ids) =>
   adminRequest(`/api/admin/applications/batch?ids=${ids.join(',')}`, { method: 'DELETE' })
 
 /** 管理员：清空班级报名 */
