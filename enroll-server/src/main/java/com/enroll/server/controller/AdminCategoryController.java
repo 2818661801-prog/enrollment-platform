@@ -11,11 +11,15 @@ import java.util.Map;
 /**
  * 管理端 - 类别字典管理
  *
- * RESTful：
- *   GET    /api/admin/categories        — 列表
- *   POST   /api/admin/categories        — 新增
- *   PUT    /api/admin/categories/{id}   — 修改
- *   DELETE /api/admin/categories/{id}   — 删除
+ * ⚠️ 2026-07-02 重构：所有"改数据库"只接受 POST，"查"只接受 GET
+ *    PUT /api/admin/categories/{id}  → POST /api/admin/categories/update
+ *    DELETE /api/admin/categories/{id} → POST /api/admin/categories/delete
+ *
+ * 接口列表：
+ *   GET    /api/admin/categories            — 列表
+ *   POST   /api/admin/categories            — 新增
+ *   POST   /api/admin/categories/update     — 修改（Body 传 id）
+ *   POST   /api/admin/categories/delete     — 删除（Body 传 id）
  */
 @RestController
 @RequestMapping("/api/admin/categories")
@@ -39,15 +43,25 @@ public class AdminCategoryController {
         return R.ok(created);
     }
 
-    @PutMapping("/{id}")
-    public Map<String, Object> update(@PathVariable Integer id, @RequestBody Map<String, String> body) {
-        String name = body.get("name");
+    /**
+     * 修改类别（POST 替代原有 PUT）
+     * Body: { id: 1, name: "新名称" }
+     */
+    @PostMapping("/update")
+    public Map<String, Object> update(@RequestBody Map<String, Object> body) {
+        Integer id = (Integer) body.get("id");
+        String name = (String) body.get("name");
         CategoryDTO updated = categoryService.update(id, name);
         return R.ok(updated);
     }
 
-    @DeleteMapping("/{id}")
-    public Map<String, Object> delete(@PathVariable Integer id) {
+    /**
+     * 删除类别（POST 替代原有 DELETE）
+     * Body: { id: 1 }
+     */
+    @PostMapping("/delete")
+    public Map<String, Object> delete(@RequestBody Map<String, Object> body) {
+        Integer id = (Integer) body.get("id");
         categoryService.delete(id);
         return R.ok(null);
     }
