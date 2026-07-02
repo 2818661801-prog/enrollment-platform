@@ -341,6 +341,15 @@ public class ApplicationService {
         appRepo.batchUpdateStatus(ids, STATUS_ENROLLED);
     }
 
+    /**
+     * 批量录取（带审核意见）
+     */
+    @Transactional
+    public void batchAdmit(List<Integer> ids, String auditComment) {
+        appRepo.batchUpdateAdmitted(ids, 1);
+        appRepo.batchUpdateStatusAndComment(ids, STATUS_ENROLLED, auditComment);
+    }
+
     // ==================== 内部工具 ====================
 
     /** 解析前端 checkbox/boolean 值 → 0/1 */
@@ -366,6 +375,7 @@ public class ApplicationService {
                 .appliedCategory(e.getAppliedCategory())
                 .status(String.valueOf(e.getStatus()))
                 .applyTime(e.getApplyTime())
+                .auditComment(e.getAuditComment())
                 .build();
     }
 }

@@ -215,7 +215,7 @@
           <div class="batch-bar" v-if="selectedAdmit.length">
             <span>已选 {{ selectedAdmit.length }} 名学生</span>
             <el-button type="danger" size="small" @click="onBatchWithdrawAdmit">批量撤回</el-button>
-            <el-button type="success" @click="onBatchAdmit">批量录取</el-button>
+            <el-button type="success" @click="admitDialogVisible=true; admitComment=''">批量录取</el-button>
           </div>
         </div>
       </el-tab-pane>
@@ -263,6 +263,19 @@
       <template #footer>
         <el-button @click="classDialogVisible=false">取消</el-button>
         <el-button type="primary" @click="onSaveClass" :loading="classSaving">保存</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 批量录取弹窗 -->
+    <el-dialog v-model="admitDialogVisible" title="批量录取" width="450px">
+      <el-form>
+        <el-form-item label="审核意见">
+          <el-input v-model="admitComment" type="textarea" :rows="3" placeholder="填写通过/驳回原因（可不填）" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="admitDialogVisible=false; ElMessage.info('已取消')">取消</el-button>
+        <el-button type="success" @click="onConfirmAdmit">确认录取</el-button>
       </template>
     </el-dialog>
   </div>
@@ -487,6 +500,8 @@ async function loadApplications() {
 const admitQuery = reactive({ classId: null, status: null, idCard: '', name: '' })
 const admitList = ref([])
 const selectedAdmit = ref([])
+const admitDialogVisible = ref(false)
+const admitComment = ref('')
 
 async function loadAdmitList() {
   const params = { page: 0, size: 200 }
@@ -499,10 +514,11 @@ async function loadAdmitList() {
     admitList.value = res.data.list || []
   } catch {}
 }
-async function onBatchAdmit() {
+async function onConfirmAdmit() {
   const ids = selectedAdmit.value.map(s => s.id)
   try {
-    await admitAdminApplications(ids)
+    await admitAdminApplications(ids, admitComment.value)
+    admitDialogVisible.value = false
     selectedAdmit.value = []
     loadAdmitList()
     ElMessage.success('已录取')

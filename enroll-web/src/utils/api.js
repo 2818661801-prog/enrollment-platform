@@ -148,9 +148,12 @@ export const withdrawAdminApplications = (ids) =>
 export const clearAdminClass = (classId) =>
   adminRequest(`/api/admin/applications/clear?classId=${classId}`, { method: 'DELETE' })
 
-/** 管理员：批量录取 */
-export const admitAdminApplications = (ids) =>
-  adminRequest(`/api/admin/applications/admit/batch?ids=${ids.join(',')}`, { method: 'PUT' })
+/** 管理员：批量录取（可选审核意见） */
+export const admitAdminApplications = (ids, auditComment = '') =>
+  adminRequest('/api/admin/applications/admit/batch', {
+    method: 'PUT',
+    body: JSON.stringify({ ids, auditComment }),
+  })
 
 /** 管理员：班级列表 */
 export const fetchAdminClasses = () => adminRequest('/api/admin/classes')

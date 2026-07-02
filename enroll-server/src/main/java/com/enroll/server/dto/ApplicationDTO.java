@@ -3,36 +3,28 @@ package com.enroll.server.dto;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
-/**
- * 报名 DTO（API 出参专用）
- *
- * 关键设计：只返 idCardMasked（脱敏版），不返 idCard（完整版）
- *   防止敏感数据从 API 流出 → 数据库完整身份证仅 Service 内部使用
- */
 public class ApplicationDTO implements Serializable {
 
     private Integer id;
     private String name;
-    private String idCard;        // 脱敏版（如 330110********0626）
+    private String idCard;
     private String gender;
     private String phone;
     private String hasPhysics;
     private String hasEnglish;
     private Integer classId;
-    private String className;     // 班级名（冗余字段，前端展示不用再查）
+    private String className;
     private String appliedCategory;
     private String status;
     private LocalDateTime applyTime;
-
-    // ==================== 构造器 ====================
+    private String auditComment;
 
     public ApplicationDTO() {}
 
-    /** 全参构造器（Builder.build() 用） */
     public ApplicationDTO(Integer id, String name, String idCard, String gender,
                           String phone, String hasPhysics, String hasEnglish,
                           Integer classId, String className, String appliedCategory,
-                          String status, LocalDateTime applyTime) {
+                          String status, LocalDateTime applyTime, String auditComment) {
         this.id = id;
         this.name = name;
         this.idCard = idCard;
@@ -45,6 +37,7 @@ public class ApplicationDTO implements Serializable {
         this.appliedCategory = appliedCategory;
         this.status = status;
         this.applyTime = applyTime;
+        this.auditComment = auditComment;
     }
 
     // ==================== Getter / Setter ====================
@@ -85,12 +78,12 @@ public class ApplicationDTO implements Serializable {
     public LocalDateTime getApplyTime() { return applyTime; }
     public void setApplyTime(LocalDateTime applyTime) { this.applyTime = applyTime; }
 
-    // ==================== Builder（链式构建） ====================
+    public String getAuditComment() { return auditComment; }
+    public void setAuditComment(String auditComment) { this.auditComment = auditComment; }
 
-    /** 静态入口：ApplicationDTO.builder() 开始链式调用 */
-    public static Builder builder() {
-        return new Builder();
-    }
+    // ==================== Builder ====================
+
+    public static Builder builder() { return new Builder(); }
 
     public static class Builder {
         private Integer id;
@@ -105,6 +98,7 @@ public class ApplicationDTO implements Serializable {
         private String appliedCategory;
         private String status;
         private LocalDateTime applyTime;
+        private String auditComment;
 
         public Builder id(Integer id) { this.id = id; return this; }
         public Builder name(String name) { this.name = name; return this; }
@@ -118,10 +112,11 @@ public class ApplicationDTO implements Serializable {
         public Builder appliedCategory(String appliedCategory) { this.appliedCategory = appliedCategory; return this; }
         public Builder status(String status) { this.status = status; return this; }
         public Builder applyTime(LocalDateTime applyTime) { this.applyTime = applyTime; return this; }
+        public Builder auditComment(String auditComment) { this.auditComment = auditComment; return this; }
 
         public ApplicationDTO build() {
             return new ApplicationDTO(id, name, idCard, gender, phone, hasPhysics, hasEnglish,
-                    classId, className, appliedCategory, status, applyTime);
+                    classId, className, appliedCategory, status, applyTime, auditComment);
         }
     }
 }

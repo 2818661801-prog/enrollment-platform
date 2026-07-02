@@ -73,4 +73,14 @@ public interface ApplicationRepository extends JpaRepository<Application, Intege
     @Modifying
     @Query("UPDATE Application a SET a.isAdmitted = :isAdmitted WHERE a.id IN :ids")
     void batchUpdateAdmitted(@Param("ids") List<Integer> ids, @Param("isAdmitted") Integer isAdmitted);
+
+    /**
+     * 批量更新 status + auditComment（录取时写入审核意见）
+     * @param ids           报名记录 ID 列表
+     * @param status        目标状态值
+     * @param auditComment  审核意见
+     */
+    @Modifying
+    @Query("UPDATE Application a SET a.status = :status, a.auditComment = :auditComment WHERE a.id IN :ids")
+    void batchUpdateStatusAndComment(@Param("ids") List<Integer> ids, @Param("status") Integer status, @Param("auditComment") String auditComment);
 }

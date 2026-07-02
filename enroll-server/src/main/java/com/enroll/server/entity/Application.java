@@ -66,6 +66,10 @@ public class Application {
     @Column(name = "notice_agreed", nullable = false)
     private Integer noticeAgreed = 0;
 
+    /** 审核意见（管理员填写，通过/驳回原因） */
+    @Column(name = "audit_comment", length = 500)
+    private String auditComment;
+
     @Column(name = "apply_time", nullable = false)
     private LocalDateTime applyTime = LocalDateTime.now(); // 报名时间
 
@@ -109,6 +113,9 @@ public class Application {
 
     public Integer getNoticeAgreed() { return noticeAgreed; }
     public void setNoticeAgreed(Integer noticeAgreed) { this.noticeAgreed = noticeAgreed; }
+
+    public String getAuditComment() { return auditComment; }
+    public void setAuditComment(String auditComment) { this.auditComment = auditComment; }
 
     public LocalDateTime getApplyTime() { return applyTime; }
     public void setApplyTime(LocalDateTime applyTime) { this.applyTime = applyTime; }

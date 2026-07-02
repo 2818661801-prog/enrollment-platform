@@ -114,10 +114,18 @@ public class AdminController {
      */
     @Transactional
     @PutMapping("/applications/admit/batch")
-    public Map<String, Object> batchAdmit(@RequestParam String ids) {
-        List<Integer> idList = parseIds(ids);
-        applicationService.batchAdmit(idList);
-        log.info("批量录取: ids={}", idList);
+    public Map<String, Object> batchAdmit(@RequestBody Map<String, Object> body) {
+        // ids 可能是 "1,2,3" 字符串，也可能是 [1,2,3] 数组
+        Object idsObj = body.get("ids");
+        List<Integer> idList;
+        if (idsObj instanceof List) {
+            idList = ((List<?>) idsObj).stream().map(i -> ((Number) i).intValue()).toList();
+        } else {
+            idList = parseIds(String.valueOf(idsObj));
+        }
+        String auditComment = (String) body.getOrDefault("auditComment", "");
+        applicationService.batchAdmit(idList, auditComment);
+        log.info("批量录取: ids={}, auditComment={}", idList, auditComment);
         return R.ok("已录取 " + idList.size() + " 名学生", null);
     }
 

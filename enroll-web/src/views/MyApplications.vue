@@ -44,8 +44,8 @@
           <el-table-column prop="idCard" label="身份证号" width="160" />
           <el-table-column prop="status" label="状态" width="90">
             <template #default="{ row }">
-              <el-tag :type="row.status==='1'?'success':'warning'" size="small">
-                {{ row.status === '1' ? '已报名' : '已撤回' }}
+              <el-tag :type="row.status==='1'?'warning':'info'" size="small">
+                {{ row.status === '1' ? '审核中' : (row.status === '2' ? '已录取' : '已撤回') }}
               </el-tag>
             </template>
           </el-table-column>

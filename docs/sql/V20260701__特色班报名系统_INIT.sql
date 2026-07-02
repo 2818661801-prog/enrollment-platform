@@ -43,6 +43,7 @@ CREATE TABLE `applications` (
   `status`         INT          NOT NULL                COMMENT '1已报名 0已撤回 2已录取',
   `is_admitted`    INT          NOT NULL                COMMENT '是否已录取',
   `notice_agreed`  INT          NOT NULL                COMMENT '是否同意报名须知',
+  `audit_comment`  VARCHAR(500) DEFAULT NULL               COMMENT '审核意见（管理员填写）',
   `apply_time`     DATETIME     NOT NULL                COMMENT '报名时间',
   INDEX `idx_id_card`  (`id_card`),
   INDEX `idx_class_id` (`class_id`)
