@@ -7,7 +7,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -19,7 +21,7 @@ import java.util.concurrent.TimeUnit;
  *
  * Redis Key：sms:login:{phone} → 验证码，TTL 5分钟
  *
- * SMS 发送：目前是 mock（控制台打印），主人替换 sendSms() 即可
+ * SMS 发送：2026-07-02 接入大汉三通短信平台（http://***REMOVED***:8061）
  */
 @Service
 public class AuthService {
@@ -100,19 +102,31 @@ public class AuthService {
     }
 
     /**
-     * 发送短信（Mock 版，主人替换为真实接口）
+     * 发送短信（真实接口：大国三通短信平台）
      * @param phone 收件人手机号
      * @param code  验证码
      */
     private void sendSms(String phone, String code) {
-        // TODO: 主人提供短信接口后，在此调用真实短信服务
-        // 示例：aliyunSmsClient.send(phone, code);
-        log.info("========== 【Mock SMS】发送验证码 ==========");
-        log.info("  收件人：{}", phone);
-        log.info("  验证码：{}（5分钟内有效）", code);
-        log.info("  用途  ：学生登录");
-        log.info("==========================================");
+        // 大汉三通短信平台：GET /mdsmssend.ashx?sn=...&pwd=...&mobile=...&content=...
+        // content 内容需与大汉三通平台报备的模板格式一致，平台会自动拼接签名
+        String sn     = "SDK-BBX-010-39560";
+        String pwd    = "3365CB7EB11EEC171571E8E91C61EF30";
+        // 与大汉三通平台模板格式一致：签名+正文（平台配置模板时已设定签名拼接规则）
+        String content = "【杭州电子科技大学信息工程学院】您的验证码为" + code + "，5分钟内有效，请勿泄露给他人。";
+        String encodedContent = java.net.URLEncoder.encode(content, StandardCharsets.UTF_8);
+        String url = String.format(
+            "http://***REMOVED***:8061/mdsmssend.ashx?sn=%s&pwd=%s&mobile=%s&content=%s",
+            sn, pwd, phone, encodedContent
+        );
+        try {
+            String resp = restTemplate.getForObject(url, String.class);
+            log.info("【短信发送结果】phone={} code={} resp={}", phone, code, resp);
+        } catch (Exception e) {
+            log.error("【短信发送失败】phone={} code={}", phone, code, e);
+        }
     }
+
+    private final RestTemplate restTemplate = new RestTemplate();
 
     /** 手机号格式校验 */
     private void validatePhone(String phone) {
