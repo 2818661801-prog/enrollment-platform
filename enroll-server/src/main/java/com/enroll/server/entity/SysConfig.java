@@ -17,7 +17,7 @@ import java.time.LocalDateTime;
  *   });
  */
 @Entity
-@Table(name = "sys_config")
+@Table(name = "ssc_sys_config")
 public class SysConfig {
 
     @Id

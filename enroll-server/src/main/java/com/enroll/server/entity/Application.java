@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
  * 每行 = 一个学生的报名记录
  */
 @Entity
-@Table(name = "applications")
+@Table(name = "ssc_applications")
 public class Application {
 
     @Id
@@ -79,8 +79,9 @@ public class Application {
      *   admin   — 管理员代录
      *   sync    — 内网低代码平台同步
      */
-    @Column(name = "source", nullable = false, length = 20)
-    private String source = "student";
+    /** 报名轮次：1=第一轮，2=第二轮（存的是报名提交时确定的轮次，非当前时间计算） */
+    @Column(name = "round", nullable = false)
+    private Integer round = 1;
 
     // ==================== 生命周期回调 ====================
 
@@ -135,6 +136,6 @@ public class Application {
     public LocalDateTime getApplyTime() { return applyTime; }
     public void setApplyTime(LocalDateTime applyTime) { this.applyTime = applyTime; }
 
-    public String getSource() { return source; }
-    public void setSource(String source) { this.source = source; }
+    public Integer getRound() { return round; }
+    public void setRound(Integer round) { this.round = round; }
 }

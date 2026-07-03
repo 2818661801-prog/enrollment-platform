@@ -93,8 +93,13 @@ export function usePhoneCode() {
       return
     }
     sending.value = true
+    // 2秒后若还在发送中，提示用户耐心等待（避免正常情况误触）
+    const waitTimer = setTimeout(() => {
+      ElMessage.info('正在获取验证码，请耐心等待...')
+    }, 2000)
     try {
       const res = await sendCodeAPI(phone.value)
+      clearTimeout(waitTimer)
       if (res.code !== 200) {
         ElMessage.error(res.message || '发送失败')
         return
@@ -103,6 +108,7 @@ export function usePhoneCode() {
       codeSent.value = true
       startCountdown()
     } catch {
+      clearTimeout(waitTimer)
       ElMessage.error('网络错误，请稍后重试')
     } finally {
       sending.value = false

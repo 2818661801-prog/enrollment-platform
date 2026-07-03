@@ -127,22 +127,22 @@ function buildClassesOverview(classes) {
  */
 const slides = computed(() => [
   {
-    img: new URL('../assets/images/01.jpg', import.meta.url).href,
+    img: new URL('../assets/images/02.jpg', import.meta.url).href,
     tag: '欢迎来到杭电信工特色班',
     title: '筑梦杭电信工 不负韶华',
     subtitle: dynamicSubtitle(props.classesCount),  // 变数：班级数量
   },
   {
-    img: new URL('../assets/images/02.jpg', import.meta.url).href,
+    img: new URL('../assets/images/01.jpg', import.meta.url).href,
     tag: '点亮你的未来',
-    title: '筑梦杭电信工 不负韶华',
+    title: '选择特色班 成就更好的自己',
     subtitle: buildClassesOverview(props.classes),  // 变数：班级类别
   },
   {
     img: new URL('../assets/images/03.jpg', import.meta.url).href,
     tag: '春暖花开 等你来',
     title: '在最美的地方 做最棒的自己',
-    subtitle: '镜湖之畔，杭电之窗，让梦想启航',
+    subtitle: '镜湖之畔，信工之窗，让梦想启航',
   },
   {
     img: new URL('../assets/images/04.jpg', import.meta.url).href,
@@ -257,7 +257,7 @@ onUnmounted(() => {
 .hero-banner {
   position: relative;
   width: 100%;
-  aspect-ratio: 28 / 9;           /* 桌面端 28:9 紧凑型 */
+  aspect-ratio: 32 / 9;           /* 桌面端 32:9 超扁型 */
   overflow: hidden;
   border-radius: 14px;
   background: #1e293b;            /* 占位背景：图加载前显示深色 */

@@ -10,7 +10,7 @@ import jakarta.persistence.*;
  *   根据当前时间在 periods 中匹配，判断当前是第几轮
  */
 @Entity
-@Table(name = "classes")
+@Table(name = "ssc_classes")
 public class ClassInfo {
 
     @Id

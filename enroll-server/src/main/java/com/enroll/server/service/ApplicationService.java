@@ -9,6 +9,8 @@ import com.enroll.server.repository.ApplicationRepository;
 import com.enroll.server.repository.ClassInfoRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,9 +18,6 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 
 /**
  * 报名业务层（核心）
@@ -40,6 +39,8 @@ import org.springframework.data.domain.PageRequest;
  * 事务边界：
  *   - 写方法（submit/withdraw）@Transactional，失败自动回滚
  *   - 读方法（findMy）继承类级别 readOnly = true
+ *
+ * ===== 测试开关 ===== 临时开放报名，测完改回 false
  */
 @Service
 @Transactional(readOnly = true)
@@ -47,17 +48,19 @@ public class ApplicationService {
 
     private static final Logger log = LoggerFactory.getLogger(ApplicationService.class);
 
+    // ===== 测试开关 =====
+    private static final boolean TEST_MODE = true;
+
     /** 状态常量 */
-    public static final int STATUS_NONE      = 0;  // 未报名（登录后无记录）
-    public static final int STATUS_APPLIED   = 1;  // 已报名
-    public static final int STATUS_WITHDRAWN = 2;  // 已撤回
-    public static final int STATUS_ENROLLED  = 3;  // 已录取
-    public static final int STATUS_REJECTED  = 4;  // 未录取
+    public static final int STATUS_NONE      = 0;
+    public static final int STATUS_APPLIED   = 1;
+    public static final int STATUS_WITHDRAWN = 2;
+    public static final int STATUS_ENROLLED  = 3;
+    public static final int STATUS_REJECTED  = 4;
 
     private final ApplicationRepository appRepo;
     private final ClassInfoRepository classRepo;
 
-    /** 构造器注入 */
     public ApplicationService(ApplicationRepository appRepo, ClassInfoRepository classRepo) {
         this.appRepo = appRepo;
         this.classRepo = classRepo;
@@ -65,11 +68,6 @@ public class ApplicationService {
 
     // ==================== 提交报名（写） ====================
 
-    /**
-     * 提交报名
-     * @param form 前端提交的表单 {name, idCard, gender, phone, hasPhysics, hasEnglish, classId, noticeAgreed}
-     * @return 报名 DTO（含新分配的 ID）
-     */
     @Transactional
     public ApplicationDTO submit(Map<String, Object> form) {
         try {
@@ -80,29 +78,31 @@ public class ApplicationService {
         ClassInfo cls = classRepo.findById(classId)
                 .orElseThrow(() -> new BusinessException(ResultCode.CLASS_NOT_FOUND));
 
-        // 2) 判断当前轮次（针对 round=2 的成电班）
-        int currentRound = determineCurrentRound(cls);
-        if (currentRound == 0) {
-            throw new BusinessException(ResultCode.PARAM_INVALID, "该班级当前不在报名时间内");
+        // 2) 测试模式：跳过时间校验
+        int currentRound = 1;
+        if (!TEST_MODE) {
+            currentRound = determineCurrentRound(cls);
+            if (currentRound == 0) {
+                throw new BusinessException(ResultCode.PARAM_INVALID, "该班级当前不在报名时间内");
+            }
         }
 
-        // 3) 全局唯一报名：检查该学生是否有 status != 0 and != 2 的记录（即已报名/已录取/未录取状态，不能再报）
+        // 3) 全局唯一报名：已报名（审核中）或已录取（永久锁定）不可再报，未录取可以重新报
         List<Application> globalDup = appRepo.findByIdCardAndStatusIn(
-                idCard, List.of(STATUS_APPLIED, STATUS_ENROLLED, STATUS_REJECTED));
+                idCard, List.of(STATUS_APPLIED, STATUS_ENROLLED));
         if (!globalDup.isEmpty()) {
             throw new BusinessException(ResultCode.DUPLICATE_APPLICATION, "您已报名其他特色班，不可重复报名");
         }
 
-        // 4) 本轮防重复：同身份证 + 同班级 + 本轮，不能有 status != 0 and != 2 的记录
+        // 4) 本轮防重复
         List<Application> roundDup = appRepo.findByIdCardAndClassIdAndStatusIn(
                 idCard, classId, List.of(STATUS_APPLIED, STATUS_ENROLLED, STATUS_REJECTED));
         if (!roundDup.isEmpty()) {
             throw new BusinessException(ResultCode.DUPLICATE_APPLICATION);
         }
 
-        // 5) 第二轮（currentRound=2）：必须先有第一轮记录才能报
-        if (currentRound == 2) {
-            // 从 periods JSON 判断是否真的有第二轮
+        // 5) 第二轮须先有第一轮记录
+        if (!TEST_MODE && currentRound == 2) {
             boolean hasRound2 = hasRound(cls.getPeriods(), 2);
             if (hasRound2) {
                 List<Application> firstRound = findRoundRecord(idCard, classId, 1);
@@ -113,7 +113,7 @@ public class ApplicationService {
         }
 
         // 6) 名额校验（quota=-1 不限）
-        if (cls.getQuota() != -1 && cls.getEnrolled() >= cls.getQuota()) {
+        if (!TEST_MODE && cls.getQuota() != -1 && cls.getEnrolled() >= cls.getQuota()) {
             throw new BusinessException(ResultCode.CLASS_FULL);
         }
 
@@ -132,6 +132,7 @@ public class ApplicationService {
         Object agreed = form.get("noticeAgreed");
         app.setNoticeAgreed(parseFlag(agreed));
         app.setApplyTime(LocalDateTime.now());
+        app.setRound(currentRound);
         Application saved = appRepo.save(app);
 
         // 8) 班级已报名人数 +1
@@ -148,15 +149,9 @@ public class ApplicationService {
 
     // ==================== 二轮判断逻辑 ====================
 
-    /**
-     * 根据当前时间和班级 periods 配置，判断当前处于哪一轮
-     * periods = [{"round":1,"period":"2026/09/01 - 2026/09/13"},{"round":2,"period":"2026/09/15 - 2026/09/16"}]
-     * @return 0=不在报名期  否则返回轮次号
-     */
     private int determineCurrentRound(ClassInfo cls) {
         String periodsJson = cls.getPeriods();
         if (periodsJson == null || periodsJson.isBlank()) {
-            // 无 periods：用旧的 period 字段fallback
             return isInPeriod(cls.getPeriod()) ? 1 : 0;
         }
         try {
@@ -169,16 +164,13 @@ public class ApplicationService {
                 String period = (String) entry.get("period");
                 if (isInPeriod(period)) return round;
             }
-            return 0; // 当前不在任何一轮
+            return 0;
         } catch (Exception e) {
             log.warn("periods JSON 解析失败: {}", periodsJson, e);
             return isInPeriod(cls.getPeriod()) ? 1 : 0;
         }
     }
 
-    /**
-     * 判断 periods JSON 中是否存在指定轮次
-     */
     private boolean hasRound(String periodsJson, int round) {
         if (periodsJson == null || periodsJson.isBlank()) return false;
         try {
@@ -196,19 +188,17 @@ public class ApplicationService {
         return false;
     }
 
-    /**
-     * 判断当前时间是否在给定时间段内
-     * @param period 格式："2026/09/01 - 2026/09/13"
-     * @return true=在报名期内
-     */
     private boolean isInPeriod(String period) {
         if (period == null || period.isBlank()) return false;
         try {
             String[] parts = period.split(" - ");
             if (parts.length != 2) return false;
+            // 去掉时间后缀（"2026/09/16 23:59" → "2026/09/16"），再解析日期
+            String startStr = parts[0].trim().split(" ")[0];
+            String endStr   = parts[1].trim().split(" ")[0];
             java.time.format.DateTimeFormatter FMT = java.time.format.DateTimeFormatter.ofPattern("yyyy/MM/dd");
-            java.time.LocalDate start = java.time.LocalDate.parse(parts[0].trim(), FMT);
-            java.time.LocalDate end   = java.time.LocalDate.parse(parts[1].trim(), FMT);
+            java.time.LocalDate start = java.time.LocalDate.parse(startStr, FMT);
+            java.time.LocalDate end   = java.time.LocalDate.parse(endStr, FMT);
             java.time.LocalDate now   = java.time.LocalDate.now();
             return !now.isBefore(start) && !now.isAfter(end);
         } catch (Exception e) {
@@ -217,20 +207,12 @@ public class ApplicationService {
         }
     }
 
-    /**
-     * 查某学生在某班某轮的报名记录（status=1 的有效记录）
-     */
     private List<Application> findRoundRecord(String idCard, Integer classId, int round) {
-        // round 不存在字段，用全量查后过滤（数据量小，够用）
         return appRepo.findByIdCardAndClassIdAndStatus(idCard, classId, STATUS_APPLIED);
     }
 
     // ==================== 撤回报名（软删除，写） ====================
 
-    /**
-     * 撤回报名（软删除：将 status 改为 0，不删除记录）
-     * @param id 报名记录 ID
-     */
     @Transactional
     public void withdraw(Integer id) {
         Application app = appRepo.findById(id)
@@ -243,11 +225,9 @@ public class ApplicationService {
             throw new BusinessException(ResultCode.PARAM_INVALID, "已录取的报名无法撤回");
         }
 
-        // 软删除：status → 0
         app.setStatus(STATUS_WITHDRAWN);
         appRepo.save(app);
 
-        // 班级已报名人数 -1
         classRepo.findById(app.getClassId()).ifPresent(cls -> {
             cls.setEnrolled(Math.max(0, cls.getEnrolled() - 1));
             classRepo.save(cls);
@@ -256,11 +236,8 @@ public class ApplicationService {
         log.info("撤回报名: id={}, name={}", id, app.getName());
     }
 
-    // ==================== 我的报名（读，只查有效记录） ====================
+    // ==================== 我的报名（读） ====================
 
-    /**
-     * 按身份证查我的报名列表（只查 status=1 已报名的）
-     */
     public List<ApplicationDTO> findMy(String idCard) {
         return appRepo.findByIdCardAndStatus(idCard, STATUS_APPLIED).stream()
                 .map(app -> {
@@ -272,13 +249,8 @@ public class ApplicationService {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * 按手机号查我的报名（JWT 认证，学生登录后直接查询）
-     * @param phone 登录手机号（来自 JWT sub）
-     * @return 报名列表（只查已报名 status=1 的）
-     */
     public List<ApplicationDTO> findMyByPhone(String phone) {
-        return appRepo.findByPhoneAndStatus(phone, STATUS_APPLIED).stream()
+        return appRepo.findByPhoneAndStatusIn(phone, List.of(STATUS_APPLIED, STATUS_ENROLLED, STATUS_REJECTED)).stream()
                 .map(app -> {
                     String className = classRepo.findById(app.getClassId())
                             .map(ClassInfo::getName)
@@ -290,11 +262,6 @@ public class ApplicationService {
 
     // ==================== 修改报名（写） ====================
 
-    /**
-     * 修改报名信息（姓名/电话/选科）
-     * @param id   报名记录 ID
-     * @param body {name, phone, hasPhysics, hasEnglish}
-     */
     @Transactional
     public void updateApp(Integer id, Map<String, Object> body) {
         Application app = appRepo.findById(id)
@@ -312,9 +279,6 @@ public class ApplicationService {
 
     // ==================== 管理端方法 ====================
 
-    /**
-     * 管理端分页查询报名记录
-     */
     public Page<ApplicationDTO> adminSearch(Integer classId, Integer status,
                                             String idCard, String name,
                                             PageRequest pageable) {
@@ -327,17 +291,11 @@ public class ApplicationService {
                 });
     }
 
-    /**
-     * 批量更新 status（如批量撤回）
-     */
     @Transactional
     public void batchUpdateStatus(List<Integer> ids, int status) {
         appRepo.batchUpdateStatus(ids, status);
     }
 
-    /**
-     * 清空某班所有报名（软删除）
-     */
     @Transactional
     public void clearClass(Integer classId) {
         appRepo.findByClassId(classId).forEach(app -> {
@@ -346,33 +304,21 @@ public class ApplicationService {
         });
     }
 
-    /**
-     * 批量录取（status=2）
-     */
     @Transactional
     public void batchAdmit(List<Integer> ids) {
         appRepo.batchUpdateStatus(ids, STATUS_ENROLLED);
     }
 
-    /**
-     * 批量录取（带审核意见）
-     */
     @Transactional
     public void batchAdmit(List<Integer> ids, String auditComment) {
         appRepo.batchUpdateStatusAndComment(ids, STATUS_ENROLLED, auditComment);
     }
 
-    /**
-     * 批量未录取（status=3）
-     */
     @Transactional
     public void batchReject(List<Integer> ids) {
         appRepo.batchUpdateStatus(ids, STATUS_REJECTED);
     }
 
-    /**
-     * 批量未录取（带审核意见）
-     */
     @Transactional
     public void batchReject(List<Integer> ids, String auditComment) {
         appRepo.batchUpdateStatusAndComment(ids, STATUS_REJECTED, auditComment);
@@ -380,7 +326,6 @@ public class ApplicationService {
 
     // ==================== 内部工具 ====================
 
-    /** 解析前端 checkbox/boolean 值 → 0/1 */
     private Integer parseFlag(Object val) {
         if (val == null) return 0;
         if (val instanceof Boolean) return ((Boolean) val) ? 1 : 0;
@@ -388,7 +333,6 @@ public class ApplicationService {
         return "true".equalsIgnoreCase(s) || "1".equals(s) ? 1 : 0;
     }
 
-    /** Entity → DTO（admin 端用，public 暴露方便 AdminController 调） */
     public ApplicationDTO toDTO(Application e, String className) {
         return ApplicationDTO.builder()
                 .id(e.getId())
@@ -405,7 +349,7 @@ public class ApplicationService {
                 .applyTime(e.getApplyTime())
                 .auditComment(e.getAuditComment())
                 .classPeriods(classRepo.findById(e.getClassId()).map(ClassInfo::getPeriods).orElse(null))
-                .source(e.getSource() != null ? e.getSource() : "student")
+                .round(e.getRound())
                 .build();
     }
 }

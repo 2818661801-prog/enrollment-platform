@@ -16,7 +16,7 @@
     <div class="card-body">
       <!-- 标题行：班级名称 + 类别标签（右上角） -->
       <div class="card-head">
-        <h3 class="card-name" :title="classInfo.name">{{ classInfo.name }}</h3>
+        <h3 class="card-name" :title="cardTitle">{{ cardTitle }}</h3>
         <div v-if="categoryNames.length" class="card-tags">
           <span v-for="n in categoryNames" :key="n" class="card-tag">{{ n }}</span>
         </div>
@@ -25,18 +25,21 @@
       <!-- 标题下分割线 -->
       <div class="card-rule" />
 
-      <!-- 报名时间段 -->
-      <div class="card-period">
-        <img :src="calendarIcon" alt="" class="period-icon" aria-hidden="true" />
-        <span class="period-text">{{ classInfo.period }}</span>
+      <!-- 报名时间段（支持多轮） -->
+      <div class="card-periods">
+        <div v-for="r in rounds" :key="r.round" class="card-period-row">
+          <img :src="calendarIcon" alt="" class="period-icon" aria-hidden="true" />
+          <span class="round-label">第{{ r.round }}轮</span>
+          <span class="period-text">{{ r.period }}</span>
+        </div>
       </div>
 
-      <!-- 三态按钮：立即报名 / 未开始 / 已截止 -->
+      <!-- 三态按钮：已录取 / 灰色已录取 / 未开始 / 已截止 / 立即报名 -->
       <button
         type="button"
         class="card-btn"
-        :class="`card-btn--${timeStatus.status}`"
-        :disabled="!timeStatus.canApply"
+        :class="btnClass"
+        :disabled="!timeStatus.canApply || isApplied || isAdmitted"
         @click.stop="onClick"
       >
         {{ buttonText }}
@@ -52,11 +55,35 @@ import { getClassTimeStatus } from '../utils/data.js'
 
 const props = defineProps({
   classInfo: { type: Object, required: true }, // 班级数据对象
+  isApplied: { type: Boolean, default: false }, // 学生是否已报该班（status=1或4）
+  isAdmitted: { type: Boolean, default: false }, // 是否已录取（status=3）
+  isLoggedIn: { type: Boolean, default: false }, // 学生是否已登录
 })
 
 const emit = defineEmits(['select'])
 
-const timeStatus = computed(() => getClassTimeStatus(props.classInfo))
+// 是否为多轮班（periods JSON 里有超过 1 条）
+const isMultiRound = computed(() => {
+  try {
+    const arr = JSON.parse(props.classInfo.periods || '[]')
+    return arr.length > 1
+  } catch { return false }
+})
+
+// 卡片标题：多轮班显示"班级名（第X轮报名）"，单轮班显示班级名
+const cardTitle = computed(() => {
+  const round = props.classInfo._round
+  if (round && isMultiRound.value) {
+    return `${props.classInfo.name}（第${round}轮报名）`
+  }
+  return props.classInfo.name
+})
+
+// 时间状态：按单轮的 _period 算，不看 classInfo.period
+const timeStatus = computed(() => {
+  const periodStr = props.classInfo._period || props.classInfo.period
+  return getClassTimeStatus({ period: periodStr })
+})
 
 // 类别标签：兼容 categoryNames（数组）和 category（字符串/null）两种来源
 const categoryNames = computed(() => {
@@ -67,7 +94,25 @@ const categoryNames = computed(() => {
   return []
 })
 
+// 解析 periods JSON，支持多轮报名时间段
+const rounds = computed(() => {
+  const periodsStr = props.classInfo.periods
+  if (!periodsStr || periodsStr.trim() === '') {
+    return [{ round: 1, period: props.classInfo.period || '' }]
+  }
+  try {
+    const arr = JSON.parse(periodsStr)
+    if (Array.isArray(arr) && arr.length > 0) return arr
+  } catch {}
+  return [{ round: 1, period: props.classInfo.period || '' }]
+})
+
+// 已录取（status=3）：黄色
+// 已登录 + 有记录（status=1/4）：灰色"已报名"
+// 无记录：按时间状态
 const buttonText = computed(() => {
+  if (props.isAdmitted) return '已录取'
+  if (props.isApplied) return '已报名'
   switch (timeStatus.value.status) {
     case 'not_started': return '未开始报名'
     case 'closed':      return '已截止'
@@ -75,11 +120,15 @@ const buttonText = computed(() => {
   }
 })
 
+// 按钮样式：已录取黄，其他已登录有记录灰
+const btnClass = computed(() => {
+  if (props.isAdmitted) return 'card-btn--admitted'
+  if (props.isApplied) return 'card-btn--gray'
+  return `card-btn--${timeStatus.value.status}`
+})
+
 function onClick() {
-  if (!timeStatus.value.canApply) {
-    // 不可报名时：不跳转，仅给出时间提示
-    return
-  }
+  if (!timeStatus.value.canApply || props.isApplied || props.isAdmitted) return
   emit('select', props.classInfo.id)
 }
 </script>
@@ -101,9 +150,13 @@ function onClick() {
 }
 .class-card.is-disabled {
   cursor: not-allowed;
+  opacity: 0.55;
+  pointer-events: none;
 }
 .class-card.is-disabled:hover {
   border-color: var(--rule, #e2e8f0);
+  box-shadow: none;
+  transform: none;
 }
 
 /* ==================== 签名元素：4px 顶部色条 ==================== */
@@ -171,14 +224,29 @@ function onClick() {
   background: var(--rule, #e2e8f0);
 }
 
-/* ==================== 时间段 ==================== */
-.card-period {
+/* ==================== 时间段（支持多轮） ==================== */
+.card-periods {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.card-period-row {
   display: flex;
   align-items: center;
   gap: 6px;
   font-size: 13px;
   color: var(--ink-soft, #475569);
-  line-height: 1.5;
+  line-height: 1.4;
+}
+.round-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #337eff;
+  background: #eaf2ff;
+  padding: 3px 10px;
+  border-radius: 10px;
+  flex-shrink: 0;
+  letter-spacing: 0.3px;
 }
 .period-icon {
   width: 14px;
@@ -224,6 +292,24 @@ function onClick() {
 .card-btn--closed {
   background: var(--disabled, #f1f5f9);
   color: var(--disabled-text, #94a3b8);
+  cursor: not-allowed;
+}
+/* 已报名：绿色（与开放状态接近，但不等于可点击） */
+.card-btn--applied {
+  background: #16a34a;
+  color: #fff;
+  cursor: not-allowed;
+}
+/* 已登录 + 有记录（未录取）：灰色 */
+.card-btn--gray {
+  background: #94a3b8;
+  color: #fff;
+  cursor: not-allowed;
+}
+/* 已录取：黄色（醒目但不等于可点击） */
+.card-btn--admitted {
+  background: #f59e0b;
+  color: #fff;
   cursor: not-allowed;
 }
 

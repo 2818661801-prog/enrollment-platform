@@ -35,7 +35,7 @@
         <template #header>
           <div class="result-header">
             <span>我的报名（共 {{ records.length }} 条）</span>
-            <el-button text type="info" size="small" @click="onLogout">退出登录</el-button>
+            <el-button text type="info" size="small" @click="onLogout" v-if="isLoggedIn">退出登录</el-button>
           </div>
         </template>
         <el-table :data="records" border stripe>
@@ -43,20 +43,31 @@
           <el-table-column prop="className" label="申报班级" min-width="200" show-overflow-tooltip />
           <el-table-column label="轮次" width="80">
             <template #default="{ row }">
-              <el-tag size="small">第{{ getCurrentRound(row.classPeriods) }}轮</el-tag>
+              <el-tag size="small">第{{ row.round }}轮</el-tag>
             </template>
           </el-table-column>
           <el-table-column prop="idCard" label="身份证号" width="160" />
           <el-table-column prop="status" label="状态" width="90">
             <template #default="{ row }">
-              <el-tag v-if="row.status==='1'" type="success" size="small">已报名</el-tag>
+              <el-tag v-if="row.status==='1'" type="success" size="small">审核中</el-tag>
               <el-tag v-else-if="row.status==='2'" type="info" size="small">已撤回</el-tag>
               <el-tag v-else-if="row.status==='3'" type="warning" size="small">已录取</el-tag>
               <el-tag v-else-if="row.status==='4'" type="danger" size="small">未录取</el-tag>
               <el-tag v-else type="info" size="small">未报名</el-tag>
             </template>
           </el-table-column>
-          <el-table-column prop="applyTime" label="报名时间" width="160" />
+          <el-table-column label="审核意见" min-width="160">
+            <template #default="{ row }">
+              <span v-if="row.status === '4'">{{ row.auditComment || '不符合报名条件' }}</span>
+              <span v-else-if="row.auditComment">{{ row.auditComment }}</span>
+              <span v-else>-</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="applyTime" label="报名时间" width="160">
+            <template #default="{ row }">
+              {{ row.applyTime ? row.applyTime.replace('T', ' ') : '-' }}
+            </template>
+          </el-table-column>
           <el-table-column label="操作" width="150">
             <template #default="{ row }">
               <el-button
@@ -118,7 +129,6 @@ import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { ArrowLeft, User, Loading } from '@element-plus/icons-vue'
 import { withdrawApplicationAPI, updateApplicationAPI } from '../utils/api.js'
-import { getCurrentRound } from '../utils/data.js'
 import AppFooter from '../components/AppFooter.vue'
 
 const router = useRouter()
@@ -144,6 +154,7 @@ function onLogout() {
   localStorage.removeItem('student_phone')
   isLoggedIn.value = false
   records.value = []
+  ElMessage.success('已退出登录')
   router.push('/student-login')
 }
 
@@ -219,7 +230,7 @@ onMounted(fetchMyRecords)
 
 <style scoped>
 .myapps-page { min-height: 100vh; display: flex; flex-direction: column; }
-.myapps-body { max-width: 800px; margin: 24px auto; padding: 0 20px; flex: 1; width: 100%; }
+.myapps-body { max-width: 800px; margin: 24px auto; padding: 0 20px; flex: 1; width: 100%; box-sizing: border-box; }
 .back-btn { margin-bottom: 12px; font-size: 14px; color: var(--text-secondary); }
 .login-card { margin-bottom: 20px; }
 .login-tip {
@@ -241,9 +252,19 @@ onMounted(fetchMyRecords)
 }
 .result-card { margin-bottom: 20px; }
 .result-card :deep(.el-card__header) { font-weight: 600; }
+.result-card :deep(.el-card__body) {
+  display: flex;
+  flex-direction: column;
+  align-items: center;   /* 表格水平居中 */
+  justify-content: center;
+}
 .result-header { display: flex; justify-content: space-between; align-items: center; }
 @media (max-width: 768px) {
   .myapps-body { margin: 12px auto; padding: 0 8px; }
   .login-tip { flex-direction: column; text-align: center; }
+  /* 移动端表格不可横向滑动：列少时自动适应，有溢出则截断 */
+  .result-card :deep(.el-table) { overflow-x: hidden; }
+  .result-card :deep(.el-table__body-wrapper) { overflow-x: hidden; }
+  .result-card :deep(.el-table__body) { overflow-x: hidden; }
 }
 </style>

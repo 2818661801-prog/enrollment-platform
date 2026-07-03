@@ -30,6 +30,9 @@
         <h4>快速链接</h4>
         <p><a href="https://www.hziee.edu.cn" target="_blank" class="footer-link">学院官网</a></p>
         <p><a href="https://www.hziee.edu.cn/zs" target="_blank" class="footer-link">招生网</a></p>
+        <p><a href="https://www.hziee.edu.cn/xxgka/" target="_blank" class="footer-link">信息公开</a></p>
+        <p><a href="https://www.hziee.edu.cn/46/list.htm" target="_blank" class="footer-link">学院介绍</a></p>
+        <p><a href="https://www.hziee.edu.cn/tusg/" target="_blank" class="footer-link">图书馆</a></p>
       </div>
     </div>
 
@@ -50,8 +53,8 @@ import logoImg from '../assets/images/logo.png' // Vite 自动处理图片路径
 .app-footer {
   background: #1e293b;
   color: #cbd5e1;
-  padding: 16px 32px 0;
-  margin-top: 24px;
+  padding: 10px 32px 0;
+  margin-top: 12px;
 }
 
 .footer-inner {

@@ -91,8 +91,11 @@ public class AdminController {
             @RequestParam(required = false) Integer status,
             @RequestParam(required = false) String idCard,
             @RequestParam(required = false) String name) {
+        // 分页边界保护：page < 0 → 0，size <= 0 → 20，size > 100 → 100
+        int safePage = Math.max(0, page);
+        int safeSize = size <= 0 ? 20 : Math.min(size, 100);
         Page<ApplicationDTO> result =
-                applicationService.adminSearch(classId, status, idCard, name, PageRequest.of(page, size));
+                applicationService.adminSearch(classId, status, idCard, name, PageRequest.of(safePage, safeSize));
         return R.ok(Map.of(
                 "list", result.getContent(),
                 "total", result.getTotalElements(),

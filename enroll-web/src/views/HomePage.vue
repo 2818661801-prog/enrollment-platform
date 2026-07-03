@@ -17,18 +17,24 @@
         <!-- 筛选栏：自定义下拉 + 重置 + 登录 + 我的报名 -->
         <FilterBar
           v-model="searchKeyword"
+          :showOnlyRound2="showOnlyRound2"
           :classes="classes"
           :is-logged-in="isLoggedIn"
+          @update:showOnlyRound2="showOnlyRound2 = $event"
           @reset="searchKeyword = null"
+          @logout="onLogout"
         />
 
         <!-- 卡片 -->
-        <el-empty v-if="displayClasses.length === 0" description="暂无匹配班级" />
+        <el-empty v-if="flatCards.length === 0" description="暂无匹配班级" />
         <div v-else class="card-grid">
           <ClassCard
-            v-for="c in displayClasses"
-            :key="c.id"
+            v-for="c in flatCards"
+            :key="c._uid"
             :class-info="c"
+            :is-applied="hasAnyApplication || appliedClassIds[c.id]"
+            :is-admitted="admittedClassIds[c.id]"
+            :is-logged-in="isLoggedIn"
             @select="goFormDirect"
           />
         </div>
@@ -38,7 +44,7 @@
     <!-- ===== 报名须知弹窗（进入时自动弹出） ===== -->
     <el-dialog
       v-model="showNotice"
-      title="杭州电子科技大学 2026 级特色班报名须知"
+      :title="noticeData.title || '杭州电子科技大学 2026 级特色班报名须知'"
       width="720px"
       :close-on-click-modal="true"
       :destroy-on-close="false"
@@ -91,7 +97,7 @@
 
       <template #footer>
         <div class="notice-footer">
-          <el-tag type="success" size="large">✓ 已阅读并同意报名须知</el-tag>
+          <el-button type="primary" size="large" @click="onAgreeNotice">我已知晓并同意</el-button>
         </div>
       </template>
     </el-dialog>
@@ -101,11 +107,11 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { getClassTimeStatus, parsePeriod } from '../utils/data.js'
-import { fetchClasses, fetchNotice } from '../utils/api.js'
+import { getClassTimeStatus, parsePeriod, syncServerTime } from '../utils/data.js'
+import { fetchClasses, fetchNotice, fetchMyApplicationsMe } from '../utils/api.js'
 import AppFooter from '../components/AppFooter.vue'
 import ClassCard from '../components/ClassCard.vue'
 import HeroBanner from '../components/HeroBanner.vue'
@@ -113,6 +119,7 @@ import FilterBar from '../components/FilterBar.vue'
 
 const router = useRouter()
 const searchKeyword = ref(null)
+const showOnlyRound2 = ref(false)
 // 是否已登录（学生端 JWT）
 const isLoggedIn = ref(false)
 // 班级列表：从后端 API 拿
@@ -124,6 +131,13 @@ const loadError = ref('')
 const showNotice = ref(false)
 const noticeData = ref({ conditions: [], notices: [] })
 
+// 已报名的班级 ID（status=1/4，不含撤回）
+const appliedClassIds = reactive({})
+// 是否有任何有效报名记录（不含撤回，用于统一禁用其他卡片）
+const hasAnyApplication = ref(false)
+// 已录取的班级 ID（status=3，单独显示黄色"已录取"）
+const admittedClassIds = reactive({})
+
 // 仅首次进入弹窗（关闭浏览器标签后重开才再弹）
 // 为什么用 sessionStorage：关闭标签即清除，localStorage 会永久记着
 let pollTimer = null
@@ -132,11 +146,31 @@ onMounted(async () => {
   // 检测学生端登录态（有 student_token 视为已登录）
   isLoggedIn.value = !!localStorage.getItem('student_token')
 
-  if (!sessionStorage.getItem('notice_shown')) {
+  // 先同步服务器时间（解决浏览器本地时间可被篡改的问题）
+  try {
+    await syncServerTime()
+  } catch (e) {
+    console.warn('[HomePage] 服务器时间同步失败，使用本地时间：', e)
+  }
+
+  // 再加载数据（loadData 会填充 appliedClassIds）
+  await loadData()
+
+  // 报名须知弹窗判断（loadData 后执行，因为要用 appliedClassIds）：
+  // 1. 已登录 + 有报名记录 → 不弹（已报过，肯定看过）
+  // 2. 已登录 + 无报名记录 + localStorage 有同意记录 → 不弹（曾经同意过）
+  // 3. 已登录 + 无报名记录 + localStorage 无记录 → 弹
+  // 4. 未登录 → 弹（每次都弹）
+  const hasAgreed = localStorage.getItem('student_notice_agreed')
+  const hasApps = Object.keys(appliedClassIds).length > 0
+  if (isLoggedIn.value && hasApps) {
+    // 情况1：不弹
+  } else if (!isLoggedIn.value || !hasAgreed) {
+    // 情况3、4：弹
     showNotice.value = true
     sessionStorage.setItem('notice_shown', '1')
   }
-  await loadData()
+
   // 每 30 秒轮询，管理员操作后返回首页能自动看到最新数据
   pollTimer = setInterval(loadData, 30_000)
 })
@@ -148,6 +182,18 @@ async function loadData() {
     const [clsRes, noticeRes] = await Promise.all([fetchClasses(), fetchNotice()])
     classes.value = clsRes
     noticeData.value = noticeRes
+    // 已登录时加载我的报名记录，标记已报名的班级（只要有记录就不让再报）
+    if (localStorage.getItem('student_token')) {
+      const myApps = await fetchMyApplicationsMe()
+      Object.keys(appliedClassIds).forEach(k => delete appliedClassIds[k])
+      Object.keys(admittedClassIds).forEach(k => delete admittedClassIds[k])
+      // hasAnyApplication：有已报名(1)或已录取(3)记录，禁止报其他班；未录取(4)可以重新报
+      hasAnyApplication.value = myApps.some(a => a.status === '1' || a.status === '3')
+      myApps.forEach(a => {
+        if (a.status === '1' || a.status === '3') appliedClassIds[a.classId] = true
+        if (a.status === '3') admittedClassIds[a.classId] = true
+      })
+    }
   } catch (err) {
     loadError.value = '班级数据加载失败，请检查后端是否启动'
     ElMessage.error(loadError.value)
@@ -231,6 +277,26 @@ const displayClasses = computed(() => {
 })
 
 /**
+ * 扁平卡片列表：每个班 × 每轮 = 一张卡片
+ * 成电班（id=2,3）显示两张（第1轮 + 第2轮），其他班显示一张
+ * _uid 格式："classId-round"，保证 key 唯一
+ */
+const flatCards = computed(() => {
+  const result = []
+  for (const cls of displayClasses.value) {
+    const rounds = parsePeriodsArray(cls.periods, cls.period)
+    for (const r of rounds) {
+      result.push({ ...cls, _round: r.round, _period: r.period, _uid: `${cls.id}-${r.round}` })
+    }
+  }
+  // "只看第二轮"过滤
+  if (showOnlyRound2.value) {
+    return result.filter(c => c._round === 2)
+  }
+  return result
+})
+
+/**
  * 班级列表按报名开始时间升序
  * 为什么排序：主人担心班级乱了，报名须知表格应按时间顺序展示
  * 用 parsePeriod 解析 period 字符串 → start Date → 升序
@@ -246,6 +312,17 @@ const sortedClassesByPeriod = computed(() => {
     }
   })
 })
+
+async function onLogout() {
+  isLoggedIn.value = false
+  ElMessage.success('已退出登录')
+}
+
+function onAgreeNotice() {
+  // 记录同意时间戳，后续报名提交时后端写入 notice_agreed=1
+  localStorage.setItem('student_notice_agreed', String(Date.now()))
+  showNotice.value = false
+}
 
 async function goFormDirect(classId) {
   const c = classes.value.find(c => c.id === classId)

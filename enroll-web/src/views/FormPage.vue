@@ -96,8 +96,7 @@
           ref="formRef"
           :model="form"
           :rules="rules"
-          label-width="120px"
-          label-position="right"
+          label-position="top"
           size="default"
           validateOnMount="false"
           @submit.prevent
@@ -110,6 +109,16 @@
             show-icon
             :closable="false"
             style="margin-bottom: 16px;"
+          />
+
+          <!-- 当前报名班级 -->
+          <el-alert
+            v-if="selectedClass"
+            :title="`当前报名：${selectedClass.name}`"
+            type="info"
+            show-icon
+            :closable="false"
+            style="margin-bottom: 16px; font-weight: 600;"
           />
 
           <!-- ===== 第一行：姓名 + 身份证号 ===== -->
@@ -132,9 +141,9 @@
             </el-col>
           </el-row>
 
-          <!-- ===== 第二行：性别 + 联系电话 ===== -->
+          <!-- ===== 第二行：性别 + 选考物理 + 选考英语 ===== -->
           <el-row :gutter="24" class="form-row">
-            <el-col :xs="24" :sm="12">
+            <el-col :xs="24" :sm="8">
               <el-form-item label="性别" prop="gender">
                 <el-radio-group v-model="form.gender">
                   <el-radio-button value="男">男</el-radio-button>
@@ -142,25 +151,16 @@
                 </el-radio-group>
               </el-form-item>
             </el-col>
-            <el-col :xs="24" :sm="12">
-              <el-form-item label="联系电话" prop="phone">
-                <el-input v-model="form.phone" placeholder="请输入手机号" maxlength="11" />
-              </el-form-item>
-            </el-col>
-          </el-row>
-
-          <!-- ===== 第三行：选考物理 + 选考英语 ===== -->
-          <el-row :gutter="24" class="form-row">
-            <el-col :xs="24" :sm="12">
-              <el-form-item label="是否选考物理" prop="hasPhysics">
+            <el-col :xs="24" :sm="8">
+              <el-form-item label="高考是否含物理/理综" prop="hasPhysics">
                 <el-radio-group v-model="form.hasPhysics">
                   <el-radio-button value="是">是</el-radio-button>
                   <el-radio-button value="否">否</el-radio-button>
                 </el-radio-group>
               </el-form-item>
             </el-col>
-            <el-col :xs="24" :sm="12">
-              <el-form-item label="是否选考英语" prop="hasEnglish">
+            <el-col :xs="24" :sm="8">
+              <el-form-item label="高考是否含英语" prop="hasEnglish">
                 <el-radio-group v-model="form.hasEnglish">
                   <el-radio-button value="是">是</el-radio-button>
                   <el-radio-button value="否">否</el-radio-button>
@@ -171,7 +171,7 @@
 
           <!-- 申报班级由 URL 参数直接指定，无需下拉选择 -->
 
-          <!-- ===== 班级类别（单选，有配置才显示） ===== -->
+          <!-- ===== 班级类别 ===== -->
           <el-row v-if="selectedClass?.categoryNames?.length" :gutter="24" class="form-row">
             <el-col :xs="24" :sm="24">
               <el-form-item label="班级类别" prop="appliedCategory">
@@ -237,7 +237,7 @@ import { ElMessage } from 'element-plus'
 import { SuccessFilled, ArrowLeft, Iphone } from '@element-plus/icons-vue'
 import { initialForm, getClassTimeStatus } from '../utils/data.js'
 import { fetchClasses } from '../utils/api.js'
-import { validateIdCard, validatePhone, validateName, inferGender } from '../utils/validate.js'
+import { validateIdCard, validateName, inferGender } from '../utils/validate.js'
 import { useApplication } from '../composables/useApplication.js'
 import { usePhoneCode } from '../composables/usePhoneCode.js'
 import AppFooter from '../components/AppFooter.vue'
@@ -277,9 +277,10 @@ onMounted(async () => {
   const existingToken = localStorage.getItem('student_token')
   const existingPhone = localStorage.getItem('student_phone')
   if (existingToken && existingPhone) {
-    // 已登录：直接进 Step 2
+    // 已登录：直接进 Step 2，且预填手机号
     verifiedPhone.value = existingPhone
     step.value = 2
+    form.phone = existingPhone
   }
 
   // 进入页面时清除所有校验提示（不自动校验）
@@ -332,9 +333,6 @@ const rules = computed(() => ({
   ],
   gender: [
     { validator: (_r, v, cb) => !v ? cb(new Error('请选择性别')) : cb(), trigger: 'change' },
-  ],
-  phone: [
-    { validator: (_r, v, cb) => !v ? cb(new Error('请输入联系电话')) : validatePhone(v) ? cb() : cb(new Error('手机号格式不正确')), trigger: 'blur' },
   ],
   hasPhysics: [
     { validator: (_r, v, cb) => !v ? cb(new Error('请选择是否选考物理')) : cb(), trigger: 'change' },
@@ -400,7 +398,9 @@ async function onSubmit() {
   // 3) 实际提交
   submitting.value = true
   try {
-    const result = await submitApplication({ ...form })
+    // 注入报名须知同意状态（localStorage 有记录则同意，否则不同意）
+    const payload = { ...form, noticeAgreed: !!localStorage.getItem('student_notice_agreed') }
+    const result = await submitApplication(payload)
     if (result.success) {
       ElMessage.success('报名提交成功！')
       router.push('/my-applications')
@@ -422,7 +422,7 @@ async function onSubmit() {
   flex-direction: column;
 }
 .form-body {
-  max-width: 680px;
+  max-width: 860px;
   margin: 24px auto;
   padding: 0 20px;
   flex: 1;
@@ -553,7 +553,7 @@ async function onSubmit() {
   border-radius: var(--radius-lg);
 }
 .form-card :deep(.el-card__body) {
-  padding: 32px;
+  padding: 40px 48px;
 }
 
 /* ==================== 平板适配 ==================== */
@@ -571,7 +571,8 @@ async function onSubmit() {
 @media (max-width: 768px) {
   .form-page { padding-top: 52px; }  /* 移动端头部高度 */
   .form-body {
-    margin: 12px auto;
+    margin-top: -40px;
+    /* margin: 4px auto; */
     padding: 0 8px;
   }
   .form-card,
@@ -589,6 +590,8 @@ async function onSubmit() {
     text-align: left;
     padding-bottom: 4px;
     width: auto !important;
+    font-size: 13px;
+    line-height: 1.4;
   }
   .form-card :deep(.el-form-item__content) {
     margin-left: 0 !important;

@@ -13,25 +13,25 @@
 
 -- ---------- 1. classes 表加 source 字段 ----------
 -- DEFAULT 'admin'：存量数据默认是管理员建的（保守起见）
-ALTER TABLE classes
+ALTER TABLE ssc_classes
   ADD COLUMN source VARCHAR(20) NOT NULL DEFAULT 'admin'
   COMMENT '数据来源：admin(管理员建)/sync(内网低代码同步)/student(预留,班级通常非学生建)'
   AFTER category_names;
 
 -- ---------- 2. applications 表加 source 字段 ----------
 -- DEFAULT 'student'：存量报名记录默认是学生报的
-ALTER TABLE applications
+ALTER TABLE ssc_applications
   ADD COLUMN source VARCHAR(20) NOT NULL DEFAULT 'student'
   COMMENT '数据来源：student(学生自报)/admin(管理员导入)/sync(内网低代码同步)'
   AFTER apply_time;
 
 -- ---------- 3. 存量数据 backfill（防御性，正常 DEFAULT 已经覆盖）----------
-UPDATE classes SET source = 'admin' WHERE source IS NULL OR source = '';
-UPDATE applications SET source = 'student' WHERE source IS NULL OR source = '';
+UPDATE ssc_classes SET source = 'admin' WHERE source IS NULL OR source = '';
+UPDATE ssc_applications SET source = 'student' WHERE source IS NULL OR source = '';
 
 -- ---------- 4. 加索引（按 source 查/统计用）----------
-ALTER TABLE classes ADD INDEX idx_source (source);
-ALTER TABLE applications ADD INDEX idx_source (source);
+ALTER TABLE ssc_classes ADD INDEX idx_source (source);
+ALTER TABLE ssc_applications ADD INDEX idx_source (source);
 
 -- ============================================================
 -- 验证脚本（执行后跑一遍）

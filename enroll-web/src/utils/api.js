@@ -129,6 +129,17 @@ export const fetchMyApplications = async (idCard) => {
   return res.data || []
 }
 
+/** JWT 版我的报名（自动带 Authorization header） */
+export const fetchMyApplicationsMe = async () => {
+  const token = localStorage.getItem('student_token')
+  if (!token) return []
+  const res = await fetch('/api/applications/me', {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  const data = await res.json()
+  return data.code === 200 ? (data.data || []) : []
+}
+
 /** 密码查询我的报名 */
 export const fetchMyApplicationsWithPwd = async (idCard, password) => {
   const res = await request('/api/applications/my-verify', {

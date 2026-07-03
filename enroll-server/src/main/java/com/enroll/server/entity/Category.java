@@ -7,7 +7,7 @@ import jakarta.persistence.*;
  * 用于管理员维护"经管类""理工类"等类别，供班级管理下拉选择
  */
 @Entity
-@Table(name = "categories")
+@Table(name = "ssc_categories")
 public class Category {
 
     @Id

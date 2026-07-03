@@ -19,7 +19,7 @@
       <!-- ========== Tab1: 报名须知 ========== -->
       <el-tab-pane label="报名须知" name="notice">
         <div class="tab-body">
-          <div class="section-label">编辑报名须知</div>
+          <div class="section-label">修改报名须知文本</div>
           <el-form label-width="90px" style="max-width:600px">
             <el-form-item label="标题">
               <el-input v-model="notice.title" maxlength="50" show-word-limit />
@@ -566,6 +566,7 @@ async function onConfirmReject() {
 function onLogout() {
   localStorage.removeItem('admin_token')
   localStorage.removeItem('admin_username')
+  ElMessage.success('已退出登录')
   router.push('/admin/login')
 }
 
