@@ -32,13 +32,29 @@ const router = createRouter({
   routes,
 })
 
-// 路由守卫：管理端页面需登录 JWT
+// 路由守卫：管理端页面需 admin JWT（⚠️ S9 修复：加 role=admin 校验）
 router.beforeEach((to, from) => {
   const isAdminRoute = to.path.startsWith('/admin')
-  const hasToken = !!localStorage.getItem('admin_token')
-  if (isAdminRoute && !hasToken && to.path !== '/admin/login') {
+  if (!isAdminRoute) return true
+
+  const token = localStorage.getItem('admin_token')
+  if (!token) {
     return '/admin/login'
   }
+
+  // 解析 JWT payload（base64），校验 role=admin
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]))
+    if (payload.role !== 'admin') {
+      localStorage.removeItem('admin_token')
+      return '/admin/login'
+    }
+  } catch {
+    localStorage.removeItem('admin_token')
+    return '/admin/login'
+  }
+
+  return true
 })
 
 export default router

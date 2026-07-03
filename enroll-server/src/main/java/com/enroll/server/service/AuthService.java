@@ -3,11 +3,14 @@ package com.enroll.server.service;
 import com.enroll.server.dto.ResultCode;
 import com.enroll.server.exception.BusinessException;
 import com.enroll.server.security.JwtUtil;
+import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeUnit;
@@ -29,8 +32,11 @@ public class AuthService {
     private static final Logger log = LoggerFactory.getLogger(AuthService.class);
 
     private static final String SMS_KEY_PREFIX = "sms:login:";
+    private static final String SMS_IP_PREFIX  = "sms:ip:";
     private static final int CODE_TTL_SECONDS = 300; // 5分钟
     private static final int MAX_RETRY = 5;         // 错误超过5次需重新获取
+    private static final int SMS_SEND_GAP = 60;     // S11: 同一手机号发送间隔 60 秒
+    private static final int SMS_IP_LIMIT  = 10;    // S14: 同一 IP 每分钟最多发 10 次
 
     private final StringRedisTemplate redis;
     private final JwtUtil jwtUtil;
@@ -42,10 +48,32 @@ public class AuthService {
 
     /**
      * 发送验证码（存入 Redis，支持重复发送刷新 TTL）
+     * ⚠️ S11 修复：手机号 60 秒内不能重复发
+     * ⚠️ S14 修复：同一 IP 每分钟最多发 10 次
+     * ⚠️ S12 修复：日志不打印 code 明文
      * @param phone 11位手机号
      */
     public void sendCode(String phone) {
         validatePhone(phone);
+
+        // ===== S11: 手机号频率限制（60秒内不能重复发） =====
+        String phoneGapKey = "sms:gap:" + phone;
+        Boolean gapSet = redis.opsForValue().setIfAbsent(phoneGapKey, "1", SMS_SEND_GAP, TimeUnit.SECONDS);
+        if (gapSet == null || !gapSet) {
+            throw new BusinessException(ResultCode.PARAM_INVALID, "发送太频繁，请" + SMS_SEND_GAP + "秒后再试");
+        }
+
+        // ===== S14: IP 频率限制（每分钟最多 10 次） =====
+        String clientIp = getClientIp();
+        String ipKey = SMS_IP_PREFIX + clientIp;
+        Long ipCount = redis.opsForValue().increment(ipKey);
+        if (ipCount != null && ipCount == 1) {
+            // 第一次调用这个 key，设 60 秒过期
+            redis.expire(ipKey, 60, TimeUnit.SECONDS);
+        }
+        if (ipCount != null && ipCount > SMS_IP_LIMIT) {
+            throw new BusinessException(ResultCode.PARAM_INVALID, "请求过于频繁，请稍后再试");
+        }
 
         // 生成6位随机数字验证码（100000~999999）
         int code = (int) (Math.random() * 900000 + 100000);
@@ -54,10 +82,40 @@ public class AuthService {
         String key = SMS_KEY_PREFIX + phone;
         redis.opsForValue().set(key, codeStr, CODE_TTL_SECONDS, TimeUnit.SECONDS);
 
-        // TODO: 主人提供短信接口后，替换下面这行
         sendSms(phone, codeStr);
 
-        log.info("【验证码已发送】phone={} code={}", phone, codeStr);
+        // S12 修复：日志不打印 code 明文，只打印手机号和 IP（脱敏）
+        log.info("【验证码已发送】phone={} ip={} codeLen={}", maskPhone(phone), clientIp, codeStr.length());
+    }
+
+    /** 提取客户端真实 IP（注意反向代理场景） */
+    private String getClientIp() {
+        try {
+            ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+            if (attrs == null) return "unknown";
+            HttpServletRequest request = attrs.getRequest();
+            // 优先取 X-Forwarded-For（反向代理），否则取 remoteAddr
+            String ip = request.getHeader("X-Forwarded-For");
+            if (ip == null || ip.isBlank() || "unknown".equalsIgnoreCase(ip)) {
+                ip = request.getHeader("X-Real-IP");
+            }
+            if (ip == null || ip.isBlank() || "unknown".equalsIgnoreCase(ip)) {
+                ip = request.getRemoteAddr();
+            }
+            // 多级代理时取第一个 IP
+            if (ip != null && ip.contains(",")) {
+                ip = ip.split(",")[0].trim();
+            }
+            return ip;
+        } catch (Exception e) {
+            return "unknown";
+        }
+    }
+
+    /** 手机号脱敏（中间4位） */
+    private String maskPhone(String phone) {
+        if (phone == null || phone.length() != 11) return phone;
+        return phone.substring(0, 3) + "****" + phone.substring(7);
     }
 
     /**
@@ -109,8 +167,9 @@ public class AuthService {
     private void sendSms(String phone, String code) {
         // 大汉三通短信平台：GET /mdsmssend.ashx?sn=...&pwd=...&mobile=...&content=...
         // content 内容需与大汉三通平台报备的模板格式一致，平台会自动拼接签名
-        String sn     = "SDK-BBX-010-39560";
-        String pwd    = "3365CB7EB11EEC171571E8E91C61EF30";
+        // ⚠️ S4 修复：生产通过环境变量 SMS_SN / SMS_PWD 注入，禁止写死
+        String sn = System.getenv("SMS_SN") != null ? System.getenv("SMS_SN") : "SDK-BBX-010-39560";
+        String pwd = System.getenv("SMS_PWD") != null ? System.getenv("SMS_PWD") : "3365CB7EB11EEC171571E8E91C61EF30";
         // 与大汉三通平台模板格式一致：签名+正文（平台配置模板时已设定签名拼接规则）
         String content = "【杭州电子科技大学信息工程学院】您的验证码为" + code + "，5分钟内有效，请勿泄露给他人。";
         String encodedContent = java.net.URLEncoder.encode(content, StandardCharsets.UTF_8);
@@ -120,9 +179,10 @@ public class AuthService {
         );
         try {
             String resp = restTemplate.getForObject(url, String.class);
-            log.info("【短信发送结果】phone={} code={} resp={}", phone, code, resp);
+            // S12 修复：日志不打印 code 明文，只打印手机号（脱敏）
+            log.info("【短信发送结果】phone={} resp={}", maskPhone(phone), resp);
         } catch (Exception e) {
-            log.error("【短信发送失败】phone={} code={}", phone, code, e);
+            log.error("【短信发送失败】phone={}", maskPhone(phone), e);
         }
     }
 

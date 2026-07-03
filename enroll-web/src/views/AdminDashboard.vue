@@ -141,8 +141,8 @@
               <el-option label="已录取" :value="3" />
               <el-option label="未录取" :value="4" />
             </el-select>
-            <el-input v-model="query.idCard" placeholder="身份证号" clearable size="default" style="width:160px" />
-            <el-input v-model="query.name" placeholder="姓名" clearable size="default" style="width:120px" />
+            <el-input v-model="query.idCard" placeholder="身份证号" clearable size="default" style="width:160px" @input="onIdCardInput" @clear="loadApplications" />
+            <el-input v-model="query.name" placeholder="姓名" clearable size="default" style="width:120px" @input="onNameInput" @clear="loadApplications" />
             <el-button type="primary" @click="queryPage=1;loadApplications()">查询</el-button>
             <el-button @click="query.classId=null;query.status=null;query.idCard='';query.name='';queryPage=1;loadApplications()">重置</el-button>
           </div>
@@ -192,8 +192,8 @@
               <el-option label="已录取" :value="3" />
               <el-option label="未录取" :value="4" />
             </el-select>
-            <el-input v-model="admitQuery.idCard" placeholder="身份证号" clearable style="width:160px" />
-            <el-input v-model="admitQuery.name" placeholder="姓名" clearable style="width:120px" />
+            <el-input v-model="admitQuery.idCard" placeholder="身份证号" clearable style="width:160px" @input="onAdmitIdCardInput" @clear="loadAdmitList" />
+            <el-input v-model="admitQuery.name" placeholder="姓名" clearable style="width:120px" @input="onAdmitNameInput" @clear="loadAdmitList" />
             <el-button type="primary" @click="loadAdmitList">查询</el-button>
             <el-button @click="admitQuery.classId=null; admitQuery.status=null; admitQuery.idCard=''; admitQuery.name=''; loadAdmitList()">重置</el-button>
           </div>
@@ -523,6 +523,23 @@ const rejectDialogVisible = ref(false)
 const rejectComment = ref('')
 const admitLoading = ref(false)   // 批量录取防抖
 const rejectLoading = ref(false)  // 批量未录取防抖
+
+// 防抖工具函数
+function debounce(fn, delay = 300) {
+  let timer = null
+  return (...args) => {
+    clearTimeout(timer)
+    timer = setTimeout(() => fn(...args), delay)
+  }
+}
+
+// Tab3 报名查询 — 身份证号 + 姓名实时搜索
+const onIdCardInput = debounce(() => { queryPage.value = 1; loadApplications() })
+const onNameInput   = debounce(() => { queryPage.value = 1; loadApplications() })
+
+// Tab5 录取配置 — 身份证号 + 姓名实时搜索
+const onAdmitIdCardInput = debounce(() => { loadAdmitList() })
+const onAdmitNameInput   = debounce(() => { loadAdmitList() })
 
 async function loadAdmitList() {
   const params = { page: 0, size: 200 }

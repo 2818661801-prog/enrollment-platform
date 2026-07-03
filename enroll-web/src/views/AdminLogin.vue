@@ -75,7 +75,7 @@ async function onSubmit() {
       ElMessage.error(res.message || '登录失败')
       return
     }
-    localStorage.setItem('admin_token', res.data.token)
+    localStorage.setItem('admin_token', res.data.token) // 保留：后端已设 httpOnly Cookie，前端同时存一份供路由守卫读 role
     localStorage.setItem('admin_username', res.data.username)
     ElMessage.success('登录成功')
     router.push('/admin')

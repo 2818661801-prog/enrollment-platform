@@ -35,8 +35,13 @@ public class WebMvcConfig implements WebMvcConfigurer {
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
+        // ⚠️ S6 修复：生产环境必须改成实际的外网域名，禁止 *
+        // 本地调试可以加 localhost，生产用环境变量注入
+        String allowedOrigins = System.getenv("CORS_ALLOWED_ORIGINS") != null
+            ? System.getenv("CORS_ALLOWED_ORIGINS")
+            : "http://localhost:5173,http://127.0.0.1:5173";
         registry.addMapping("/api/**")
-                .allowedOriginPatterns("http://localhost:*", "http://127.0.0.1:*", "*")
+                .allowedOriginPatterns(allowedOrigins.split(","))
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD")
                 .allowedHeaders("*")
                 .allowCredentials(true)

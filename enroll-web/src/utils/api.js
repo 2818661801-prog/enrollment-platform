@@ -123,18 +123,22 @@ export const updateApplicationAPI = (id, data) =>
     body: JSON.stringify({ id, ...data }),
   })
 
-/** 按身份证查我的报名 */
+/** 按身份证查我的报名（⚠️ S7 修复：此接口已废弃，改用 JWT 版本 fetchMyApplicationsMe） */
 export const fetchMyApplications = async (idCard) => {
-  const res = await request(`/api/applications/my?idCard=${encodeURIComponent(idCard)}`)
-  return res.data || []
-}
-
-/** JWT 版我的报名（自动带 Authorization header） */
-export const fetchMyApplicationsMe = async () => {
+  // 兼容旧调用，但实际应该用 fetchMyApplicationsMe
   const token = localStorage.getItem('student_token')
   if (!token) return []
-  const res = await fetch('/api/applications/me', {
+  const res = await fetch('/api/applications/my', {
     headers: { Authorization: `Bearer ${token}` },
+  })
+  const data = await res.json()
+  return data.code === 200 ? (data.data || []) : []
+}
+
+/** JWT 版我的报名（⚠️ S8 修复：改用 httpOnly Cookie + credentials:include） */
+export const fetchMyApplicationsMe = async () => {
+  const res = await fetch('/api/applications/me', {
+    credentials: 'include',  // 自动带上 httpOnly Cookie
   })
   const data = await res.json()
   return data.code === 200 ? (data.data || []) : []
@@ -179,19 +183,15 @@ export const loginByCodeAPI = (phone, code) =>
 
 // ==================== 管理端 API（需 JWT）====================
 
-/** 通用带 JWT 的 fetch */
+/** 通用带 JWT 的 fetch（⚠️ S8 修复：优先 httpOnly Cookie，credentials:include 自动带） */
 async function adminRequest(url, options = {}) {
-  const token = localStorage.getItem('admin_token')
   const res = await fetch(url, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
+    credentials: 'include',  // 自动带上 httpOnly Cookie
+    headers: { 'Content-Type': 'application/json' },
     ...options,
   })
   if (!res.ok) {
     if (res.status === 401) {
-      localStorage.removeItem('admin_token')
       window.location.hash = '#/admin/login'
     }
     const err = new Error(`HTTP ${res.status}: ${res.statusText}`)

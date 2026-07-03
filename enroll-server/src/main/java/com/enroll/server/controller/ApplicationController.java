@@ -45,10 +45,30 @@ public class ApplicationController {
         return R.ok("提交成功", applicationService.submit(form));
     }
 
-    /** 我的报名（仅返回已报名记录） */
+    /**
+     * 我的报名（JWT 认证，手机号从 token 自动提取，不再用 idCard 参数）
+     * ⚠️ S2 修复：原 /my?idCard=xxx 任何人知道身份证就能查 → 改为必须带 JWT
+     */
     @GetMapping("/my")
-    public Map<String, Object> myApplications(@RequestParam String idCard) {
-        return R.ok(applicationService.findMy(idCard));
+    public Map<String, Object> myApplications(HttpServletRequest request) {
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return R.fail(ResultCode.PARAM_INVALID, "请先登录");
+        }
+        String token = authHeader.substring(7);
+        try {
+            Claims claims = jwtUtil.parse(token);
+            String phone = claims.getSubject();
+            String role = String.valueOf(claims.get("role"));
+            if (!"student".equals(role)) {
+                return R.fail(ResultCode.PARAM_INVALID, "无效的凭证");
+            }
+            log.info("【我的报名】phone={}", phone);
+            return R.ok(applicationService.findMyByPhone(phone));
+        } catch (Exception e) {
+            log.warn("JWT 解析失败: {}", e.getMessage());
+            return R.fail(ResultCode.PARAM_INVALID, "登录已过期，请重新登录");
+        }
     }
 
     /** 撤回报名（软删除：status → 0）

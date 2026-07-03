@@ -10,6 +10,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletResponse;
 import java.util.List;
 import java.util.Map;
 
@@ -35,9 +37,11 @@ public class AuthController {
     private final AuthService authService;
     private final ApplicationRepository appRepo;
 
-    // 固定管理员账号
-    private static final String ADMIN_USER = "***REMOVED***";
-    private static final String ADMIN_PWD  = "***REMOVED***";
+    // 固定管理员账号（⚠️ S3 修复：生产通过环境变量注入，禁止写死）
+    private static final String ADMIN_USER = System.getenv("AUTH_ADMIN_USER") != null
+        ? System.getenv("AUTH_ADMIN_USER") : "***REMOVED***";
+    private static final String ADMIN_PWD  = System.getenv("AUTH_ADMIN_PASSWORD") != null
+        ? System.getenv("AUTH_ADMIN_PASSWORD") : "***REMOVED***";
 
     public AuthController(JwtUtil jwtUtil, AuthService authService, ApplicationRepository appRepo) {
         this.jwtUtil = jwtUtil;
@@ -45,9 +49,9 @@ public class AuthController {
         this.appRepo = appRepo;
     }
 
-    /** 管理员账号密码登录 → 返 JWT */
+    /** 管理员账号密码登录 → 返 JWT（⚠️ S8 修复：同时设 httpOnly Cookie） */
     @PostMapping("/login")
-    public Map<String, Object> login(@RequestBody Map<String, String> body) {
+    public Map<String, Object> login(@RequestBody Map<String, String> body, HttpServletResponse response) {
         String username = body.get("username");
         String password = body.get("password");
 
@@ -59,6 +63,13 @@ public class AuthController {
         }
 
         String token = jwtUtil.generateAdmin(username);
+        // S8 修复：httpOnly Cookie，JS 无法通过 document.cookie 读取
+        Cookie cookie = new Cookie("admin_token", token);
+        cookie.setHttpOnly(true);
+        cookie.setPath("/api");
+        cookie.setMaxAge(86400); // 24小时
+        response.addCookie(cookie);
+
         log.info("管理员登录成功：username={}", username);
         return R.ok("登录成功", Map.of("token", token, "username", username));
     }
@@ -72,14 +83,21 @@ public class AuthController {
     }
 
     /**
-     * 学生验证码登录 → 返 JWT + 报名状态
+     * 学生验证码登录 → 返 JWT + 报名状态（⚠️ S8 修复：同时设 httpOnly Cookie）
      * status=4 表示未报名（登录后无记录）
      */
     @PostMapping("/login/sms")
-    public Map<String, Object> loginSms(@RequestBody Map<String, String> body) {
+    public Map<String, Object> loginSms(@RequestBody Map<String, String> body, HttpServletResponse response) {
         String phone = body.get("phone");
         String code  = body.get("code");
         String token = authService.verifyCodeAndLogin(phone, code);
+
+        // S8 修复：httpOnly Cookie，JS 无法通过 document.cookie 读取
+        Cookie cookie = new Cookie("student_token", token);
+        cookie.setHttpOnly(true);
+        cookie.setPath("/api");
+        cookie.setMaxAge(86400); // 24小时
+        response.addCookie(cookie);
 
         // 查该手机号是否有有效报名记录（status=1/2/3/4）
         List<Application> apps = appRepo.findByPhoneAndStatusIn(phone, List.of(1, 2, 3, 4));

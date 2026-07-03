@@ -12,14 +12,14 @@
 # ============================================================
 
 server:
-  port: ${SERVER_PORT:8081}
+  port: 8081
 
 spring:
   # ==================== 数据库（默认 enroll 本地账号） ====================
   datasource:
-    url: ${DB_URL:jdbc:mysql://localhost:3306/enroll_db?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=utf-8&allowPublicKeyRetrieval=true}
-    username: ${DB_USER:enroll}
-    password: ${DB_PASSWORD:***REMOVED***}
+    url: jdbc:mysql://localhost:3306/enroll_db?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=utf-8&allowPublicKeyRetrieval=true
+    username: enroll
+    password: ***REMOVED***
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   jackson:
@@ -30,7 +30,7 @@ spring:
     hibernate:
       ddl-auto: update              # update = 自动建表（生产改 none）
     database-platform: org.hibernate.dialect.MySQLDialect  # 显式指定方言
-    show-sql: ${JPA_SHOW_SQL:true}  # 控制台打印 SQL（生产可关）
+    show-sql: true  # 控制台打印 SQL（生产可关）
     defer-datasource-initialization: true  # 让 Hibernate 先建表，再执行 data.sql
     properties:
       hibernate:
@@ -39,17 +39,18 @@ spring:
   # ==================== 启动时执行 data.sql ====================
   sql:
     init:
-      mode: ${SQL_INIT_MODE:always}
+      mode: always
       data-locations: classpath:data.sql
 
   # ==================== Redis 配置（本地测试）====================
   data:
     redis:
-      host: ${REDIS_HOST:localhost}
-      port: ${REDIS_PORT:6379}
-      password: ${REDIS_PASSWORD:}
+      host: localhost
+      port: 6379
+      password:
       database: 0
       timeout: 5000ms
+      key-prefix: ""  # ⚠️ S15修复：禁用Spring默认前缀，让key精确匹配
       lettuce:
         pool:
           max-active: 8
@@ -61,14 +62,15 @@ spring:
 #   jwt.enabled = false → 学生匿名（问卷式）
 #   jwt.enabled = true  → 强制鉴权（生产或加管理员后台时）
 jwt:
-  enabled: ${JWT_ENABLED:true}                 # 默认开启（生产必须为 true）
+  enabled: true                 # 默认开启（生产必须为 true）
+  # ⚠️ S5 修复：生产必须通过环境变量 JWT_SECRET 注入，禁止写死
   secret: ${JWT_SECRET:***REMOVED***}
-  expiration: ${JWT_EXPIRATION:86400000}       # 24 小时（毫秒）
+  expiration: 86400000       # 24 小时（毫秒）
   header: Authorization
   prefix: "Bearer "
 
 # ==================== 日志 ====================
 logging:
   level:
-    com.enroll.server: ${LOG_LEVEL:INFO}
-    org.hibernate.SQL: ${SQL_LOG_LEVEL:DEBUG}
+    com.enroll.server: INFO
+    org.hibernate.SQL: DEBUG

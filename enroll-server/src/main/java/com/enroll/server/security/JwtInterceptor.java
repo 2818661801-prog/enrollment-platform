@@ -2,6 +2,7 @@ package com.enroll.server.security;
 
 import com.enroll.server.dto.ResultCode;
 import io.jsonwebtoken.Claims;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
@@ -52,13 +53,29 @@ public class JwtInterceptor implements HandlerInterceptor {
             return true;
         }
 
+        // S8 修复：优先从 Authorization header 拿，header 没有则从 httpOnly Cookie 拿
         String authHeader = request.getHeader(header);
-        if (authHeader == null || !authHeader.startsWith(prefix)) {
-            writeJson(response, ResultCode.PARAM_INVALID.getCode(), "缺少 Authorization 头");
-            return false;
+        String token = null;
+
+        if (authHeader != null && authHeader.startsWith(prefix)) {
+            token = authHeader.substring(prefix.length());
+        } else {
+            // 从 httpOnly Cookie 读取（JS 无法伪造，因为 httpOnly）
+            Cookie[] cookies = request.getCookies();
+            if (cookies != null) {
+                for (Cookie c : cookies) {
+                    if ("admin_token".equals(c.getName())) {
+                        token = c.getValue();
+                        break;
+                    }
+                }
+            }
         }
 
-        String token = authHeader.substring(prefix.length());
+        if (token == null || token.isBlank()) {
+            writeJson(response, ResultCode.PARAM_INVALID.getCode(), "缺少登录凭证");
+            return false;
+        }
         try {
             Claims claims = jwtUtil.parse(token);
             // 把用户信息放进 request，Controller 用 @RequestAttribute 拿

@@ -48,8 +48,8 @@ public class ApplicationService {
 
     private static final Logger log = LoggerFactory.getLogger(ApplicationService.class);
 
-    // ===== 测试开关 =====
-    private static final boolean TEST_MODE = true;
+    // ===== 测试开关（生产必须为 false） =====
+    private static final boolean TEST_MODE = false;
 
     /** 状态常量 */
     public static final int STATUS_NONE      = 0;
@@ -112,9 +112,12 @@ public class ApplicationService {
             }
         }
 
-        // 6) 名额校验（quota=-1 不限）
-        if (!TEST_MODE && cls.getQuota() != -1 && cls.getEnrolled() >= cls.getQuota()) {
-            throw new BusinessException(ResultCode.CLASS_FULL);
+        // 6) 名额校验（⚠️ S16 修复：名额校验 + enrolled+1 合并为原子 UPDATE）
+        if (!TEST_MODE) {
+            int affected = classRepo.incrementEnrolledIfQuotaAvailable(classId);
+            if (affected == 0) {
+                throw new BusinessException(ResultCode.CLASS_FULL);
+            }
         }
 
         // 7) 构造报名记录
@@ -135,10 +138,7 @@ public class ApplicationService {
         app.setRound(currentRound);
         Application saved = appRepo.save(app);
 
-        // 8) 班级已报名人数 +1
-        cls.setEnrolled(cls.getEnrolled() + 1);
-        classRepo.save(cls);
-
+        // S16 修复：enrolled+1 已由上面的原子 UPDATE 完成，无需再 save classRepo
         log.info("报名成功: id={}, name={}, classId={}, round={}", saved.getId(), saved.getName(), classId, currentRound);
         return toDTO(saved, cls.getName());
         } catch (Exception e) {
@@ -228,10 +228,8 @@ public class ApplicationService {
         app.setStatus(STATUS_WITHDRAWN);
         appRepo.save(app);
 
-        classRepo.findById(app.getClassId()).ifPresent(cls -> {
-            cls.setEnrolled(Math.max(0, cls.getEnrolled() - 1));
-            classRepo.save(cls);
-        });
+        // S16 修复：enrolled-1 改为原子 UPDATE，防止并发超卖回升
+        classRepo.decrementEnrolled(app.getClassId());
 
         log.info("撤回报名: id={}, name={}", id, app.getName());
     }
