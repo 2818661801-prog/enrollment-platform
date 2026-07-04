@@ -1,0 +1,19 @@
+# Build artifacts
+enroll-server/target/
+enroll-web/dist/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Environment secrets (never commit real credentials)
+*.pem
+*.key
