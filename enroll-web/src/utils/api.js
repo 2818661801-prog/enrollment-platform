@@ -137,8 +137,9 @@ export const fetchMyApplications = async (idCard) => {
 
 /** JWT 版我的报名（⚠️ S8 修复：改用 httpOnly Cookie + credentials:include） */
 export const fetchMyApplicationsMe = async () => {
+  const token = localStorage.getItem('student_token')
   const res = await fetch('/api/applications/me', {
-    credentials: 'include',  // 自动带上 httpOnly Cookie
+    headers: { Authorization: token ? `Bearer ${token}` : '' },
   })
   const data = await res.json()
   return data.code === 200 ? (data.data || []) : []

@@ -41,15 +41,23 @@
       重置
     </button>
 
-    <!-- 第二轮筛选 -->
-    <label class="round2-filter">
-      <input
-        type="checkbox"
-        :checked="props.showOnlyRound2"
-        @change="emit('update:showOnlyRound2', $event.target.checked)"
+    <!-- 轮次筛选下拉框：动态从 periods JSON 提取所有 round 值 -->
+    <el-select
+      v-if="availableRounds.length > 1"
+      class="pc-round-select"
+      :model-value="props.selectedRound"
+      placeholder="全部轮次"
+      clearable
+      style="width: 140px; height: 34px"
+      @update:model-value="v => emit('update:selectedRound', v)"
+    >
+      <el-option
+        v-for="r in availableRounds"
+        :key="r"
+        :label="`第${r}轮`"
+        :value="r"
       />
-      <span>只看第二轮报名</span>
-    </label>
+    </el-select>
 
     <!-- 右侧：登录 + 我的报名按钮组 -->
     <div class="user-actions">
@@ -89,16 +97,23 @@
       </button>
     </div>
 
-    <!-- 移动端第二行：checkbox + 登录 + 我的报名 均分 -->
+    <!-- 移动端第二行：轮次下拉框 + 登录 + 我的报名 均分 -->
     <div class="mobile-actions-row">
-      <label class="round2-filter">
-        <input
-          type="checkbox"
-          :checked="props.showOnlyRound2"
-          @change="emit('update:showOnlyRound2', $event.target.checked)"
+      <el-select
+        v-if="availableRounds.length > 1"
+        :model-value="props.selectedRound"
+        placeholder="全部轮次"
+        clearable
+        style="flex: 1; min-width: 0"
+        @update:model-value="v => emit('update:selectedRound', v)"
+      >
+        <el-option
+          v-for="r in availableRounds"
+          :key="r"
+          :label="`第${r}轮`"
+          :value="r"
         />
-        <span>第二轮</span>
-      </label>
+      </el-select>
       <button v-if="!isLoggedIn" type="button" class="user-btn login-btn" @click="goLogin">
         <img :src="lockIcon" alt="" class="user-icon" />
         <span>登录</span>
@@ -123,13 +138,13 @@ import lockIcon from '../assets/images/lock.svg'
 import folderIcon from '../assets/images/folder.svg'
 
 const props = defineProps({
-  modelValue: { type: [Number, String, null], default: null },
-  classes:    { type: Array, default: () => [] },
-  isLoggedIn: { type: Boolean, default: false },
-  showOnlyRound2: { type: Boolean, default: false }, // 只看第二轮
+  modelValue:    { type: [Number, String, null], default: null },
+  classes:       { type: Array, default: () => [] },
+  isLoggedIn:    { type: Boolean, default: false },
+  selectedRound: { type: [Number, null], default: null }, // null=全部轮次，数字=只看第N轮
 })
 
-const emit = defineEmits(['update:modelValue', 'reset', 'logout', 'update:showOnlyRound2'])
+const emit = defineEmits(['update:modelValue', 'reset', 'logout', 'update:selectedRound'])
 
 const router = useRouter()
 const selectRef = ref(null)
@@ -139,6 +154,23 @@ const selectedLabel = computed(() => {
   if (!props.modelValue) return null
   const found = props.classes.find(c => c.id === props.modelValue)
   return found ? found.name : null
+})
+
+/**
+ * 动态提取所有班级 periods JSON 中的 round 值，去重升序
+ * 用于轮次筛选下拉框，天然支持多轮（3轮/4轮/...）
+ */
+const availableRounds = computed(() => {
+  const rounds = new Set()
+  for (const cls of props.classes || []) {
+    try {
+      const arr = JSON.parse(cls.periods || '[]')
+      for (const item of arr) {
+        if (item.round) rounds.add(item.round)
+      }
+    } catch {}
+  }
+  return [...rounds].sort((a, b) => a - b)
 })
 
 function toggleDrop() {
@@ -152,7 +184,7 @@ function pick(c) {
 
 function onReset() {
   emit('update:modelValue', null)
-  emit('update:showOnlyRound2', false)
+  emit('update:selectedRound', null)
   emit('reset')
 }
 
@@ -324,31 +356,6 @@ onUnmounted(() => {
   color: #3b7bf8;
 }
 
-/* ==================== 第二轮筛选 checkbox ==================== */
-.round2-filter {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 14px;
-  color: #555b70;
-  cursor: pointer;
-  user-select: none;
-  height: 38px;
-  padding: 0 12px;
-  border: 1px solid #e8ecf2;
-  border-radius: 8px;
-  transition: border-color 0.2s, color 0.2s;
-}
-.round2-filter:hover {
-  border-color: #3b7bf8;
-  color: #3b7bf8;
-}
-.round2-filter input[type="checkbox"] {
-  width: 15px;
-  height: 15px;
-  cursor: pointer;
-  accent-color: #3b7bf8;
-}
 
 /* ==================== 右侧按钮组 ==================== */
 .user-actions {
@@ -396,34 +403,47 @@ onUnmounted(() => {
   color: #f56c6c;
 }
 
+/* ==================== 轮次下拉框高度对齐 ==================== */
+/* el-select 内部 input 高度 + line-height 与 .user-btn(36px) 对齐 */
+::v-deep(.pc-round-select .el-select__wrapper),
+::v-deep(.mobile-actions-row .el-select__wrapper) {
+  height: 34px !important;
+  min-height: 34px !important;
+  line-height: 34px !important;
+  padding: 0 11px;
+  box-shadow: 1px solid #e8ecf2 !important;
+  border-radius: 8px;
+  font-size: 14px;
+}
+::v-deep(.pc-round-select .el-select__wrapper:hover),
+::v-deep(.mobile-actions-row .el-select__wrapper:hover) {
+  box-shadow: 0 0 0 3px rgba(59, 123, 248, 0.1), 1px solid #3b7bf8 !important;
+}
+::v-deep(.pc-round-select .el-select__wrapper.is-focused),
+::v-deep(.mobile-actions-row .el-select__wrapper.is-focused) {
+  box-shadow: 0 0 0 3px rgba(59, 123, 248, 0.15), 1px solid #3b7bf8 !important;
+}
+
+
 /* ==================== 响应式 ≤768px ==================== */
 .mobile-actions-row { display: none; }
 @media (max-width: 768px) {
   .filter-bar {
     gap: 8px;
   }
-  /* PC端第二轮 checkbox 移动端隐藏 */
-  .round2-filter {
-    display: none;
-  }
   /* user-actions（PC端按钮组）移动端隐藏 */
   .user-actions {
     display: none;
   }
-  /* 移动端第二行：均分三个元素 */
+  /* PC端轮次下拉框移动端隐藏（移动端在 mobile-actions-row 里有自己的） */
+  .pc-round-select {
+    display: none;
+  }
+  /* 移动端第二行：均分元素 */
   .mobile-actions-row {
     display: flex;
     gap: 6px;
     width: 100%;
-  }
-  .mobile-actions-row .round2-filter {
-    display: flex;
-    flex: 1;
-    height: 34px;
-    justify-content: center;
-    align-items: center;
-    font-size: 12px;
-    margin: 0;
   }
   .mobile-actions-row .user-btn {
     flex: 1;

@@ -23,7 +23,7 @@ public interface ClassInfoRepository extends JpaRepository<ClassInfo, Integer> {
      * @return 受影响行数，0 = 名额已满或班级不存在
      */
     @Modifying
-    @Query(value = "UPDATE classes SET enrolled = enrolled + 1 WHERE id = :id AND (quota = -1 OR enrolled < quota)", nativeQuery = true)
+    @Query(value = "UPDATE ssc_classes SET enrolled = enrolled + 1 WHERE id = :id AND (quota = -1 OR enrolled < quota)", nativeQuery = true)
     int incrementEnrolledIfQuotaAvailable(Integer id);
 
     /**
@@ -31,6 +31,6 @@ public interface ClassInfoRepository extends JpaRepository<ClassInfo, Integer> {
      * @return 受影响行数，0 = 班级不存在或 enrolled 已经是 0
      */
     @Modifying
-    @Query(value = "UPDATE classes SET enrolled = GREATEST(0, enrolled - 1) WHERE id = :id", nativeQuery = true)
+    @Query(value = "UPDATE ssc_classes SET enrolled = GREATEST(0, enrolled - 1) WHERE id = :id", nativeQuery = true)
     int decrementEnrolled(Integer id);
 }

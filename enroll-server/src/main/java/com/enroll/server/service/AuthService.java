@@ -7,6 +7,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -82,7 +83,7 @@ public class AuthService {
         String key = SMS_KEY_PREFIX + phone;
         redis.opsForValue().set(key, codeStr, CODE_TTL_SECONDS, TimeUnit.SECONDS);
 
-        sendSms(phone, codeStr);
+        sendSmsAsync(phone, codeStr);
 
         // S12 修复：日志不打印 code 明文，只打印手机号和 IP（脱敏）
         log.info("【验证码已发送】phone={} ip={} codeLen={}", maskPhone(phone), clientIp, codeStr.length());
@@ -160,11 +161,13 @@ public class AuthService {
     }
 
     /**
-     * 发送短信（真实接口：大国三通短信平台）
+     * 异步发送短信（真实接口：大国三通短信平台）
+     * 异步：验证码已写 Redis 返给用户，短信在后台线程发送，不阻塞主流程
      * @param phone 收件人手机号
      * @param code  验证码
      */
-    private void sendSms(String phone, String code) {
+    @Async
+    private void sendSmsAsync(String phone, String code) {
         // 大汉三通短信平台：GET /mdsmssend.ashx?sn=...&pwd=...&mobile=...&content=...
         // content 内容需与大汉三通平台报备的模板格式一致，平台会自动拼接签名
         // ⚠️ S4 修复：生产通过环境变量 SMS_SN / SMS_PWD 注入，禁止写死
@@ -186,7 +189,14 @@ public class AuthService {
         }
     }
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
+    {
+        // 配置超时：连接8秒，读取15秒，防止短信平台响应慢时阻塞线程
+        var factory = new org.springframework.http.client.SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(java.time.Duration.ofSeconds(8));
+        factory.setReadTimeout(java.time.Duration.ofSeconds(15));
+        this.restTemplate = new org.springframework.web.client.RestTemplate(factory);
+    }
 
     /** 手机号格式校验 */
     private void validatePhone(String phone) {

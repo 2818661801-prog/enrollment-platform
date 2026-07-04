@@ -71,14 +71,14 @@
           <el-table-column label="操作" width="150">
             <template #default="{ row }">
               <el-button
-                v-if="row.status === '1'"
+                v-if="row.status === '1' || row.status === '4'"
                 text type="primary" size="small"
                 @click="onEdit(row)"
               >
                 修改
               </el-button>
               <el-button
-                v-if="row.status === '1'"
+                v-if="row.status === '1' || row.status === '4'"
                 text type="danger" size="small"
                 @click="onWithdraw(row)"
               >

@@ -59,27 +59,27 @@
             </el-input>
           </el-form-item>
 
-          <el-button
-            type="primary"
-            class="send-btn"
-            :disabled="phoneCode.countdown.value > 0"
-            :loading="phoneCode.sending.value"
-            @click="phoneCode.onSendCode"
-          >
-            {{ phoneCode.countdown.value > 0 ? `${phoneCode.countdown.value}秒后重发` : '发送验证码' }}
-          </el-button>
-
-          <el-form-item v-if="phoneCode.codeSent.value" label="验证码" class="code-item">
+          <!-- 验证码输入 + 发送按钮并排，始终显示 -->
+          <div class="code-row">
             <el-input
               v-model="phoneCode.code.value"
               placeholder="请输入6位验证码"
               maxlength="6"
+              class="code-input"
               @keyup.enter="onVerifyAndNext"
             />
-          </el-form-item>
+            <el-button
+              type="primary"
+              class="send-btn"
+              :disabled="phoneCode.countdown.value > 0"
+              :loading="phoneCode.sending.value"
+              @click="phoneCode.onSendCode"
+            >
+              {{ phoneCode.countdown.value > 0 ? `${phoneCode.countdown.value}秒后重发` : '发送验证码' }}
+            </el-button>
+          </div>
 
           <el-button
-            v-if="phoneCode.codeSent.value"
             type="primary"
             class="next-btn"
             :loading="phoneCode.logging.value"
@@ -288,6 +288,7 @@ onMounted(async () => {
 })
 
 // 监听班级列表 + 路由 classId，两者都就绪才预填表单
+// 多轮班：period 从 URL query param 传入（第2轮时间），而非 cls.period（第一轮时间）
 watch(
   [() => classes.value.length, () => route.params.classId],
   ([len, cid]) => {
@@ -296,7 +297,9 @@ watch(
     if (!classId || form.classId === classId) return
     const cls = classes.value.find(c => c.id === classId)
     if (!cls) return
-    const { canApply, label } = getClassTimeStatus(cls)
+    // 优先用 URL 传入的 period（多轮班第2轮时间），否则降级用 cls.period（单轮班）
+    const periodStr = route.query.period || cls.period
+    const { canApply, label } = getClassTimeStatus({ period: periodStr })
     if (!canApply) {
       ElMessage.warning(`「${cls.name}」${label}，无法报名`)
       router.replace('/home')
@@ -313,7 +316,9 @@ const selectedClass = computed(() =>
 
 const timeStatus = computed(() => {
   if (!selectedClass.value) return null
-  return getClassTimeStatus(selectedClass.value)
+  // 优先用 URL 传入的 period，保持多轮班时间判断一致
+  const periodStr = route.query.period || selectedClass.value.period
+  return getClassTimeStatus({ period: periodStr })
 })
 
 function onIdCardBlur() {
@@ -403,6 +408,7 @@ async function onSubmit() {
     const result = await submitApplication(payload)
     if (result.success) {
       ElMessage.success('报名提交成功！')
+      window.dispatchEvent(new Event('application_changed'))
       router.push('/my-applications')
     } else {
       ElMessage.error(result.message || '提交失败')
@@ -525,11 +531,16 @@ async function onSubmit() {
   padding: 0 4px;
 }
 .send-btn {
-  width: 100%;
-  margin-bottom: 16px;
+  width: auto;
+  flex-shrink: 0;
 }
-.code-item {
-  margin-top: 8px;
+.code-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.code-input {
+  flex: 1;
 }
 .next-btn {
   width: 100%;

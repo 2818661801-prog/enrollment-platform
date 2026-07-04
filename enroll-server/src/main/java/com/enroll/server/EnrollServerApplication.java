@@ -2,6 +2,7 @@ package com.enroll.server;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableAsync;
 
 /**
  * 报名系统后端启动类
@@ -12,6 +13,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  *   @ComponentScan       — 扫描同包下的 @Controller/@Service/@Repository
  */
 @SpringBootApplication
+@EnableAsync  // 启用异步，短信发送不阻塞主线程
 public class EnrollServerApplication {
 
     public static void main(String[] args) {

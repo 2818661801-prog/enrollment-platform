@@ -101,17 +101,6 @@ public class ApplicationService {
             throw new BusinessException(ResultCode.DUPLICATE_APPLICATION);
         }
 
-        // 5) 第二轮须先有第一轮记录
-        if (!TEST_MODE && currentRound == 2) {
-            boolean hasRound2 = hasRound(cls.getPeriods(), 2);
-            if (hasRound2) {
-                List<Application> firstRound = findRoundRecord(idCard, classId, 1);
-                if (firstRound.isEmpty()) {
-                    throw new BusinessException(ResultCode.PARAM_INVALID, "您尚未完成第一轮报名，无法参加第二轮");
-                }
-            }
-        }
-
         // 6) 名额校验（⚠️ S16 修复：名额校验 + enrolled+1 合并为原子 UPDATE）
         if (!TEST_MODE) {
             int affected = classRepo.incrementEnrolledIfQuotaAvailable(classId);
@@ -171,23 +160,6 @@ public class ApplicationService {
         }
     }
 
-    private boolean hasRound(String periodsJson, int round) {
-        if (periodsJson == null || periodsJson.isBlank()) return false;
-        try {
-            var mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-            var list = mapper.readValue(periodsJson, java.util.List.class);
-            for (var item : list) {
-                @SuppressWarnings("unchecked")
-                var entry = (java.util.Map<String, Object>) item;
-                int r = ((Number) entry.get("round")).intValue();
-                if (r == round) return true;
-            }
-        } catch (Exception e) {
-            log.warn("hasRound 解析失败: {}", periodsJson, e);
-        }
-        return false;
-    }
-
     private boolean isInPeriod(String period) {
         if (period == null || period.isBlank()) return false;
         try {
@@ -207,9 +179,6 @@ public class ApplicationService {
         }
     }
 
-    private List<Application> findRoundRecord(String idCard, Integer classId, int round) {
-        return appRepo.findByIdCardAndClassIdAndStatus(idCard, classId, STATUS_APPLIED);
-    }
 
     // ==================== 撤回报名（软删除，写） ====================
 

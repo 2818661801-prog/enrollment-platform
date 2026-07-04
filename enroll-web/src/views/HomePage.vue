@@ -17,10 +17,10 @@
         <!-- 筛选栏：自定义下拉 + 重置 + 登录 + 我的报名 -->
         <FilterBar
           v-model="searchKeyword"
-          :showOnlyRound2="showOnlyRound2"
+          :selectedRound="selectedRound"
           :classes="classes"
           :is-logged-in="isLoggedIn"
-          @update:showOnlyRound2="showOnlyRound2 = $event"
+          @update:selectedRound="selectedRound = $event"
           @reset="searchKeyword = null"
           @logout="onLogout"
         />
@@ -32,7 +32,7 @@
             v-for="c in flatCards"
             :key="c._uid"
             :class-info="c"
-            :is-applied="hasAnyApplication || appliedClassIds[c.id]"
+            :is-applied="appliedClassIds[c.id]"
             :is-admitted="admittedClassIds[c.id]"
             :is-logged-in="isLoggedIn"
             @select="goFormDirect"
@@ -69,15 +69,17 @@
       <section class="nd-section">
         <h3>二、特色班简介</h3>
         <div class="nd-table-wrap">
-          <el-table :data="sortedClassesByPeriod" border size="small">
+          <el-table :data="flatTableData" border size="small">
             <el-table-column label="班级名称" align="center" width="260">
               <template #default="{ row }">
-                <span class="class-name-full">{{ row.name }}</span>
+                <span class="class-name-full">{{ row._name }}</span>
               </template>
             </el-table-column>
             <el-table-column label="报名时间" align="center" min-width="180">
               <template #default="{ row }">
-                <span class="period-text">{{ row.period }}</span>
+                <el-tooltip :content="`报名时间：${row._period}`" placement="top">
+                  <span class="period-text">{{ row._period }}</span>
+                </el-tooltip>
               </template>
             </el-table-column>
           </el-table>
@@ -119,7 +121,7 @@ import FilterBar from '../components/FilterBar.vue'
 
 const router = useRouter()
 const searchKeyword = ref(null)
-const showOnlyRound2 = ref(false)
+const selectedRound = ref(null)  // null=全部轮次，数字=只看第N轮
 // 是否已登录（学生端 JWT）
 const isLoggedIn = ref(false)
 // 班级列表：从后端 API 拿
@@ -133,14 +135,15 @@ const noticeData = ref({ conditions: [], notices: [] })
 
 // 已报名的班级 ID（status=1/4，不含撤回）
 const appliedClassIds = reactive({})
-// 是否有任何有效报名记录（不含撤回，用于统一禁用其他卡片）
-const hasAnyApplication = ref(false)
 // 已录取的班级 ID（status=3，单独显示黄色"已录取"）
 const admittedClassIds = reactive({})
 
 // 仅首次进入弹窗（关闭浏览器标签后重开才再弹）
 // 为什么用 sessionStorage：关闭标签即清除，localStorage 会永久记着
 let pollTimer = null
+// storage 事件处理器（需存引用才能在 unmount 时正确移除）
+const onStorageChange = (e) => { if (e.key === 'application_changed') loadData() }
+const onAppChanged = () => loadData()
 
 onMounted(async () => {
   // 检测学生端登录态（有 student_token 视为已登录）
@@ -173,9 +176,17 @@ onMounted(async () => {
 
   // 每 30 秒轮询，管理员操作后返回首页能自动看到最新数据
   pollTimer = setInterval(loadData, 30_000)
+
+  // 监听其他页面报名变化，刷新已报名状态（storage 事件跨标签页，自定义事件同标签页）
+  window.addEventListener('storage', onStorageChange)
+  window.addEventListener('application_changed', onAppChanged)
 })
 
-onUnmounted(() => { if (pollTimer) clearInterval(pollTimer) })
+onUnmounted(() => {
+  if (pollTimer) clearInterval(pollTimer)
+  window.removeEventListener('storage', onStorageChange)
+  window.removeEventListener('application_changed', onAppChanged)
+})
 
 async function loadData() {
   try {
@@ -187,8 +198,6 @@ async function loadData() {
       const myApps = await fetchMyApplicationsMe()
       Object.keys(appliedClassIds).forEach(k => delete appliedClassIds[k])
       Object.keys(admittedClassIds).forEach(k => delete admittedClassIds[k])
-      // hasAnyApplication：有已报名(1)或已录取(3)记录，禁止报其他班；未录取(4)可以重新报
-      hasAnyApplication.value = myApps.some(a => a.status === '1' || a.status === '3')
       myApps.forEach(a => {
         if (a.status === '1' || a.status === '3') appliedClassIds[a.classId] = true
         if (a.status === '3') admittedClassIds[a.classId] = true
@@ -289,26 +298,35 @@ const flatCards = computed(() => {
       result.push({ ...cls, _round: r.round, _period: r.period, _uid: `${cls.id}-${r.round}` })
     }
   }
-  // "只看第二轮"过滤
-  if (showOnlyRound2.value) {
-    return result.filter(c => c._round === 2)
+  // 轮次筛选：selectedRound 为 null/undefined 时显示全部，否则只显示指定轮次
+  if (selectedRound.value != null) {
+    return result.filter(c => c._round === selectedRound.value)
   }
   return result
 })
 
 /**
- * 班级列表按报名开始时间升序
- * 为什么排序：主人担心班级乱了，报名须知表格应按时间顺序展示
- * 用 parsePeriod 解析 period 字符串 → start Date → 升序
+ * 表格数据源：每个班 × 每轮 = 一行（与 flatCards 逻辑一致，保证多轮班的多轮时间都能展示）
+ * 按报名开始时间升序排列
  */
-const sortedClassesByPeriod = computed(() => {
-  return [...classes.value].sort((a, b) => {
+const flatTableData = computed(() => {
+  const result = []
+  for (const cls of classes.value) {
+    const rounds = parsePeriodsArray(cls.periods, cls.period)
+    for (const r of rounds) {
+      // 多轮班班级名加"（第X轮报名）"后缀，与 ClassCard.cardTitle 逻辑一致
+      const name = rounds.length > 1 ? `${cls.name}（第${r.round}轮报名）` : cls.name
+      result.push({ ...cls, _name: name, _period: r.period, _round: r.round })
+    }
+  }
+  // 按报名开始时间升序
+  return result.sort((a, b) => {
     try {
-      const aStart = parsePeriod(a.period).start.getTime()
-      const bStart = parsePeriod(b.period).start.getTime()
+      const aStart = parsePeriod(a._period).start.getTime()
+      const bStart = parsePeriod(b._period).start.getTime()
       return aStart - bStart
     } catch {
-      return 0  // 解析失败保持原序
+      return 0
     }
   })
 })
@@ -324,17 +342,18 @@ function onAgreeNotice() {
   showNotice.value = false
 }
 
-async function goFormDirect(classId) {
-  const c = classes.value.find(c => c.id === classId)
+async function goFormDirect({ id, period }) {
+  const c = classes.value.find(c => c.id === id)
   if (!c) return
-  const { canApply, label } = getClassTimeStatus(c)
+  // 用该轮的实际 period 判断，而非 cls.period（第一轮的）
+  const { canApply, label } = getClassTimeStatus({ period })
   if (!canApply) {
     ElMessage.warning(`「${c.name}」${label}`)
     return
   }
   showNotice.value = false
   await nextTick()
-  router.push(`/form/${classId}`)
+  router.push(`/form/${id}?period=${encodeURIComponent(period)}`)
 }
 
 /**

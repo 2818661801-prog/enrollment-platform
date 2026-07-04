@@ -104,7 +104,11 @@ export function usePhoneCode() {
         ElMessage.error(res.message || '发送失败')
         return
       }
-      ElMessage.success('验证码已发送')
+      ElMessage({
+        message: '验证码已发送，短信可能有 20-30 秒延迟，请耐心等待',
+        type: 'success',
+        duration: 4000,  // 4秒后自动消失，足够读完
+      })
       codeSent.value = true
       startCountdown()
     } catch {

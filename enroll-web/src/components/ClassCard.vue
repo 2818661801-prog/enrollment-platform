@@ -27,10 +27,16 @@
 
       <!-- 报名时间段（支持多轮） -->
       <div class="card-periods">
-        <div v-for="r in rounds" :key="r.round" class="card-period-row">
+        <div v-for="(r, idx) in rounds" :key="r.round" class="card-period-row">
           <img :src="calendarIcon" alt="" class="period-icon" aria-hidden="true" />
           <span class="round-label">第{{ r.round }}轮</span>
-          <span class="period-text">{{ r.period }}</span>
+          <el-tooltip :content="`报名时间：${r.period}`" placement="top">
+            <span class="period-text">{{ r.period }}</span>
+          </el-tooltip>
+          <!-- 多轮时右侧显示状态标签 -->
+          <span v-if="isMultiRound" class="round-status" :class="`round-status--${roundStatusList[idx].status}`">
+            {{ roundStatusList[idx].label }}
+          </span>
         </div>
       </div>
 
@@ -107,6 +113,11 @@ const rounds = computed(() => {
   return [{ round: 1, period: props.classInfo.period || '' }]
 })
 
+// 每轮的时间状态（用于多轮卡片右侧标签显示）
+const roundStatusList = computed(() => {
+  return rounds.value.map(r => getClassTimeStatus({ period: r.period }))
+})
+
 // 已录取（status=3）：黄色
 // 已登录 + 有记录（status=1/4）：灰色"已报名"
 // 无记录：按时间状态
@@ -120,16 +131,16 @@ const buttonText = computed(() => {
   }
 })
 
-// 按钮样式：已录取黄，其他已登录有记录灰
+// 按钮样式：已录取黄，已报名绿，其他按时间状态
 const btnClass = computed(() => {
   if (props.isAdmitted) return 'card-btn--admitted'
-  if (props.isApplied) return 'card-btn--gray'
+  if (props.isApplied) return 'card-btn--applied'
   return `card-btn--${timeStatus.value.status}`
 })
 
 function onClick() {
   if (!timeStatus.value.canApply || props.isApplied || props.isAdmitted) return
-  emit('select', props.classInfo.id)
+  emit('select', { id: props.classInfo.id, period: props.classInfo._period })
 }
 </script>
 
@@ -260,6 +271,29 @@ function onClick() {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  pointer-events: auto; /* 恢复点击，让 disabled 卡片里的 el-tooltip 也能触发 */
+}
+
+/* 轮次状态标签：报名中=绿，已截止/未开始=灰 */
+.round-status {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 10px;
+  border-radius: 10px;
+  flex-shrink: 0;
+  letter-spacing: 0.3px;
+}
+.round-status--open {
+  color: #16a34a;
+  background: #f0fdf4;
+}
+.round-status--closed {
+  color: #94a3b8;
+  background: #f1f5f9;
+}
+.round-status--not_started {
+  color: #94a3b8;
+  background: #f1f5f9;
 }
 
 /* ==================== 三态按钮 ==================== */
