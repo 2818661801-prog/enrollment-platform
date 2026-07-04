@@ -71,7 +71,7 @@
 
     <!-- 时间状态筛选下拉框：报名中 / 未开始 / 已截止 -->
     <el-select
-      v-if="availableTimeStatuses.length > 1"
+      v-if="availableTimeStatuses.length >= 1"
       class="pc-time-select"
       :model-value="props.selectedTimeStatus"
       placeholder="全部状态"
@@ -138,7 +138,7 @@
       </el-select>
       <!-- 第2列：时间状态筛选 -->
       <el-select
-        v-if="availableTimeStatuses.length > 1"
+        v-if="availableTimeStatuses.length >= 1"
         style="flex: 1; min-width: 0"
         :model-value="props.selectedTimeStatus"
         placeholder="状态"
