@@ -331,8 +331,10 @@ const flatTableData = computed(() => {
   })
 })
 
-async function onLogout() {
+function onLogout() {
   isLoggedIn.value = false
+  Object.keys(appliedClassIds).forEach(k => delete appliedClassIds[k])
+  Object.keys(admittedClassIds).forEach(k => delete admittedClassIds[k])
   ElMessage.success('已退出登录')
 }
 
