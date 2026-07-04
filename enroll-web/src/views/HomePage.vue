@@ -18,9 +18,11 @@
         <FilterBar
           v-model="searchKeyword"
           :selectedRound="selectedRound"
+          :selectedTimeStatus="selectedTimeStatus"
           :classes="classes"
           :is-logged-in="isLoggedIn"
           @update:selectedRound="selectedRound = $event"
+          @update:selectedTimeStatus="selectedTimeStatus = $event"
           @reset="searchKeyword = null"
           @logout="onLogout"
         />
@@ -122,6 +124,7 @@ import FilterBar from '../components/FilterBar.vue'
 const router = useRouter()
 const searchKeyword = ref(null)
 const selectedRound = ref(null)  // null=全部轮次，数字=只看第N轮
+const selectedTimeStatus = ref(null)  // null=全部状态，open/not_started/closed
 // 是否已登录（学生端 JWT）
 const isLoggedIn = ref(false)
 // 班级列表：从后端 API 拿
@@ -291,16 +294,23 @@ const displayClasses = computed(() => {
  * _uid 格式："classId-round"，保证 key 唯一
  */
 const flatCards = computed(() => {
-  const result = []
+  let result = []
   for (const cls of displayClasses.value) {
     const rounds = parsePeriodsArray(cls.periods, cls.period)
     for (const r of rounds) {
       result.push({ ...cls, _round: r.round, _period: r.period, _uid: `${cls.id}-${r.round}` })
     }
   }
-  // 轮次筛选：selectedRound 为 null/undefined 时显示全部，否则只显示指定轮次
+  // 轮次筛选：selectedRound 为 null 时显示全部
   if (selectedRound.value != null) {
-    return result.filter(c => c._round === selectedRound.value)
+    result = result.filter(c => c._round === selectedRound.value)
+  }
+  // 时间状态筛选：selectedTimeStatus 为 null 时显示全部
+  if (selectedTimeStatus.value != null) {
+    result = result.filter(c => {
+      const s = getClassTimeStatus({ period: c._period }).status
+      return s === selectedTimeStatus.value
+    })
   }
   return result
 })

@@ -16,9 +16,19 @@
         :class="{ 'is-opened': isOpen }"
         @click="toggleDrop"
       >
-        <span class="select-label">
+        <span class="select-label" :class="{ 'is-placeholder': !selectedLabel }">
           {{ selectedLabel || '按班级名称...' }}
         </span>
+        <!-- 清除按钮：有值时显示 X -->
+        <button
+          v-if="props.modelValue"
+          type="button"
+          class="select-clear"
+          @click.stop="onClear"
+          aria-label="清除选择"
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
         <span class="select-arrow" :class="{ 'is-up': isOpen }"></span>
       </button>
 
@@ -59,6 +69,21 @@
       />
     </el-select>
 
+    <!-- 时间状态筛选下拉框：报名中 / 未开始 / 已截止 -->
+    <el-select
+      v-if="availableTimeStatuses.length > 1"
+      class="pc-time-select"
+      :model-value="props.selectedTimeStatus"
+      placeholder="全部状态"
+      clearable
+      style="width: 130px; height: 34px"
+      @update:model-value="v => emit('update:selectedTimeStatus', v)"
+    >
+      <el-option label="报名中" value="open" />
+      <el-option label="未开始" value="not_started" />
+      <el-option label="已截止" value="closed" />
+    </el-select>
+
     <!-- 右侧：登录 + 我的报名按钮组 -->
     <div class="user-actions">
       <!-- 登录（未登录时显示） -->
@@ -97,34 +122,47 @@
       </button>
     </div>
 
-    <!-- 移动端第二行：轮次下拉框 + 登录 + 我的报名 均分 -->
+    <!-- 移动端第二行：轮次 + 时间状态 + 登录 + 我的报名 四列均分 -->
     <div class="mobile-actions-row">
+      <!-- 第1列：轮次筛选 -->
       <el-select
         v-if="availableRounds.length > 1"
-        :model-value="props.selectedRound"
-        placeholder="全部轮次"
-        clearable
         style="flex: 1; min-width: 0"
+        :model-value="props.selectedRound"
+        placeholder="轮次"
+        clearable
         @update:model-value="v => emit('update:selectedRound', v)"
       >
-        <el-option
-          v-for="r in availableRounds"
-          :key="r"
-          :label="`第${r}轮`"
-          :value="r"
-        />
+        <el-option label="全部" :value="null" />
+        <el-option v-for="r in availableRounds" :key="r" :label="`第${r}轮`" :value="r" />
       </el-select>
-      <button v-if="!isLoggedIn" type="button" class="user-btn login-btn" @click="goLogin">
+      <!-- 第2列：时间状态筛选 -->
+      <el-select
+        v-if="availableTimeStatuses.length > 1"
+        style="flex: 1; min-width: 0"
+        :model-value="props.selectedTimeStatus"
+        placeholder="状态"
+        clearable
+        @update:model-value="v => emit('update:selectedTimeStatus', v)"
+      >
+        <el-option label="全部" :value="null" />
+        <el-option label="报名中" value="open" />
+        <el-option label="未开始" value="not_started" />
+        <el-option label="已截止" value="closed" />
+      </el-select>
+      <!-- 第3列：登录/退出 -->
+      <button v-if="!isLoggedIn" type="button" class="user-btn" style="flex: 1; justify-content: center" @click="goLogin">
         <img :src="lockIcon" alt="" class="user-icon" />
         <span>登录</span>
       </button>
-      <button v-if="isLoggedIn" type="button" class="user-btn logout-btn" @click="onLogout">
+      <button v-if="isLoggedIn" type="button" class="user-btn" style="flex: 1; justify-content: center" @click="onLogout">
         <img :src="lockIcon" alt="" class="user-icon" />
         <span>退出</span>
       </button>
-      <button type="button" class="user-btn apps-btn" @click="goMyApps">
+      <!-- 第4列：我的报名 -->
+      <button type="button" class="user-btn" style="flex: 1; justify-content: center" @click="goMyApps">
         <img :src="folderIcon" alt="" class="user-icon" />
-        <span>我的报名</span>
+        <span>我的</span>
       </button>
     </div>
   </div>
@@ -136,15 +174,33 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import lockIcon from '../assets/images/lock.svg'
 import folderIcon from '../assets/images/folder.svg'
+import { getClassTimeStatus } from '../utils/data.js'
+
+/**
+ * 解析 periods JSON 字符串为数组（与 HomePage.vue 相同逻辑）
+ */
+function parsePeriodsArray(periodsJson, fallbackPeriod) {
+  if (!periodsJson || periodsJson.trim() === '') {
+    return [{ round: 1, period: fallbackPeriod || '' }]
+  }
+  try {
+    const arr = JSON.parse(periodsJson)
+    if (Array.isArray(arr) && arr.length > 0) {
+      return arr
+    }
+  } catch {}
+  return [{ round: 1, period: fallbackPeriod || '' }]
+}
 
 const props = defineProps({
   modelValue:    { type: [Number, String, null], default: null },
   classes:       { type: Array, default: () => [] },
   isLoggedIn:    { type: Boolean, default: false },
   selectedRound: { type: [Number, null], default: null }, // null=全部轮次，数字=只看第N轮
+  selectedTimeStatus: { type: [String, null], default: null }, // null=全部状态，open/not_started/closed
 })
 
-const emit = defineEmits(['update:modelValue', 'reset', 'logout', 'update:selectedRound'])
+const emit = defineEmits(['update:modelValue', 'reset', 'logout', 'update:selectedRound', 'update:selectedTimeStatus'])
 
 const router = useRouter()
 const selectRef = ref(null)
@@ -173,6 +229,22 @@ const availableRounds = computed(() => {
   return [...rounds].sort((a, b) => a - b)
 })
 
+/**
+ * 动态提取所有班级卡片的时间状态（open/not_started/closed）
+ * 用于时间状态筛选下拉框
+ */
+const availableTimeStatuses = computed(() => {
+  const statuses = new Set()
+  for (const cls of props.classes || []) {
+    const rounds = parsePeriodsArray(cls.periods, cls.period)
+    for (const r of rounds) {
+      const s = getClassTimeStatus({ period: r.period }).status
+      statuses.add(s)
+    }
+  }
+  return [...statuses]
+})
+
 function toggleDrop() {
   isOpen.value = !isOpen.value
 }
@@ -182,9 +254,15 @@ function pick(c) {
   isOpen.value = false
 }
 
+function onClear() {
+  emit('update:modelValue', null)
+  isOpen.value = false
+}
+
 function onReset() {
   emit('update:modelValue', null)
   emit('update:selectedRound', null)
+  emit('update:selectedTimeStatus', null)
   emit('reset')
 }
 
@@ -252,10 +330,10 @@ onUnmounted(() => {
   min-width: 180px;
 }
 
-/* 触发器按钮 */
+/* 触发器按钮（高度与下拉框34px对齐） */
 .select-trigger {
   width: 100%;
-  height: 38px;
+  height: 34px;
   padding: 0 34px 0 14px;
   background: #ffffff;
   border: 1px solid #e8ecf2;
@@ -268,6 +346,7 @@ onUnmounted(() => {
   transition: border-color 0.2s, box-shadow 0.2s;
   display: flex;
   align-items: center;
+  position: relative;
 }
 .select-trigger.is-opened,
 .select-trigger:hover {
@@ -279,10 +358,36 @@ onUnmounted(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.select-label.is-placeholder {
   color: #8890a4;
 }
-.select-label:not(:empty) {
+.select-label:not(.is-placeholder) {
   color: #1a1a2e;
+}
+
+/* 清除按钮 */
+.select-clear {
+  position: absolute;
+  right: 28px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #c0c4d0;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+  transition: background 0.15s;
+}
+.select-clear:hover {
+  background: #8890a4;
 }
 
 /* 自定义箭头 */
@@ -406,6 +511,7 @@ onUnmounted(() => {
 /* ==================== 轮次下拉框高度对齐 ==================== */
 /* el-select 内部 input 高度 + line-height 与 .user-btn(36px) 对齐 */
 ::v-deep(.pc-round-select .el-select__wrapper),
+::v-deep(.pc-time-select .el-select__wrapper),
 ::v-deep(.mobile-actions-row .el-select__wrapper) {
   height: 34px !important;
   min-height: 34px !important;
@@ -416,10 +522,12 @@ onUnmounted(() => {
   font-size: 14px;
 }
 ::v-deep(.pc-round-select .el-select__wrapper:hover),
+::v-deep(.pc-time-select .el-select__wrapper:hover),
 ::v-deep(.mobile-actions-row .el-select__wrapper:hover) {
   box-shadow: 0 0 0 3px rgba(59, 123, 248, 0.1), 1px solid #3b7bf8 !important;
 }
 ::v-deep(.pc-round-select .el-select__wrapper.is-focused),
+::v-deep(.pc-time-select .el-select__wrapper.is-focused),
 ::v-deep(.mobile-actions-row .el-select__wrapper.is-focused) {
   box-shadow: 0 0 0 3px rgba(59, 123, 248, 0.15), 1px solid #3b7bf8 !important;
 }
@@ -435,19 +543,26 @@ onUnmounted(() => {
   .user-actions {
     display: none;
   }
-  /* PC端轮次下拉框移动端隐藏（移动端在 mobile-actions-row 里有自己的） */
-  .pc-round-select {
+  /* PC端轮次+时间状态下拉框移动端隐藏 */
+  .pc-round-select,
+  .pc-time-select {
     display: none;
   }
-  /* 移动端第二行：均分元素 */
+  /* 移动端第二行：四列均分 */
   .mobile-actions-row {
     display: flex;
-    gap: 6px;
+    gap: 4px;
     width: 100%;
   }
-  .mobile-actions-row .user-btn {
+  .mobile-actions-row > * {
     flex: 1;
+    min-width: 0;
+  }
+  .mobile-actions-row .user-btn {
     justify-content: center;
+    font-size: 12px;
+    padding: 0 4px;
+    height: 34px;
   }
 }
 </style>
