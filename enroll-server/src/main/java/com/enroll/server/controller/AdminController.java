@@ -7,6 +7,7 @@ import com.enroll.server.entity.SysConfig;
 import com.enroll.server.repository.SysConfigRepository;
 import com.enroll.server.service.ApplicationService;
 import com.enroll.server.service.ClassService;
+import com.enroll.server.util.RequestUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
@@ -170,10 +171,7 @@ public class AdminController {
     @Transactional
     @PostMapping("/applications/clear")
     public Map<String, Object> clearClass(@RequestBody Map<String, Object> body) {
-        Integer classId = (Integer) body.get("classId");
-        if (classId == null) {
-            return R.fail(ResultCode.PARAM_INVALID, "classId 不能为空");
-        }
+        Integer classId = RequestUtils.parseId(body, "classId");
         applicationService.clearClass(classId);
         log.info("清空班级报名: classId={}", classId);
         return R.ok("已清空该班所有报名记录", null);
@@ -200,10 +198,7 @@ public class AdminController {
     @Transactional
     @PostMapping("/classes/update")
     public Map<String, Object> updateClass(@RequestBody Map<String, Object> body) {
-        Integer id = (Integer) body.get("id");
-        if (id == null) {
-            return R.fail(ResultCode.PARAM_INVALID, "id 不能为空");
-        }
+        Integer id = RequestUtils.parseId(body, "id");
         log.info("=== UPDATE CLASS id={} body={}", id, body);
         return R.ok("更新成功", classService.updateClass(id, body));
     }
@@ -212,10 +207,10 @@ public class AdminController {
     @Transactional
     @PostMapping("/classes/update-period")
     public Map<String, Object> updatePeriod(@RequestBody Map<String, Object> body) {
-        Integer id = (Integer) body.get("id");
+        Integer id = RequestUtils.parseId(body, "id");
         String period = (String) body.get("period");
-        if (id == null || period == null || period.isBlank()) {
-            return R.fail(ResultCode.PARAM_INVALID, "id / period 不能为空");
+        if (period == null || period.isBlank()) {
+            return R.fail(ResultCode.PARAM_INVALID, "period 不能为空");
         }
         return R.ok("修改成功", classService.updatePeriod(id, period));
     }
@@ -224,11 +219,8 @@ public class AdminController {
     @Transactional
     @PostMapping("/classes/update-quota")
     public Map<String, Object> updateQuota(@RequestBody Map<String, Object> body) {
-        Integer id = (Integer) body.get("id");
-        Integer quota = (Integer) body.get("quota");
-        if (id == null || quota == null) {
-            return R.fail(ResultCode.PARAM_INVALID, "id / quota 不能为空");
-        }
+        Integer id = RequestUtils.parseId(body, "id");
+        Integer quota = RequestUtils.parseId(body, "quota");
         return R.ok("修改成功", classService.updateQuota(id, quota));
     }
 
@@ -236,10 +228,7 @@ public class AdminController {
     @Transactional
     @PostMapping("/classes/delete")
     public Map<String, Object> deleteClass(@RequestBody Map<String, Object> body) {
-        Integer id = (Integer) body.get("id");
-        if (id == null) {
-            return R.fail(ResultCode.PARAM_INVALID, "id 不能为空");
-        }
+        Integer id = RequestUtils.parseId(body, "id");
         log.info("=== DELETE CLASS id={}", id);
         classService.deleteClass(id);
         return R.ok("已删除", null);

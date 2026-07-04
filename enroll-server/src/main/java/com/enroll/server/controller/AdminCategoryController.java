@@ -3,9 +3,9 @@ package com.enroll.server.controller;
 import com.enroll.server.dto.CategoryDTO;
 import com.enroll.server.dto.R;
 import com.enroll.server.service.CategoryService;
+import com.enroll.server.util.RequestUtils;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -49,7 +49,7 @@ public class AdminCategoryController {
      */
     @PostMapping("/update")
     public Map<String, Object> update(@RequestBody Map<String, Object> body) {
-        Integer id = (Integer) body.get("id");
+        Integer id = RequestUtils.parseId(body, "id");
         String name = (String) body.get("name");
         CategoryDTO updated = categoryService.update(id, name);
         return R.ok(updated);
@@ -61,7 +61,7 @@ public class AdminCategoryController {
      */
     @PostMapping("/delete")
     public Map<String, Object> delete(@RequestBody Map<String, Object> body) {
-        Integer id = (Integer) body.get("id");
+        Integer id = RequestUtils.parseId(body, "id");
         categoryService.delete(id);
         return R.ok(null);
     }

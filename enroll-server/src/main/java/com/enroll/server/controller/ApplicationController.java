@@ -4,6 +4,7 @@ import com.enroll.server.dto.R;
 import com.enroll.server.dto.ResultCode;
 import com.enroll.server.security.JwtUtil;
 import com.enroll.server.service.ApplicationService;
+import com.enroll.server.util.RequestUtils;
 import io.jsonwebtoken.Claims;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -75,10 +76,7 @@ public class ApplicationController {
      *  2026-07-02 重构：PUT → POST（主人规则） */
     @PostMapping("/withdraw")
     public Map<String, Object> withdraw(@RequestBody Map<String, Object> body) {
-        Integer id = (Integer) body.get("id");
-        if (id == null) {
-            return R.fail(ResultCode.PARAM_INVALID, "id 不能为空");
-        }
+        Integer id = RequestUtils.parseId(body, "id");
         applicationService.withdraw(id);
         return R.ok("已撤回", null);
     }
@@ -87,10 +85,7 @@ public class ApplicationController {
      *  2026-07-02 重构：PUT → POST（主人规则） */
     @PostMapping("/update")
     public Map<String, Object> update(@RequestBody Map<String, Object> body) {
-        Integer id = (Integer) body.get("id");
-        if (id == null) {
-            return R.fail(ResultCode.PARAM_INVALID, "id 不能为空");
-        }
+        Integer id = RequestUtils.parseId(body, "id");
         applicationService.updateApp(id, body);
         return R.ok("修改成功", null);
     }
