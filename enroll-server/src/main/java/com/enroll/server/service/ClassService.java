@@ -68,6 +68,10 @@ public class ClassService {
      */
     @Transactional
     public ClassDTO createClass(java.util.Map<String, Object> body) {
+        // P1-7: quota 边界校验（-1=不限，>=0=具体名额，负数其他值不允许）
+        Integer quota = (Integer) body.getOrDefault("quota", 0);
+        validateQuota(quota);
+
         ClassInfo cls = new ClassInfo();
         cls.setName((String) body.get("name"));
         cls.setPeriods((String) body.get("periods"));
@@ -80,7 +84,7 @@ public class ClassService {
             throw new BusinessException(ResultCode.PARAM_INVALID, "报名时间段不能为空");
         }
         cls.setPeriod(period);
-        cls.setQuota((Integer) body.getOrDefault("quota", 0));
+        cls.setQuota(quota);
         cls.setEnrolled(0);
         cls.setDescription((String) body.get("description"));
         cls.setIsDeleted(0);
@@ -116,7 +120,11 @@ public class ClassService {
             String p = (String) body.get("period");
             if (p != null && !p.isBlank()) cls.setPeriod(p);
         }
-        if (body.containsKey("quota"))       cls.setQuota((Integer) body.get("quota"));
+        if (body.containsKey("quota")) {
+            Integer q = (Integer) body.get("quota");
+            validateQuota(q);
+            cls.setQuota(q);
+        }
         if (body.containsKey("description")) cls.setDescription((String) body.get("description"));
         if (body.containsKey("isDeleted"))  cls.setIsDeleted((Integer) body.get("isDeleted"));
         if (body.containsKey("categoryNames")) {
@@ -143,6 +151,7 @@ public class ClassService {
     /** 修改配额 */
     @Transactional
     public ClassDTO updateQuota(Integer id, Integer quota) {
+        validateQuota(quota);
         ClassInfo cls = classRepo.findById(id)
                 .orElseThrow(() -> new BusinessException(ResultCode.CLASS_NOT_FOUND));
         cls.setQuota(quota);
@@ -157,6 +166,15 @@ public class ClassService {
         cls.setIsDeleted(1);
         classRepo.save(cls);
         log.info("软删除班级: id={}, name={}", id, cls.getName());
+    }
+
+    // ==================== 内部工具方法 ====================
+
+    /** P1-7: quota 边界校验（-1=不限，>=0=正整数，负数其他值不允许） */
+    private void validateQuota(Integer quota) {
+        if (quota != -1 && quota < 0) {
+            throw new BusinessException(ResultCode.PARAM_INVALID, "名额必须为 -1（不限）或正整数");
+        }
     }
 
     // ==================== 内部：Entity → DTO ====================

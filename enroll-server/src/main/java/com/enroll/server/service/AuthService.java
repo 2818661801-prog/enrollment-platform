@@ -6,6 +6,7 @@ import com.enroll.server.security.JwtUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -41,6 +42,18 @@ public class AuthService {
 
     private final StringRedisTemplate redis;
     private final JwtUtil jwtUtil;
+
+    @Value("${sms.sn}")
+    private String smsSn;
+
+    @Value("${sms.pwd}")
+    private String smsPwd;
+
+    @Value("${sms.url}")
+    private String smsUrl;
+
+    @Value("${sms.sign}")
+    private String smsSign;
 
     public AuthService(StringRedisTemplate redis, JwtUtil jwtUtil) {
         this.redis = redis;
@@ -170,19 +183,15 @@ public class AuthService {
     private void sendSmsAsync(String phone, String code) {
         // 大汉三通短信平台：GET /mdsmssend.ashx?sn=...&pwd=...&mobile=...&content=...
         // content 内容需与大汉三通平台报备的模板格式一致，平台会自动拼接签名
-        // ⚠️ S4 修复：生产通过环境变量 SMS_SN / SMS_PWD 注入，禁止写死
-        String sn = System.getenv("SMS_SN") != null ? System.getenv("SMS_SN") : "SDK-BBX-010-39560";
-        String pwd = System.getenv("SMS_PWD") != null ? System.getenv("SMS_PWD") : "3365CB7EB11EEC171571E8E91C61EF30";
-        // 与大汉三通平台模板格式一致：签名+正文（平台配置模板时已设定签名拼接规则）
-        String content = "【杭州电子科技大学信息工程学院】您的验证码为" + code + "，5分钟内有效，请勿泄露给他人。";
+        // ⚠️ P0-1 修复：SMS 账号密码从 application.yml 注入，生产通过环境变量覆盖
+        String content = smsSign + "您的验证码为" + code + "，5分钟内有效，请勿泄露给他人。";
         String encodedContent = java.net.URLEncoder.encode(content, StandardCharsets.UTF_8);
         String url = String.format(
-            "http://***REMOVED***:8061/mdsmssend.ashx?sn=%s&pwd=%s&mobile=%s&content=%s",
-            sn, pwd, phone, encodedContent
+            smsUrl + "?sn=%s&pwd=%s&mobile=%s&content=%s",
+            smsSn, smsPwd, phone, encodedContent
         );
         try {
             String resp = restTemplate.getForObject(url, String.class);
-            // S12 修复：日志不打印 code 明文，只打印手机号（脱敏）
             log.info("【短信发送结果】phone={} resp={}", maskPhone(phone), resp);
         } catch (Exception e) {
             log.error("【短信发送失败】phone={}", maskPhone(phone), e);

@@ -48,9 +48,6 @@ public class ApplicationService {
 
     private static final Logger log = LoggerFactory.getLogger(ApplicationService.class);
 
-    // ===== 测试开关（生产必须为 false） =====
-    private static final boolean TEST_MODE = false;
-
     /** 状态常量 */
     public static final int STATUS_NONE      = 0;
     public static final int STATUS_APPLIED   = 1;
@@ -78,13 +75,10 @@ public class ApplicationService {
         ClassInfo cls = classRepo.findById(classId)
                 .orElseThrow(() -> new BusinessException(ResultCode.CLASS_NOT_FOUND));
 
-        // 2) 测试模式：跳过时间校验
-        int currentRound = 1;
-        if (!TEST_MODE) {
-            currentRound = determineCurrentRound(cls);
-            if (currentRound == 0) {
-                throw new BusinessException(ResultCode.PARAM_INVALID, "该班级当前不在报名时间内");
-            }
+        // 2) 判断当前轮次，不在报名期内拒绝
+        int currentRound = determineCurrentRound(cls);
+        if (currentRound == 0) {
+            throw new BusinessException(ResultCode.PARAM_INVALID, "该班级当前不在报名时间内");
         }
 
         // 3) 全局唯一报名：已报名（审核中）或已录取（永久锁定）不可再报，未录取可以重新报
@@ -102,11 +96,9 @@ public class ApplicationService {
         }
 
         // 6) 名额校验（⚠️ S16 修复：名额校验 + enrolled+1 合并为原子 UPDATE）
-        if (!TEST_MODE) {
-            int affected = classRepo.incrementEnrolledIfQuotaAvailable(classId);
-            if (affected == 0) {
-                throw new BusinessException(ResultCode.CLASS_FULL);
-            }
+        int affected = classRepo.incrementEnrolledIfQuotaAvailable(classId);
+        if (affected == 0) {
+            throw new BusinessException(ResultCode.CLASS_FULL);
         }
 
         // 7) 构造报名记录

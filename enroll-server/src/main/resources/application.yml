@@ -1,21 +1,7 @@
-# ============================================================
-# 杭电信工学院特色班报名系统 · 后端配置（默认 dev profile）
-#
-# 字段说明：
-#   ${DB_URL:默认值} = 优先读环境变量 DB_URL，没设就用冒号后的默认值
-#   这样主人可以不改文件，只设环境变量就能切到外部数据库
-#
-# 切外部数据库的 3 种方法（按推荐顺序）：
-#   1. 编辑 application-external.yml（最简单，主人维护）
-#   2. 设环境变量（如 set DB_URL=jdbc:mysql://x.x.x.x:3306/enroll_db）
-#   3. 命令行参数（--spring.datasource.url=...）
-# ============================================================
-
 server:
   port: 8081
 
 spring:
-  # ==================== 数据库（默认 enroll 本地账号） ====================
   datasource:
     url: jdbc:mysql://localhost:3306/enroll_db?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=utf-8&allowPublicKeyRetrieval=true
     username: enroll
@@ -23,26 +9,23 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   jackson:
-    default-property-inclusion: always  # null 字段也序列化，保证 category=null 时返回 "category":null
+    default-property-inclusion: always
 
-  # ==================== JPA 配置 ====================
   jpa:
     hibernate:
-      ddl-auto: update              # update = 自动建表（生产改 none）
-    database-platform: org.hibernate.dialect.MySQLDialect  # 显式指定方言
-    show-sql: true  # 控制台打印 SQL（生产可关）
-    defer-datasource-initialization: true  # 让 Hibernate 先建表，再执行 data.sql
+      ddl-auto: update
+    database-platform: org.hibernate.dialect.MySQLDialect
+    show-sql: true
+    defer-datasource-initialization: true
     properties:
       hibernate:
         format_sql: true
 
-  # ==================== 启动时执行 data.sql ====================
   sql:
     init:
       mode: always
       data-locations: classpath:data.sql
 
-  # ==================== Redis 配置（本地测试）====================
   data:
     redis:
       host: localhost
@@ -50,26 +33,21 @@ spring:
       password:
       database: 0
       timeout: 5000ms
-      key-prefix: ""  # ⚠️ S15修复：禁用Spring默认前缀，让key精确匹配
-      lettuce:
-        pool:
-          max-active: 8
-          max-idle: 8
-          min-idle: 0
+      key-prefix: ""
 
-# ==================== JWT 鉴权配置 ====================
-# 主人改这里就能切鉴权开关：
-#   jwt.enabled = false → 学生匿名（问卷式）
-#   jwt.enabled = true  → 强制鉴权（生产或加管理员后台时）
+sms:
+  sn: ${SMS_SN:SDK-BBX-010-39560}
+  pwd: ${SMS_PWD:}
+  url: http://***REMOVED***:8061/mdsmssend.ashx
+  sign: 【杭州电子科技大学信息工程学院】
+
 jwt:
-  enabled: true                 # 默认开启（生产必须为 true）
-  # ⚠️ S5 修复：生产必须通过环境变量 JWT_SECRET 注入，禁止写死
+  enabled: true
   secret: ${JWT_SECRET:***REMOVED***}
-  expiration: 86400000       # 24 小时（毫秒）
+  expiration: 86400000
   header: Authorization
   prefix: "Bearer "
 
-# ==================== 日志 ====================
 logging:
   level:
     com.enroll.server: INFO
