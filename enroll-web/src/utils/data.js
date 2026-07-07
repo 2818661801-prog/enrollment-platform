@@ -152,11 +152,50 @@ export function getClassTimeStatus(classInfo, periodStr = null, now = null) {
 }
 
 /**
- * 根据当前时间从 periods JSON 中算出"第几轮"
- * @param {string} periodsJson - 后端存的 JSON 数组
+ * 根据当前时间从 classRounds 数组中算出"第几轮"
+ * @param {Array} classRounds - 后端返回的 [{roundNum, periodStart, periodEnd}, ...]
  * @returns {number} 轮次号（1, 2, ...），无匹配或单轮返回 1
  */
-export function getCurrentRound(periodsJson) {
+export function getCurrentRound(classRounds) {
+  if (!classRounds || !Array.isArray(classRounds) || classRounds.length === 0) return 1
+  const now = new Date()
+  for (const r of classRounds) {
+    const start = parseDate(r.periodStart)
+    const end = parseDate(r.periodEnd)
+    if (now >= start && now <= end) return r.roundNum || 1
+  }
+  // 不在任何一轮时，返回最后一个轮次号
+  return classRounds[classRounds.length - 1].roundNum || 1
+}
+
+function parseDate(val) {
+  if (!val) return new Date(0)
+  const d = new Date(val)
+  return isNaN(d.getTime()) ? new Date(0) : d
+}
+
+/**
+ * 格式化时间字符串（ISO "2026-09-01T08:00:00" → "2026/09/01 08:00"）
+ * @param {string} val - ISO 格式时间
+ * @returns {string} 格式化后的字符串
+ */
+export function formatTime(val) {
+  if (!val) return ''
+  const d = new Date(val)
+  if (isNaN(d.getTime())) return val  // 不识别的格式直接返回原值
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  const h = String(d.getHours()).padStart(2, '0')
+  const min = String(d.getMinutes()).padStart(2, '0')
+  return `${y}/${m}/${day} ${h}:${min}`
+}
+
+/**
+ * @deprecated v2.2 已废弃，由后端 ClassRoundRepository.findCurrentRound() 计算轮次
+ * 此函数保留仅供兼容，旧代码清理前不要删
+ */
+export function getCurrentRound_JSON(periodsJson) {
   if (!periodsJson) return 1
   try {
     const list = JSON.parse(periodsJson)
@@ -166,7 +205,6 @@ export function getCurrentRound(periodsJson) {
       const { start, end } = parsePeriod(item.period)
       if (now >= start && now <= end) return item.round || 1
     }
-    // 不在任何一轮时，按 periods 里最新的轮次号返回
     return list[list.length - 1].round || 1
   } catch {
     return 1

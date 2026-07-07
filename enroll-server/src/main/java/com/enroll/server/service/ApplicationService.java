@@ -7,14 +7,13 @@ import com.enroll.server.entity.ClassInfo;
 import com.enroll.server.exception.BusinessException;
 import com.enroll.server.repository.ApplicationRepository;
 import com.enroll.server.repository.ClassInfoRepository;
+import com.enroll.server.repository.ClassRoundRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -55,10 +54,14 @@ public class ApplicationService {
 
     private final ApplicationRepository appRepo;
     private final ClassInfoRepository classRepo;
+    private final ClassRoundRepository roundRepo;
 
-    public ApplicationService(ApplicationRepository appRepo, ClassInfoRepository classRepo) {
+    public ApplicationService(ApplicationRepository appRepo,
+                               ClassInfoRepository classRepo,
+                               ClassRoundRepository roundRepo) {
         this.appRepo = appRepo;
         this.classRepo = classRepo;
+        this.roundRepo = roundRepo;
     }
 
     // ==================== 提交报名（写） ====================
@@ -144,59 +147,22 @@ public class ApplicationService {
         }
     }
 
-    // ==================== 二轮判断逻辑 ====================
+    // ==================== 二轮判断逻辑（改查 class_rounds 表） ====================
 
+    /**
+     * 根据当前时间查 class_rounds 表，判断当前是第几轮
+     * @return 当前在报名时间内的那一轮，0 表示当前不在任何报名时间内
+     */
     private int determineCurrentRound(ClassInfo cls) {
-        String periodsJson = cls.getPeriods();
-        if (periodsJson == null || periodsJson.isBlank()) {
-            return isInPeriod(cls.getPeriod()) ? 1 : 0;
+        LocalDateTime now = LocalDateTime.now();
+        // 用 Repository 自定义 SQL 查询当前有效轮次
+        var current = roundRepo.findCurrentRound(cls.getId(), now);
+        if (current != null) {
+            return current.getRoundNum();
         }
-        try {
-            var mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-            var list = mapper.readValue(periodsJson, java.util.List.class);
-            for (var item : list) {
-                @SuppressWarnings("unchecked")
-                var entry = (java.util.Map<String, Object>) item;
-                int round = ((Number) entry.get("round")).intValue();
-                String period = (String) entry.get("period");
-                if (isInPeriod(period)) return round;
-            }
-            return 0;
-        } catch (Exception e) {
-            // log.warn("periods JSON 解析失败: {}", periodsJson, e);
-            return isInPeriod(cls.getPeriod()) ? 1 : 0;
-        }
-    }
-
-    private boolean isInPeriod(String period) {
-        if (period == null || period.isBlank()) return false;
-        try {
-            String[] parts = period.split(" - ");
-            if (parts.length != 2) return false;
-            String startPart = parts[0].trim(); // "2026/09/15 08:00"
-            String endPart   = parts[1].trim(); // "2026/09/16 23:59"
-            DateTimeFormatter dateFmt = DateTimeFormatter.ofPattern("yyyy/MM/dd");
-            DateTimeFormatter dtFmt   = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm");
-
-            LocalDateTime start, end;
-            // 开始时间：有时分用时分，没分用 00:00
-            if (startPart.contains(":")) {
-                start = LocalDateTime.parse(startPart, dtFmt);
-            } else {
-                start = LocalDate.parse(startPart.split(" ")[0], dateFmt).atStartOfDay();
-            }
-            // 结束时间：有时分用时分，没分用 23:59
-            if (endPart.contains(":")) {
-                end = LocalDateTime.parse(endPart, dtFmt);
-            } else {
-                end = LocalDate.parse(endPart.split(" ")[0], dateFmt).atTime(23, 59);
-            }
-            LocalDateTime now = LocalDateTime.now();
-            return !now.isBefore(start) && !now.isAfter(end);
-        } catch (Exception e) {
-            // log.warn("时间段解析失败: period={}", period, e);
-            return false;
-        }
+        // 不在任何一轮内，取最大轮次号（fallback）
+        Integer maxRound = roundRepo.findMaxRoundNum(cls.getId());
+        return maxRound != null ? maxRound : 0;
     }
 
 
@@ -311,6 +277,91 @@ public class ApplicationService {
         appRepo.batchUpdateStatusAndComment(ids, STATUS_REJECTED, auditComment);
     }
 
+    // ==================== 低代码平台同步 ====================
+
+    /**
+     * 全量同步报名记录（低代码平台调 sync/applications 时调用）
+     * 主键：idCard + classId（一个学生一个班只有一条报名记录）
+     *
+     * @param dataList  低代码平台传来的报名数据列表
+     * @return 同步结果统计 {total, inserted, updated, deleted}
+     */
+    @Transactional
+    public Map<String, Object> syncFromLowCode(List<Map> dataList) {
+        List<Application> allA = appRepo.findAll();
+
+        // 用 idCard+classId 做 a 端 map
+        Map<String, Application> aMap = new java.util.HashMap<>();
+        for (Application a : allA) {
+            aMap.put(a.getIdCard() + "|" + a.getClassId(), a);
+        }
+
+        java.util.Set<String> bKeys = new java.util.HashSet<>();
+        java.util.Set<String> toDelete = new java.util.HashSet<>(aMap.keySet());
+
+        int inserted = 0, updated = 0, deleted = 0;
+
+        for (Map<String, Object> item : dataList) {
+            String idCard = (String) item.get("idCard");
+            Integer classId = (Integer) item.get("classId");
+            if (idCard == null || idCard.isBlank() || classId == null) continue;
+
+            String key = idCard + "|" + classId;
+            bKeys.add(key);
+            toDelete.remove(key);
+
+            Application existing = aMap.get(key);
+            if (existing == null) {
+                // 新增
+                Application app = new Application();
+                app.setName((String) item.get("name"));
+                app.setIdCard(idCard);
+                app.setIdCardMasked(idCard.replaceAll("(?<=^.{6}).{8}(?=.{4}$)", "********"));
+                app.setGender((String) item.get("gender"));
+                app.setPhone((String) item.get("phone"));
+                app.setHasPhysics((String) item.getOrDefault("hasPhysics", "否"));
+                app.setHasEnglish((String) item.getOrDefault("hasEnglish", "否"));
+                app.setAppliedCategory((String) item.get("appliedCategory"));
+                app.setClassId(classId);
+                app.setStatus((Integer) item.getOrDefault("status", 1));
+                app.setNoticeAgreed(parseFlag(item.get("noticeAgreed")));
+                app.setApplyTime(LocalDateTime.now());
+                app.setRound((Integer) item.getOrDefault("round", 1));
+                appRepo.save(app);
+                inserted++;
+            } else {
+                // 更新（只更新传来的字段）
+                if (item.containsKey("name"))           existing.setName((String) item.get("name"));
+                if (item.containsKey("gender"))         existing.setGender((String) item.get("gender"));
+                if (item.containsKey("phone"))          existing.setPhone((String) item.get("phone"));
+                if (item.containsKey("hasPhysics"))     existing.setHasPhysics((String) item.get("hasPhysics"));
+                if (item.containsKey("hasEnglish"))    existing.setHasEnglish((String) item.get("hasEnglish"));
+                if (item.containsKey("appliedCategory")) existing.setAppliedCategory((String) item.get("appliedCategory"));
+                if (item.containsKey("status"))         existing.setStatus((Integer) item.get("status"));
+                if (item.containsKey("noticeAgreed"))   existing.setNoticeAgreed(parseFlag(item.get("noticeAgreed")));
+                if (item.containsKey("auditComment"))  existing.setAuditComment((String) item.get("auditComment"));
+                appRepo.save(existing);
+                updated++;
+            }
+        }
+
+        // a有、b无 → 真正删除
+        for (String keyToDelete : toDelete) {
+            Application toRemove = aMap.get(keyToDelete);
+            if (toRemove != null) {
+                appRepo.delete(toRemove);
+                deleted++;
+            }
+        }
+
+        return java.util.Map.of(
+            "total", dataList.size(),
+            "inserted", inserted,
+            "updated", updated,
+            "deleted", deleted
+        );
+    }
+
     // ==================== 内部工具 ====================
 
     private Integer parseFlag(Object val) {
@@ -335,7 +386,7 @@ public class ApplicationService {
                 .status(String.valueOf(e.getStatus()))
                 .applyTime(e.getApplyTime())
                 .auditComment(e.getAuditComment())
-                .classPeriods(classRepo.findById(e.getClassId()).map(ClassInfo::getPeriods).orElse(null))
+                .classPeriods(null) // 兼容旧字段，报名记录接口不再返回班级轮次 JSON
                 .round(e.getRound())
                 .build();
     }

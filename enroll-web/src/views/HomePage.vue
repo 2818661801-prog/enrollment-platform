@@ -114,7 +114,7 @@
 import { ref, reactive, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { getClassTimeStatus, parsePeriod, syncServerTime } from '../utils/data.js'
+import { getClassTimeStatus, parsePeriod, syncServerTime, formatTime } from '../utils/data.js'
 import { fetchClasses, fetchNotice, fetchMyApplicationsMe } from '../utils/api.js'
 import AppFooter from '../components/AppFooter.vue'
 import ClassCard from '../components/ClassCard.vue'
@@ -195,7 +195,11 @@ async function loadData() {
   try {
     const [clsRes, noticeRes] = await Promise.all([fetchClasses(), fetchNotice()])
     classes.value = clsRes
-    noticeData.value = noticeRes
+    noticeData.value = {
+      ...noticeRes,
+      conditions: (noticeRes.conditions || '').split('\n').filter(l => l.trim()),
+      notices:    (noticeRes.notices    || '').split('\n').filter(l => l.trim()),
+    }
     // 已登录时加载我的报名记录，标记已报名的班级（只要有记录就不让再报）
     if (localStorage.getItem('student_token')) {
       const myApps = await fetchMyApplicationsMe()
@@ -296,7 +300,7 @@ const displayClasses = computed(() => {
 const flatCards = computed(() => {
   let result = []
   for (const cls of displayClasses.value) {
-    const rounds = parsePeriodsArray(cls.periods, cls.period)
+    const rounds = parsePeriodsArray(cls.classRounds, cls.period)
     for (const r of rounds) {
       result.push({ ...cls, _round: r.round, _period: r.period, _uid: `${cls.id}-${r.round}` })
     }
@@ -322,7 +326,7 @@ const flatCards = computed(() => {
 const flatTableData = computed(() => {
   const result = []
   for (const cls of classes.value) {
-    const rounds = parsePeriodsArray(cls.periods, cls.period)
+    const rounds = parsePeriodsArray(cls.classRounds, cls.period)
     for (const r of rounds) {
       // 多轮班班级名加"（第X轮报名）"后缀，与 ClassCard.cardTitle 逻辑一致
       const name = rounds.length > 1 ? `${cls.name}（第${r.round}轮报名）` : cls.name
@@ -376,20 +380,18 @@ function isChengDian(cls) {
 }
 
 /**
- * 解析 periods JSON 字符串为数组
- * 若解析失败或为空，返回单元素数组（用 period 字段兜底）
+ * 从 classRounds 数组解析出轮次信息（替代旧的 periods JSON 解析）
+ * classRounds 格式：[{roundNum: 1, periodStart: "2026/09/01 08:00", periodEnd: "2026/09/13 23:59"}]
+ * 返回格式：[{round: 1, period: "2026/09/01 08:00 - 2026/09/13 23:59"}]
  */
-function parsePeriodsArray(periodsJson, fallbackPeriod) {
-  if (!periodsJson || periodsJson.trim() === '') {
+function parsePeriodsArray(classRounds, fallbackPeriod) {
+  if (!classRounds || !Array.isArray(classRounds) || classRounds.length === 0) {
     return [{ round: 1, period: fallbackPeriod || '' }]
   }
-  try {
-    const arr = JSON.parse(periodsJson)
-    if (Array.isArray(arr) && arr.length > 0) {
-      return arr
-    }
-  } catch {}
-  return [{ round: 1, period: fallbackPeriod || '' }]
+  return classRounds.map(r => ({
+    round: r.roundNum,
+    period: `${formatTime(r.periodStart)} - ${formatTime(r.periodEnd)}`
+  }))
 }
 </script>
 

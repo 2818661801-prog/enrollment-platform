@@ -111,9 +111,8 @@ function buildClassesOverview(classes) {
   if (!classes?.length) return '多元成长路径等你探索'
   const allTags = new Set()
   classes.forEach(c => {
-    if (Array.isArray(c.categoryNames)) {
-      c.categoryNames.forEach(tag => allTags.add(tag))
-    }
+    const cats = Array.isArray(c.categories) ? c.categories : Array.isArray(c.categoryNames) ? c.categoryNames : []
+    cats.forEach(tag => allTags.add(tag))
   })
   const tags = Array.from(allTags).slice(0, 4)  // 最多取 4 个
   return tags.length ? `${tags.join('、')} 等多元方向` : '多元成长路径等你探索'

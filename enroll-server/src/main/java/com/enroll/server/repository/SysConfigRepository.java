@@ -4,22 +4,12 @@ import com.enroll.server.entity.SysConfig;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import java.util.Optional;
-
 /**
  * 系统配置 Repository
  *
- * 提供常用查询方法：
- *   - findByCfgKey  按键查配置
- *   - findAll        查所有配置（管理后台列表用）
+ * v2.2 起 sys_config 只有一条记录（id=1），直接用 findById(1) 查询
  */
 @Repository
 public interface SysConfigRepository extends JpaRepository<SysConfig, Integer> {
-
-    /**
-     * 按配置键查配置
-     * @param cfgKey 配置键（如 "notice"、"admin_phone"）
-     * @return 配置对象（无则抛 NoSuchElementException）
-     */
-    Optional<SysConfig> findByCfgKey(String cfgKey);
+    // 不再需要 findByCfgKey，实体已无 cfgKey 字段
 }

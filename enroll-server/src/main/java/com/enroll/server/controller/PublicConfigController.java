@@ -24,8 +24,15 @@ public class PublicConfigController {
     /** 获取报名须知（学生端弹窗内容） */
     @GetMapping("/notice")
     public Map<String, Object> getNotice() {
-        return sysConfigRepo.findByCfgKey("notice")
-                .map(cfg -> R.ok(cfg.getCfgValue()))
-                .orElse(R.ok("{}")); // 无配置时返空 JSON
+        var cfg = sysConfigRepo.findById(1); // 只有一条记录，id=1
+        if (cfg.isPresent()) {
+            var c = cfg.get();
+            return R.ok(java.util.Map.of(
+                "title", c.getTitle() != null ? c.getTitle() : "",
+                "conditions", c.getConditions() != null ? c.getConditions() : "",
+                "notices", c.getNotices() != null ? c.getNotices() : ""
+            ));
+        }
+        return R.ok(java.util.Map.of("title", "", "conditions", "", "notices", ""));
     }
 }

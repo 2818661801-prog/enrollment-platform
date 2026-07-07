@@ -95,8 +95,8 @@
             <el-table-column prop="enrolled" label="已报名" width="80" />
             <el-table-column label="班级类别" width="160">
               <template #default="{ row }">
-                <template v-if="row.categoryNames && row.categoryNames.length">
-                  <el-tag v-for="n in row.categoryNames" :key="n" size="small" style="margin-right:4px">{{ n }}</el-tag>
+                <template v-if="row.categories && row.categories.length">
+                  <el-tag v-for="n in row.categories" :key="n" size="small" style="margin-right:4px">{{ n }}</el-tag>
                 </template>
                 <span v-else>—</span>
               </template>
@@ -307,9 +307,10 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   fetchAdminClasses, createAdminClass, updateAdminClass, deleteAdminClass, restoreAdminClass,
   fetchAdminApplications, withdrawAdminApplications, admitAdminApplications, rejectAdminApplications,
-  fetchAdminConfig, updateAdminConfig,
+  fetchAdminNotice, updateAdminNotice,
   fetchAdminCategories, createAdminCategory, updateAdminCategory, deleteAdminCategory,
 } from '../utils/api.js'
+import { formatTime } from '../utils/data.js'
 
 const router = useRouter()
 const activeTab = ref('notice')
@@ -328,24 +329,26 @@ function onTabChange(tab) {
 
 async function loadNotice() {
   try {
-    const res = await fetchAdminConfig('notice')
+    const res = await fetchAdminNotice()
     if (res.code === 200 && res.data) {
-      const json = JSON.parse(res.data)
-      notice.title = json.title || ''
-      noticeCondText.value = (json.conditions || []).join('\n')
-      noticeNoticesText.value = (json.notices || []).join('\n')
+      // res.data 已是对象: {title, conditions, notices}
+      // conditions/notices 是换行分隔字符串，转数组给 textarea 显示
+      notice.title = res.data.title || ''
+      noticeCondText.value = (res.data.conditions || '').split('\n').filter(l => l.trim()).join('\n')
+      noticeNoticesText.value = (res.data.notices || '').split('\n').filter(l => l.trim()).join('\n')
     }
   } catch {}
 }
 async function onSaveNotice() {
   noticeSaving.value = true
   try {
-    const json = JSON.stringify({
+    // conditions/notices 直接提交换行分隔字符串，不需要 split/join
+    await updateAdminNotice({
       title: notice.title,
-      conditions: noticeCondText.value.split('\n').filter(s => s.trim()),
-      notices: noticeNoticesText.value.split('\n').filter(s => s.trim()),
+      conditions: noticeCondText.value,
+      notices: noticeNoticesText.value,
+      updatedBy: adminUsername,
     })
-    await updateAdminConfig('notice', json, adminUsername)
     ElMessage.success('保存成功')
   } catch { ElMessage.error('保存失败') }
   finally { noticeSaving.value = false }
@@ -419,14 +422,13 @@ async function onDeleteCategory(id) {
 function showClassDialog(row) {
   if (row) {
     classDialogTitle.value = '编辑班级'
-    Object.assign(classForm, { id: row.id, name: row.name, quota: row.quota, description: row.description, categoryNames: row.categoryNames || [] })
-    // 解析 periods JSON 回显（period 字符串转 date-range 需要的数组格式）
-    try {
-      const list = JSON.parse(row.periods || '[]')
-      classRounds.value = list.length
-        ? list.map(item => ({ period: item.period.split(' - ') }))
-        : [{ period: '' }]
-    } catch {
+    Object.assign(classForm, { id: row.id, name: row.name, quota: row.quota, description: row.description, categoryNames: row.categories || row.categoryNames || [] })
+    // 回显 classRounds（后端返回的数组 [{roundNum, periodStart, periodEnd}]）
+    if (row.classRounds && Array.isArray(row.classRounds) && row.classRounds.length > 0) {
+      classRounds.value = row.classRounds.map(r => ({
+        period: [r.periodStart, r.periodEnd],  // el-date-picker date-range 需要数组格式
+      }))
+    } else {
       classRounds.value = [{ period: '' }]
     }
   } else {
@@ -440,26 +442,26 @@ function showClassDialog(row) {
 async function onSaveClass() {
   classSaving.value = true
   try {
-    // 过滤空轮次，按顺序编号；period 可能是数组（date-range 返回）或字符串
+    // classRounds：el-date-picker 返回 [start, end] 数组，转 classRounds 格式
     const validRounds = classRounds.value
       .map((r, i) => {
-        const p = Array.isArray(r.period) ? r.period.join(' - ') : (r.period || '')
-        return { round: i + 1, period: p }
+        const p = Array.isArray(r.period) ? r.period : []
+        return {
+          roundNum: i + 1,
+          periodStart: p[0] || '',
+          periodEnd: p[1] || '',
+        }
       })
-      .filter(r => r.period.trim())
+      .filter(r => r.periodStart && r.periodEnd)
     if (validRounds.length === 0) {
       ElMessage.warning('请至少填写一轮报名时间段')
       return
     }
-    // 构建 periods JSON
-    const periodsJson = JSON.stringify(validRounds)
-    // period 字段取第一轮（兼容旧字段）
-    const period = validRounds[0].period
     const payload = {
       name: classForm.name,
       quota: classForm.quota,
-      period,
-      periods: periodsJson,
+      period: `${formatTime(validRounds[0].periodStart)} - ${formatTime(validRounds[0].periodEnd)}`,
+      classRounds: validRounds,
       description: classForm.description,
       categoryNames: classForm.categoryNames,
     }

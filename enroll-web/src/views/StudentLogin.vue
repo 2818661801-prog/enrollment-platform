@@ -201,6 +201,7 @@ function onLogout() {
 :deep(.app-footer) {
   width: 100%;
   margin-top: auto;
+  padding-top: 50px;  /* 与上方 card 保持 50px 间距（移动端适配）*/
 }
 
 @media (max-width: 440px) {

@@ -174,22 +174,19 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import lockIcon from '../assets/images/lock.svg'
 import folderIcon from '../assets/images/folder.svg'
-import { getClassTimeStatus } from '../utils/data.js'
+import { getClassTimeStatus, formatTime } from '../utils/data.js'
 
 /**
- * 解析 periods JSON 字符串为数组（与 HomePage.vue 相同逻辑）
+ * 从 classRounds 数组解析出轮次信息（替代旧的 periods JSON 解析）
  */
-function parsePeriodsArray(periodsJson, fallbackPeriod) {
-  if (!periodsJson || periodsJson.trim() === '') {
+function parsePeriodsArray(classRounds, fallbackPeriod) {
+  if (!classRounds || !Array.isArray(classRounds) || classRounds.length === 0) {
     return [{ round: 1, period: fallbackPeriod || '' }]
   }
-  try {
-    const arr = JSON.parse(periodsJson)
-    if (Array.isArray(arr) && arr.length > 0) {
-      return arr
-    }
-  } catch {}
-  return [{ round: 1, period: fallbackPeriod || '' }]
+  return classRounds.map(r => ({
+    round: r.roundNum,
+    period: `${formatTime(r.periodStart)} - ${formatTime(r.periodEnd)}`
+  }))
 }
 
 const props = defineProps({
@@ -213,18 +210,18 @@ const selectedLabel = computed(() => {
 })
 
 /**
- * 动态提取所有班级 periods JSON 中的 round 值，去重升序
+ * 动态提取所有班级 classRounds 中的 roundNum 值，去重升序
  * 用于轮次筛选下拉框，天然支持多轮（3轮/4轮/...）
  */
 const availableRounds = computed(() => {
   const rounds = new Set()
   for (const cls of props.classes || []) {
-    try {
-      const arr = JSON.parse(cls.periods || '[]')
+    const arr = cls.classRounds
+    if (Array.isArray(arr)) {
       for (const item of arr) {
-        if (item.round) rounds.add(item.round)
+        if (item.roundNum) rounds.add(item.roundNum)
       }
-    } catch {}
+    }
   }
   return [...rounds].sort((a, b) => a - b)
 })
@@ -236,7 +233,7 @@ const availableRounds = computed(() => {
 const availableTimeStatuses = computed(() => {
   const statuses = new Set()
   for (const cls of props.classes || []) {
-    const rounds = parsePeriodsArray(cls.periods, cls.period)
+    const rounds = parsePeriodsArray(cls.classRounds, cls.period)
     for (const r of rounds) {
       const s = getClassTimeStatus({ period: r.period }).status
       statuses.add(s)
@@ -270,12 +267,10 @@ function onReset() {
  * 生成班级选项显示名称：多轮班加"（第X轮报名）"后缀
  */
 function getClassLabel(cls) {
-  try {
-    const arr = JSON.parse(cls.periods || '[]')
-    if (arr.length > 1) {
-      return `${cls.name}（第1轮报名） / 第2轮报名`
-    }
-  } catch {}
+  const arr = cls.classRounds
+  if (Array.isArray(arr) && arr.length > 1) {
+    return `${cls.name}（第1轮报名） / 第2轮报名`
+  }
   return cls.name
 }
 

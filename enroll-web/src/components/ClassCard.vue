@@ -57,7 +57,7 @@
 <script setup>
 import { computed } from 'vue'
 import calendarIcon from '../assets/images/calendar(1).svg'
-import { getClassTimeStatus } from '../utils/data.js'
+import { getClassTimeStatus, formatTime } from '../utils/data.js'
 
 const props = defineProps({
   classInfo: { type: Object, required: true }, // 班级数据对象
@@ -68,12 +68,10 @@ const props = defineProps({
 
 const emit = defineEmits(['select'])
 
-// 是否为多轮班（periods JSON 里有超过 1 条）
+// 是否为多轮班（classRounds 数组里有超过 1 条）
 const isMultiRound = computed(() => {
-  try {
-    const arr = JSON.parse(props.classInfo.periods || '[]')
-    return arr.length > 1
-  } catch { return false }
+  const rounds = props.classInfo.classRounds
+  return Array.isArray(rounds) && rounds.length > 1
 })
 
 // 卡片标题：多轮班显示"班级名（第X轮报名）"，单轮班显示班级名
@@ -91,8 +89,11 @@ const timeStatus = computed(() => {
   return getClassTimeStatus({ period: periodStr })
 })
 
-// 类别标签：兼容 categoryNames（数组）和 category（字符串/null）两种来源
+// 类别标签：优先读 categories 数组（中间表来源），兼容 categoryNames
 const categoryNames = computed(() => {
+  if (Array.isArray(props.classInfo.categories) && props.classInfo.categories.length) {
+    return props.classInfo.categories
+  }
   if (Array.isArray(props.classInfo.categoryNames) && props.classInfo.categoryNames.length) {
     return props.classInfo.categoryNames
   }
@@ -100,17 +101,16 @@ const categoryNames = computed(() => {
   return []
 })
 
-// 解析 periods JSON，支持多轮报名时间段
+// 从 classRounds 数组解析轮次信息（替代旧的 periods JSON 解析）
 const rounds = computed(() => {
-  const periodsStr = props.classInfo.periods
-  if (!periodsStr || periodsStr.trim() === '') {
+  const arr = props.classInfo.classRounds
+  if (!arr || !Array.isArray(arr) || arr.length === 0) {
     return [{ round: 1, period: props.classInfo.period || '' }]
   }
-  try {
-    const arr = JSON.parse(periodsStr)
-    if (Array.isArray(arr) && arr.length > 0) return arr
-  } catch {}
-  return [{ round: 1, period: props.classInfo.period || '' }]
+  return arr.map(r => ({
+    round: r.roundNum,
+    period: `${formatTime(r.periodStart)} - ${formatTime(r.periodEnd)}`
+  }))
 })
 
 // 每轮的时间状态（用于多轮卡片右侧标签显示）

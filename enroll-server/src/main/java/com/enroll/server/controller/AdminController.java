@@ -31,7 +31,6 @@ import java.util.Map;
  *   GET    /api/admin/classes                   — 班级列表（含已删除）
  *   GET    /api/admin/categories                — 类别列表
  *   GET    /api/admin/notice                    — 报名须知
- *   GET    /api/admin/config/{key}              — 读 sys_config
  *
  * 写（POST）：
  *   报名管理：
@@ -48,7 +47,6 @@ import java.util.Map;
  *   类别管理：见 AdminCategoryController.java（GET/POST/PUT/DELETE 全套）
  *   系统配置：
  *     POST /api/admin/notice/update              — 改报名须知
- *     POST /api/admin/config/set                 — 改 sys_config 通用配置
  */
 @RestController
 @RequestMapping("/api/admin")
@@ -233,75 +231,36 @@ public class AdminController {
     // ==================== 报名须知 / sys_config · 读 ====================
 
     /**
-     * 读取报名须知（2026-07-02 新增显式 API）
-     * 返回 {title, conditions[], notices[]} 结构
+     * 读取报名须知
+     * 返回 {title, conditions, notices} 结构（换行分隔字符串）
      */
     @GetMapping("/notice")
     public Map<String, Object> getNotice() {
-        return sysConfigRepo.findByCfgKey("notice")
-                .map(cfg -> R.ok(parseJsonOrEmpty(cfg.getCfgValue())))
-                .orElse(R.ok(Map.of("title", "", "conditions", List.of(), "notices", List.of())));
+        return sysConfigRepo.findById(1)
+                .map(cfg -> R.ok(java.util.Map.of(
+                    "title", cfg.getTitle() != null ? cfg.getTitle() : "",
+                    "conditions", cfg.getConditions() != null ? cfg.getConditions() : "",
+                    "notices", cfg.getNotices() != null ? cfg.getNotices() : ""
+                )))
+                .orElse(R.ok(java.util.Map.of("title", "", "conditions", "", "notices", "")));
     }
 
-    /** 读取 sys_config（通用配置） */
-    @GetMapping("/config/{key}")
-    public Map<String, Object> getConfig(@PathVariable String key) {
-        return sysConfigRepo.findByCfgKey(key)
-                .map(cfg -> R.ok(cfg.getCfgValue()))
-                .orElse(R.fail(ResultCode.PARAM_INVALID, "配置项不存在: " + key));
-    }
-
-    // ==================== 报名须知 / sys_config · 写（全部 POST） ====================
+    // ==================== 报名须知 · 写（全部 POST） ====================
 
     /**
-     * 更新报名须知（2026-07-02 新增显式 API）
-     * Body: { title: "...", conditions: [...], notices: [...] }
-     * 内部存到 sys_config.cfgKey='notice'.cfgValue（JSON 字符串）
+     * 更新报名须知
+     * Body: { title: "...", conditions: "条件1\n条件2", notices: "须知1\n须知2", updatedBy: "admin" }
      */
     @Transactional
     @PostMapping("/notice/update")
     public Map<String, Object> updateNotice(@RequestBody Map<String, Object> body) {
-        String cfgValue;
-        try {
-            cfgValue = objectMapper.writeValueAsString(body);
-        } catch (com.fasterxml.jackson.core.JsonProcessingException ex) {
-            // log.warn("报名须知 JSON 序列化失败", ex);
-            return R.fail(ResultCode.PARAM_INVALID, "body 序列化失败: " + ex.getMessage());
-        }
-        saveConfig("notice", cfgValue, (String) body.getOrDefault("updatedBy", "admin"));
-        // log.info("更新报名须知: {}", body);
-        return R.ok("保存成功", null);
-    }
-
-    /**
-     * 更新 sys_config（通用配置）
-     * Body: { key: "xxx", cfgValue: "...", updatedBy: "admin" }
-     */
-    @Transactional
-    @PostMapping("/config/set")
-    public Map<String, Object> updateConfig(@RequestBody Map<String, Object> body) {
-        String key = (String) body.get("key");
-        String cfgValue = (String) body.get("cfgValue");
-        String updatedBy = (String) body.getOrDefault("updatedBy", "admin");
-        if (key == null || cfgValue == null) {
-            return R.fail(ResultCode.PARAM_INVALID, "key / cfgValue 不能为空");
-        }
-        saveConfig(key, cfgValue, updatedBy);
-        // log.info("更新配置: key={}, updatedBy={}", key, updatedBy);
-        return R.ok("保存成功", null);
-    }
-
-    /** 通用 saveConfig 逻辑（避免重复） */
-    private void saveConfig(String key, String cfgValue, String updatedBy) {
-        SysConfig cfg = sysConfigRepo.findByCfgKey(key)
-                .orElseGet(() -> {
-                    SysConfig newCfg = new SysConfig();
-                    newCfg.setCfgKey(key);
-                    return newCfg;
-                });
-        cfg.setCfgValue(cfgValue);
-        cfg.setUpdatedBy(updatedBy);
+        SysConfig cfg = sysConfigRepo.findById(1).orElse(new SysConfig());
+        cfg.setTitle((String) body.get("title"));
+        cfg.setConditions((String) body.get("conditions"));
+        cfg.setNotices((String) body.get("notices"));
         sysConfigRepo.save(cfg);
+        // log.info("更新报名须知: title={}", body.get("title"));
+        return R.ok("保存成功", null);
     }
 
     // ==================== 内部工具 ====================
@@ -321,19 +280,4 @@ public class AdminController {
                 .collect(java.util.stream.Collectors.toList());
     }
 
-    /** 解析 JSON 字符串为 Map，空值兜底为 {} */
-    @SuppressWarnings("unchecked")
-    private Map<String, Object> parseJsonOrEmpty(String json) {
-        if (json == null || json.isBlank()) return Map.of();
-        try {
-            return objectMapper.readValue(json, Map.class);
-        } catch (Exception ex) {
-            // log.warn("JSON 解析失败: {}", json);
-            return Map.of();
-        }
-    }
-
-    // ObjectMapper 静态注入（Spring 推荐构造注入，这里因为用 @PostMapping 较多，提取为静态方便）
-    private static final com.fasterxml.jackson.databind.ObjectMapper objectMapper =
-            new com.fasterxml.jackson.databind.ObjectMapper();
 }

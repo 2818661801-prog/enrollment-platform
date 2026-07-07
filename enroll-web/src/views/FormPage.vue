@@ -172,12 +172,12 @@
           <!-- 申报班级由 URL 参数直接指定，无需下拉选择 -->
 
           <!-- ===== 班级类别 ===== -->
-          <el-row v-if="selectedClass?.categoryNames?.length" :gutter="24" class="form-row">
+          <el-row v-if="(selectedClass?.categories?.length || selectedClass?.categoryNames?.length)" :gutter="24" class="form-row">
             <el-col :xs="24" :sm="24">
               <el-form-item label="班级类别" prop="appliedCategory">
                 <el-radio-group v-model="form.appliedCategory">
                   <el-radio-button
-                    v-for="cat in selectedClass.categoryNames"
+                    v-for="cat in (selectedClass.categories || selectedClass.categoryNames || [])"
                     :key="cat"
                     :value="cat"
                   >{{ cat }}</el-radio-button>
@@ -346,7 +346,7 @@ const rules = computed(() => ({
     { validator: (_r, v, cb) => !v ? cb(new Error('请选择是否选考英语')) : cb(), trigger: 'change' },
   ],
   appliedCategory: [
-    { validator: (_r, v, cb) => !selectedClass.value?.categoryNames?.length || v ? cb() : cb(new Error('请选择班级类别')), trigger: 'change' },
+    { validator: (_r, v, cb) => !(selectedClass.value?.categories?.length || selectedClass.value?.categoryNames?.length) || v ? cb() : cb(new Error('请选择班级类别')), trigger: 'change' },
   ],
 }))
 
