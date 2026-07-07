@@ -10,7 +10,7 @@ spring:
       ddl-auto: update
 
 sms:
-  sn: ${SMS_SN}
+  sn: ${SMS_SN:SDK-BBX-010-39560}
   pwd: ${SMS_PWD}
   url: http://***REMOVED***:8061/mdsmssend.ashx
   sign: 【杭州电子科技大学信息工程学院】

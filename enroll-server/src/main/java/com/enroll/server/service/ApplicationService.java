@@ -7,14 +7,14 @@ import com.enroll.server.entity.ClassInfo;
 import com.enroll.server.exception.BusinessException;
 import com.enroll.server.repository.ApplicationRepository;
 import com.enroll.server.repository.ClassInfoRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -46,8 +46,6 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class ApplicationService {
 
-    private static final Logger log = LoggerFactory.getLogger(ApplicationService.class);
-
     /** 状态常量 */
     public static final int STATUS_NONE      = 0;
     public static final int STATUS_APPLIED   = 1;
@@ -68,7 +66,8 @@ public class ApplicationService {
     @Transactional
     public ApplicationDTO submit(Map<String, Object> form) {
         try {
-        String idCard  = (String) form.get("idCard");
+        String idCard   = (String) form.get("idCard");
+        String phone    = (String) form.get("phone");
         Integer classId = (Integer) form.get("classId");
 
         // 1) 校验班级存在
@@ -81,14 +80,31 @@ public class ApplicationService {
             throw new BusinessException(ResultCode.PARAM_INVALID, "该班级当前不在报名时间内");
         }
 
-        // 3) 全局唯一报名：已报名（审核中）或已录取（永久锁定）不可再报，未录取可以重新报
-        List<Application> globalDup = appRepo.findByIdCardAndStatusIn(
+        // 3) 身份证全局唯一：已报名（审核中）或已录取（永久锁定）不可再报
+        List<Application> idCardDup = appRepo.findByIdCardAndStatusIn(
                 idCard, List.of(STATUS_APPLIED, STATUS_ENROLLED));
-        if (!globalDup.isEmpty()) {
-            throw new BusinessException(ResultCode.DUPLICATE_APPLICATION, "您已报名其他特色班，不可重复报名");
+        if (!idCardDup.isEmpty()) {
+            Application existing = idCardDup.get(0);
+            String className = classRepo.findById(existing.getClassId())
+                    .map(ClassInfo::getName)
+                    .orElse("未知班级");
+            throw new BusinessException(ResultCode.DUPLICATE_APPLICATION,
+                    "该身份证持有者已报名【" + className + "】");
         }
 
-        // 4) 本轮防重复
+        // 3.5) 手机号全局唯一：同一手机号只能报名一个班（核心防重：手机号=JWT subject=用户唯一标识）
+        List<Application> phoneDup = appRepo.findByPhoneAndStatusIn(
+                phone, List.of(STATUS_APPLIED, STATUS_ENROLLED));
+        if (!phoneDup.isEmpty()) {
+            Application existing = phoneDup.get(0);
+            String className = classRepo.findById(existing.getClassId())
+                    .map(ClassInfo::getName)
+                    .orElse("未知班级");
+            throw new BusinessException(ResultCode.DUPLICATE_APPLICATION,
+                    "该手机号已报名【" + className + "】");
+        }
+
+        // 4) 本轮防重复（同一身份证+同一班级，防止同一人报两次同一班）
         List<Application> roundDup = appRepo.findByIdCardAndClassIdAndStatusIn(
                 idCard, classId, List.of(STATUS_APPLIED, STATUS_ENROLLED, STATUS_REJECTED));
         if (!roundDup.isEmpty()) {
@@ -120,10 +136,10 @@ public class ApplicationService {
         Application saved = appRepo.save(app);
 
         // S16 修复：enrolled+1 已由上面的原子 UPDATE 完成，无需再 save classRepo
-        log.info("报名成功: id={}, name={}, classId={}, round={}", saved.getId(), saved.getName(), classId, currentRound);
+        // log.info("报名成功: id={}, name={}, classId={}, round={}", saved.getId(), saved.getName(), classId, currentRound);
         return toDTO(saved, cls.getName());
         } catch (Exception e) {
-            log.error("submit 异常: form={}", form, e);
+            // log.error("submit 异常: form={}", form, e);
             throw e;
         }
     }
@@ -147,7 +163,7 @@ public class ApplicationService {
             }
             return 0;
         } catch (Exception e) {
-            log.warn("periods JSON 解析失败: {}", periodsJson, e);
+            // log.warn("periods JSON 解析失败: {}", periodsJson, e);
             return isInPeriod(cls.getPeriod()) ? 1 : 0;
         }
     }
@@ -157,16 +173,28 @@ public class ApplicationService {
         try {
             String[] parts = period.split(" - ");
             if (parts.length != 2) return false;
-            // 去掉时间后缀（"2026/09/16 23:59" → "2026/09/16"），再解析日期
-            String startStr = parts[0].trim().split(" ")[0];
-            String endStr   = parts[1].trim().split(" ")[0];
-            java.time.format.DateTimeFormatter FMT = java.time.format.DateTimeFormatter.ofPattern("yyyy/MM/dd");
-            java.time.LocalDate start = java.time.LocalDate.parse(startStr, FMT);
-            java.time.LocalDate end   = java.time.LocalDate.parse(endStr, FMT);
-            java.time.LocalDate now   = java.time.LocalDate.now();
+            String startPart = parts[0].trim(); // "2026/09/15 08:00"
+            String endPart   = parts[1].trim(); // "2026/09/16 23:59"
+            DateTimeFormatter dateFmt = DateTimeFormatter.ofPattern("yyyy/MM/dd");
+            DateTimeFormatter dtFmt   = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm");
+
+            LocalDateTime start, end;
+            // 开始时间：有时分用时分，没分用 00:00
+            if (startPart.contains(":")) {
+                start = LocalDateTime.parse(startPart, dtFmt);
+            } else {
+                start = LocalDate.parse(startPart.split(" ")[0], dateFmt).atStartOfDay();
+            }
+            // 结束时间：有时分用时分，没分用 23:59
+            if (endPart.contains(":")) {
+                end = LocalDateTime.parse(endPart, dtFmt);
+            } else {
+                end = LocalDate.parse(endPart.split(" ")[0], dateFmt).atTime(23, 59);
+            }
+            LocalDateTime now = LocalDateTime.now();
             return !now.isBefore(start) && !now.isAfter(end);
         } catch (Exception e) {
-            log.warn("时间段解析失败: period={}", period);
+            // log.warn("时间段解析失败: period={}", period, e);
             return false;
         }
     }
@@ -192,7 +220,7 @@ public class ApplicationService {
         // S16 修复：enrolled-1 改为原子 UPDATE，防止并发超卖回升
         classRepo.decrementEnrolled(app.getClassId());
 
-        log.info("撤回报名: id={}, name={}", id, app.getName());
+        // log.info("撤回报名: id={}, name={}", id, app.getName());
     }
 
     // ==================== 我的报名（读） ====================
@@ -233,7 +261,7 @@ public class ApplicationService {
         if (body.containsKey("hasPhysics"))  app.setHasPhysics((String) body.get("hasPhysics"));
         if (body.containsKey("hasEnglish")) app.setHasEnglish((String) body.get("hasEnglish"));
         appRepo.save(app);
-        log.info("修改报名: id={}, name={}", id, app.getName());
+        // log.info("修改报名: id={}, name={}", id, app.getName());
     }
 
     // ==================== 管理端方法 ====================

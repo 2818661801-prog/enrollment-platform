@@ -5,8 +5,6 @@ import io.jsonwebtoken.Claims;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
@@ -27,8 +25,6 @@ import org.springframework.web.servlet.HandlerInterceptor;
  */
 @Component
 public class JwtInterceptor implements HandlerInterceptor {
-
-    private static final Logger log = LoggerFactory.getLogger(JwtInterceptor.class);
 
     @Value("${jwt.enabled}")
     private Boolean enabled;
@@ -83,7 +79,7 @@ public class JwtInterceptor implements HandlerInterceptor {
             request.setAttribute("currentRole", claims.get("role"));
             return true;
         } catch (Exception e) {
-            log.warn("JWT 解析失败: {}", e.getMessage());
+            // log.warn("JWT 解析失败: {}", e.getMessage());
             writeJson(response, ResultCode.PARAM_INVALID.getCode(), "token 无效或已过期");
             return false;
         }

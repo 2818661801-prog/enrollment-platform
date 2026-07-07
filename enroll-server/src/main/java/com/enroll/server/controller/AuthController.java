@@ -6,8 +6,6 @@ import com.enroll.server.entity.Application;
 import com.enroll.server.repository.ApplicationRepository;
 import com.enroll.server.security.JwtUtil;
 import com.enroll.server.service.AuthService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.servlet.http.Cookie;
@@ -31,7 +29,6 @@ import java.util.Map;
 @RequestMapping("/api/auth")
 public class AuthController {
 
-    private static final Logger log = LoggerFactory.getLogger(AuthController.class);
 
     private final JwtUtil jwtUtil;
     private final AuthService authService;
@@ -70,7 +67,7 @@ public class AuthController {
         cookie.setMaxAge(86400); // 24小时
         response.addCookie(cookie);
 
-        log.info("管理员登录成功：username={}", username);
+        // log.info("管理员登录成功：username={}", username);
         return R.ok("登录成功", Map.of("token", token, "username", username));
     }
 

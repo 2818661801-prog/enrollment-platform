@@ -8,8 +8,6 @@ import com.enroll.server.repository.SysConfigRepository;
 import com.enroll.server.service.ApplicationService;
 import com.enroll.server.service.ClassService;
 import com.enroll.server.util.RequestUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.transaction.annotation.Transactional;
@@ -55,8 +53,6 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/admin")
 public class AdminController {
-
-    private static final Logger log = LoggerFactory.getLogger(AdminController.class);
 
     private final ClassService classService;
     private final ApplicationService applicationService;
@@ -133,7 +129,7 @@ public class AdminController {
         List<Integer> idList = parseIdsField(body.get("ids"));
         String auditComment = (String) body.getOrDefault("auditComment", "");
         applicationService.batchAdmit(idList, auditComment);
-        log.info("批量录取: ids={}, auditComment={}", idList, auditComment);
+        // log.info("批量录取: ids={}, auditComment={}", idList, auditComment);
         return R.ok("已录取 " + idList.size() + " 名学生", null);
     }
 
@@ -147,7 +143,7 @@ public class AdminController {
         List<Integer> idList = parseIdsField(body.get("ids"));
         String auditComment = (String) body.getOrDefault("auditComment", "");
         applicationService.batchReject(idList, auditComment);
-        log.info("批量未录取: ids={}, auditComment={}", idList, auditComment);
+        // log.info("批量未录取: ids={}, auditComment={}", idList, auditComment);
         return R.ok("已设置 " + idList.size() + " 名学生为未录取", null);
     }
 
@@ -160,7 +156,7 @@ public class AdminController {
     public Map<String, Object> batchDelete(@RequestBody Map<String, Object> body) {
         List<Integer> idList = parseIdsField(body.get("ids"));
         applicationService.batchUpdateStatus(idList, ApplicationService.STATUS_WITHDRAWN);
-        log.info("批量删除报名: ids={}", idList);
+        // log.info("批量删除报名: ids={}", idList);
         return R.ok("已删除 " + idList.size() + " 条记录", null);
     }
 
@@ -173,7 +169,7 @@ public class AdminController {
     public Map<String, Object> clearClass(@RequestBody Map<String, Object> body) {
         Integer classId = RequestUtils.parseId(body, "classId");
         applicationService.clearClass(classId);
-        log.info("清空班级报名: classId={}", classId);
+        // log.info("清空班级报名: classId={}", classId);
         return R.ok("已清空该班所有报名记录", null);
     }
 
@@ -199,7 +195,7 @@ public class AdminController {
     @PostMapping("/classes/update")
     public Map<String, Object> updateClass(@RequestBody Map<String, Object> body) {
         Integer id = RequestUtils.parseId(body, "id");
-        log.info("=== UPDATE CLASS id={} body={}", id, body);
+        // log.info("=== UPDATE CLASS id={} body={}", id, body);
         return R.ok("更新成功", classService.updateClass(id, body));
     }
 
@@ -229,7 +225,7 @@ public class AdminController {
     @PostMapping("/classes/delete")
     public Map<String, Object> deleteClass(@RequestBody Map<String, Object> body) {
         Integer id = RequestUtils.parseId(body, "id");
-        log.info("=== DELETE CLASS id={}", id);
+        // log.info("=== DELETE CLASS id={}", id);
         classService.deleteClass(id);
         return R.ok("已删除", null);
     }
@@ -269,11 +265,11 @@ public class AdminController {
         try {
             cfgValue = objectMapper.writeValueAsString(body);
         } catch (com.fasterxml.jackson.core.JsonProcessingException ex) {
-            log.warn("报名须知 JSON 序列化失败", ex);
+            // log.warn("报名须知 JSON 序列化失败", ex);
             return R.fail(ResultCode.PARAM_INVALID, "body 序列化失败: " + ex.getMessage());
         }
         saveConfig("notice", cfgValue, (String) body.getOrDefault("updatedBy", "admin"));
-        log.info("更新报名须知: {}", body);
+        // log.info("更新报名须知: {}", body);
         return R.ok("保存成功", null);
     }
 
@@ -291,7 +287,7 @@ public class AdminController {
             return R.fail(ResultCode.PARAM_INVALID, "key / cfgValue 不能为空");
         }
         saveConfig(key, cfgValue, updatedBy);
-        log.info("更新配置: key={}, updatedBy={}", key, updatedBy);
+        // log.info("更新配置: key={}, updatedBy={}", key, updatedBy);
         return R.ok("保存成功", null);
     }
 
@@ -332,7 +328,7 @@ public class AdminController {
         try {
             return objectMapper.readValue(json, Map.class);
         } catch (Exception ex) {
-            log.warn("JSON 解析失败: {}", json);
+            // log.warn("JSON 解析失败: {}", json);
             return Map.of();
         }
     }

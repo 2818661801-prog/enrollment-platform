@@ -37,6 +37,9 @@ router.beforeEach((to, from) => {
   const isAdminRoute = to.path.startsWith('/admin')
   if (!isAdminRoute) return true
 
+  // /admin/login 不需要 token，直接放行（避免死循环）
+  if (to.path === '/admin/login') return true
+
   const token = localStorage.getItem('admin_token')
   if (!token) {
     return '/admin/login'

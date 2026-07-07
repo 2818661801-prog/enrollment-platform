@@ -235,18 +235,20 @@
         <el-form-item label="报名轮次">
           <div class="rounds-list">
             <div v-for="(r, idx) in classRounds" :key="idx" class="round-row">
-              <span class="round-label">第 {{ idx + 1 }} 轮</span>
-              <el-date-picker
-                v-model="classRounds[idx].period"
-                type="daterange"
-                range-separator="至"
-                start-placeholder="开始日期"
-                end-placeholder="结束日期"
-                format="YYYY/MM/DD"
-                value-format="YYYY/MM/DD"
-                style="width:260px"
-              />
-              <el-button text type="danger" @click="classRounds.splice(idx, 1)" :disabled="classRounds.length <= 1">删除</el-button>
+              <div style="display:flex;align-items:center;gap:8px">
+                <span class="round-label">第 {{ idx + 1 }} 轮</span>
+                <el-date-picker
+                  v-model="classRounds[idx].period"
+                  type="datetimerange"
+                  range-separator="至"
+                  start-placeholder="开始时间"
+                  end-placeholder="结束时间"
+                  format="YYYY/MM/DD HH:mm"
+                  value-format="YYYY/MM/DD HH:mm"
+                  style="width:300px"
+                />
+              </div>
+              <el-button text type="danger" size="small" @click="classRounds.splice(idx, 1)" :disabled="classRounds.length <= 1">删除</el-button>
             </div>
             <el-button text type="primary" @click="classRounds.push({ period: '' })">+ 添加轮次</el-button>
           </div>
@@ -637,6 +639,6 @@ onMounted(() => {
 .batch-bar { margin-top: 12px; display: flex; align-items: center; gap: 12px; font-size: 14px; color: #666; }
 .field-tip { margin-left: 8px; font-size: 12px; color: #999; }
 .rounds-list { display: flex; flex-direction: column; gap: 10px; }
-.round-row { display: flex; align-items: center; gap: 8px; }
-.round-label { font-size: 13px; color: #666; min-width: 50px; }
+.round-row { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.round-label { font-size: 13px; color: #666; }
 </style>

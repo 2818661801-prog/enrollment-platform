@@ -7,8 +7,6 @@ import com.enroll.server.dto.ResultCode;
 import com.enroll.server.repository.ClassInfoRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,7 +27,6 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class ClassService {
 
-    private static final Logger log = LoggerFactory.getLogger(ClassService.class);
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private final ClassInfoRepository classRepo;
@@ -94,11 +91,11 @@ public class ClassService {
             try {
                 cls.setCategoryNames(MAPPER.writeValueAsString(catNames));
             } catch (Exception ex) {
-                log.warn("categoryNames 序列化失败", ex);
+                // log.warn("categoryNames 序列化失败", ex);
             }
         }
         ClassInfo saved = classRepo.save(cls);
-        log.info("新增班级: id={}, name={}", saved.getId(), saved.getName());
+        // log.info("新增班级: id={}, name={}", saved.getId(), saved.getName());
         return toDTO(saved);
     }
 
@@ -131,11 +128,11 @@ public class ClassService {
             try {
                 cls.setCategoryNames(MAPPER.writeValueAsString(body.get("categoryNames")));
             } catch (Exception ex) {
-                log.warn("categoryNames 序列化失败", ex);
+                // log.warn("categoryNames 序列化失败", ex);
             }
         }
         ClassInfo saved = classRepo.save(cls);
-        log.info("更新班级: id={}, name={}", saved.getId(), saved.getName());
+        // log.info("更新班级: id={}, name={}", saved.getId(), saved.getName());
         return toDTO(saved);
     }
 
@@ -165,7 +162,7 @@ public class ClassService {
                 .orElseThrow(() -> new BusinessException(ResultCode.CLASS_NOT_FOUND));
         cls.setIsDeleted(1);
         classRepo.save(cls);
-        log.info("软删除班级: id={}, name={}", id, cls.getName());
+        // log.info("软删除班级: id={}, name={}", id, cls.getName());
     }
 
     // ==================== 内部工具方法 ====================
@@ -203,7 +200,7 @@ public class ClassService {
         try {
             return MAPPER.readValue(json, new TypeReference<List<String>>() {});
         } catch (Exception ex) {
-            log.warn("category_names JSON 解析失败: {}", json);
+            // log.warn("category_names JSON 解析失败: {}", json);
             return List.of();
         }
     }
@@ -222,7 +219,7 @@ public class ClassService {
                 return (String) first.get("period");
             }
         } catch (Exception e) {
-            log.warn("periods JSON 解析失败: {}", periodsJson);
+            // log.warn("periods JSON 解析失败: {}", periodsJson);
         }
         return null;
     }

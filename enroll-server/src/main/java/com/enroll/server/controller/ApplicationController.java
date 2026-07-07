@@ -6,8 +6,6 @@ import com.enroll.server.security.JwtUtil;
 import com.enroll.server.service.ApplicationService;
 import com.enroll.server.util.RequestUtils;
 import io.jsonwebtoken.Claims;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -29,8 +27,6 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/applications")
 public class ApplicationController {
-
-    private static final Logger log = LoggerFactory.getLogger(ApplicationController.class);
 
     private final ApplicationService applicationService;
     private final JwtUtil jwtUtil;
@@ -64,10 +60,10 @@ public class ApplicationController {
             if (!"student".equals(role)) {
                 return R.fail(ResultCode.PARAM_INVALID, "无效的凭证");
             }
-            log.info("【我的报名】phone={}", phone);
+            // log.info("【我的报名】phone={}", phone);
             return R.ok(applicationService.findMyByPhone(phone));
         } catch (Exception e) {
-            log.warn("JWT 解析失败: {}", e.getMessage());
+            // log.warn("JWT 解析失败: {}", e.getMessage());
             return R.fail(ResultCode.PARAM_INVALID, "登录已过期，请重新登录");
         }
     }
@@ -109,10 +105,10 @@ public class ApplicationController {
             if (!"student".equals(role)) {
                 return R.fail(ResultCode.PARAM_INVALID, "无效的登录凭证");
             }
-            log.info("【我的报名】phone={}", phone);
+            // log.info("【我的报名】phone={}", phone);
             return R.ok(applicationService.findMyByPhone(phone));
         } catch (Exception e) {
-            log.warn("JWT 解析失败: {}", e.getMessage());
+            // log.warn("JWT 解析失败: {}", e.getMessage());
             return R.fail(ResultCode.PARAM_INVALID, "登录已过期，请重新登录");
         }
     }

@@ -4,8 +4,6 @@ import com.enroll.server.dto.ResultCode;
 import com.enroll.server.exception.BusinessException;
 import com.enroll.server.security.JwtUtil;
 import jakarta.servlet.http.HttpServletRequest;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.scheduling.annotation.Async;
@@ -30,8 +28,6 @@ import java.util.concurrent.TimeUnit;
  */
 @Service
 public class AuthService {
-
-    private static final Logger log = LoggerFactory.getLogger(AuthService.class);
 
     private static final String SMS_KEY_PREFIX = "sms:login:";
     private static final String SMS_IP_PREFIX  = "sms:ip:";
@@ -99,7 +95,7 @@ public class AuthService {
         sendSmsAsync(phone, codeStr);
 
         // S12 修复：日志不打印 code 明文，只打印手机号和 IP（脱敏）
-        log.info("【验证码已发送】phone={} ip={} codeLen={}", maskPhone(phone), clientIp, codeStr.length());
+        // log.info("【验证码已发送】phone={} ip={} codeLen={}", maskPhone(phone), clientIp, codeStr.length());
     }
 
     /** 提取客户端真实 IP（注意反向代理场景） */
@@ -169,7 +165,7 @@ public class AuthService {
 
         // 生成学生 JWT
         String token = jwtUtil.generateStudent(phone);
-        log.info("【学生登录成功】phone={}", phone);
+        // log.info("【学生登录成功】phone={}", phone);
         return token;
     }
 
@@ -192,9 +188,9 @@ public class AuthService {
         );
         try {
             String resp = restTemplate.getForObject(url, String.class);
-            log.info("【短信发送结果】phone={} resp={}", maskPhone(phone), resp);
+            // log.info("【短信发送结果】phone={} resp={}", maskPhone(phone), resp);
         } catch (Exception e) {
-            log.error("【短信发送失败】phone={}", maskPhone(phone), e);
+            // log.error("【短信发送失败】phone={}", maskPhone(phone), e);
         }
     }
 
