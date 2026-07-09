@@ -178,7 +178,7 @@ public class AuthService {
      * @param code  验证码
      */
     @Async
-    private void sendSmsAsync(String phone, String code) {
+    public void sendSmsAsync(String phone, String code) {
         // 大汉三通短信平台：GET /mdsmssend.ashx?sn=...&pwd=...&mobile=...&content=...
         // content 内容需与大汉三通平台报备的模板格式一致，平台会自动拼接签名
         // ⚠️ P0-1 修复：SMS 账号密码从 application.yml 注入，生产通过环境变量覆盖
