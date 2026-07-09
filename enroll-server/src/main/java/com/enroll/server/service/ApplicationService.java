@@ -160,9 +160,8 @@ public class ApplicationService {
         if (current != null) {
             return current.getRoundNum();
         }
-        // 不在任何一轮内，取最大轮次号（fallback）
-        Integer maxRound = roundRepo.findMaxRoundNum(cls.getId());
-        return maxRound != null ? maxRound : 0;
+        // 不在任何一轮内，返回0，由 submit() 的 if (currentRound == 0) 拦截
+        return 0;
     }
 
 
