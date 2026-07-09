@@ -1,0 +1,497 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "特色班报名系统 - 管理端 API（低代码平台同步专用）",
+    "version": "1.0.0",
+    "description": "用于低代码平台同步外网数据库，一个按钮完成所有同步操作"
+  },
+  "servers": [
+    { "url": "https://***REMOVED***", "description": "外网生产环境" }
+  ],
+  "paths": {
+
+    "/api/admin/categories": {
+      "get": {
+        "summary": "获取类别列表（全量，用于同步）",
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CategoryListResponse" }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "新增类别",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string", "description": "类别名称" }
+                },
+                "required": ["name"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "成功" }
+        }
+      }
+    },
+
+    "/api/admin/categories/update": {
+      "post": {
+        "summary": "更新类别",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id":   { "type": "integer", "description": "类别ID" },
+                  "name": { "type": "string",  "description": "新类别名称" }
+                },
+                "required": ["id", "name"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "成功" }
+        }
+      }
+    },
+
+    "/api/admin/categories/delete": {
+      "post": {
+        "summary": "删除类别",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": { "type": "integer", "description": "类别ID" }
+                },
+                "required": ["id"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "成功" }
+        }
+      }
+    },
+
+    "/api/admin/classes": {
+      "get": {
+        "summary": "获取班级列表（全量，用于同步）",
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ClassListResponse" }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "新建班级",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name":     { "type": "string",   "description": "班级名称" },
+                  "category": { "type": "string",   "description": "班级类别" },
+                  "period":   { "type": "string",   "description": "当前有效时间段（格式：2026/09/01 - 2026/09/13）" },
+                  "periods":  { "type": "array",    "description": "多轮时间段", "items": { "$ref": "#/components/schemas/ClassRound" } },
+                  "quota":    { "type": "integer",  "description": "总容量" },
+                  "enrolled": { "type": "integer",  "description": "已报名人数" },
+                  "source":   { "type": "string",   "description": "数据来源：admin/sync/student" }
+                },
+                "required": ["name", "period", "quota", "enrolled"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "成功" }
+        }
+      }
+    },
+
+    "/api/admin/classes/update": {
+      "post": {
+        "summary": "更新班级（含所有字段：名称、类别、时间段、配额等）",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id":        { "type": "integer",  "description": "班级ID（必填）" },
+                  "name":      { "type": "string",   "description": "班级名称" },
+                  "category":  { "type": "string",   "description": "班级类别" },
+                  "period":    { "type": "string",   "description": "当前有效时间段" },
+                  "periods":   { "type": "array",    "description": "多轮时间段", "items": { "$ref": "#/components/schemas/ClassRound" } },
+                  "quota":     { "type": "integer",  "description": "总容量" },
+                  "enrolled":  { "type": "integer",  "description": "已报名人数" },
+                  "isDeleted": { "type": "integer",  "description": "删除标记（0=正常，1=已删除）" },
+                  "source":    { "type": "string",   "description": "数据来源" }
+                },
+                "required": ["id"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "成功" }
+        }
+      }
+    },
+
+    "/api/admin/classes/update-period": {
+      "post": {
+        "summary": "单独更新班级时间段",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id":     { "type": "integer", "description": "班级ID" },
+                  "period": { "type": "string",  "description": "新时间段" }
+                },
+                "required": ["id", "period"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "成功" }
+        }
+      }
+    },
+
+    "/api/admin/classes/update-quota": {
+      "post": {
+        "summary": "单独更新班级配额",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id":    { "type": "integer", "description": "班级ID" },
+                  "quota": { "type": "integer", "description": "新总容量" }
+                },
+                "required": ["id", "quota"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "成功" }
+        }
+      }
+    },
+
+    "/api/admin/classes/delete": {
+      "post": {
+        "summary": "软删除班级",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": { "type": "integer", "description": "班级ID" }
+                },
+                "required": ["id"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "成功" }
+        }
+      }
+    },
+
+    "/api/admin/notice": {
+      "get": {
+        "summary": "获取报名须知",
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/NoticeResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "/api/admin/notice/update": {
+      "post": {
+        "summary": "更新报名须知",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title":      { "type": "string",  "description": "须知标题" },
+                  "conditions": { "type": "string",  "description": "报名条件" },
+                  "notices":    { "type": "string",  "description": "须知内容" }
+                },
+                "required": ["title", "conditions", "notices"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "成功" }
+        }
+      }
+    },
+
+    "/api/admin/applications": {
+      "get": {
+        "summary": "查询报名记录列表（分页+过滤，用于同步）",
+        "parameters": [
+          { "name": "page",    "in": "query", "schema": { "type": "integer", "default": 0 },         "description": "页码，从0开始" },
+          { "name": "size",    "in": "query", "schema": { "type": "integer", "default": 20 },        "description": "每页条数，最大100" },
+          { "name": "classId", "in": "query", "schema": { "type": "integer" },                       "description": "班级ID" },
+          { "name": "status",  "in": "query", "schema": { "type": "integer" },                        "description": "状态：0=已撤回，1=已报名，2=已录取，3=未录取" },
+          { "name": "idCard",  "in": "query", "schema": { "type": "string" },                        "description": "身份证号，模糊搜索" },
+          { "name": "name",    "in": "query", "schema": { "type": "string" },                        "description": "姓名，模糊搜索" }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ApplicationPageResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "/api/admin/applications/admit": {
+      "post": {
+        "summary": "批量录取（status=3）",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ids":          { "type": "array", "items": { "type": "integer" }, "description": "报名记录ID数组" },
+                  "auditComment": { "type": "string", "description": "审核意见（可选）" }
+                },
+                "required": ["ids"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "成功" }
+        }
+      }
+    },
+
+    "/api/admin/applications/reject": {
+      "post": {
+        "summary": "批量不录取（status=4）",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ids":          { "type": "array", "items": { "type": "integer" }, "description": "报名记录ID数组" },
+                  "auditComment": { "type": "string", "description": "审核意见（可选）" }
+                },
+                "required": ["ids"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "成功" }
+        }
+      }
+    },
+
+    "/api/admin/applications/delete": {
+      "post": {
+        "summary": "批量删除报名记录（软删除，status=0）",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ids": { "type": "array", "items": { "type": "integer" }, "description": "报名记录ID数组" }
+                },
+                "required": ["ids"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "成功" }
+        }
+      }
+    },
+
+    "/api/admin/applications/clear": {
+      "post": {
+        "summary": "清空某班级所有报名记录",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "classId": { "type": "integer", "description": "班级ID" }
+                },
+                "required": ["classId"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "成功" }
+        }
+      }
+    }
+
+  },
+
+  "components": {
+    "schemas": {
+
+      "CategoryDTO": {
+        "type": "object",
+        "properties": {
+          "id":   { "type": "integer", "description": "类别ID" },
+          "name": { "type": "string", "description": "类别名称" }
+        }
+      },
+
+      "CategoryListResponse": {
+        "type": "object",
+        "properties": {
+          "code": { "type": "integer" },
+          "data": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/CategoryDTO" }
+          }
+        }
+      },
+
+      "ClassRound": {
+        "type": "object",
+        "properties": {
+          "round":  { "type": "integer", "description": "轮次编号（1、2...）" },
+          "period": { "type": "string",  "description": "时间段（格式：2026/09/01 - 2026/09/13）" }
+        }
+      },
+
+      "ClassDTO": {
+        "type": "object",
+        "properties": {
+          "id":        { "type": "integer",  "description": "班级ID" },
+          "name":      { "type": "string",   "description": "班级名称" },
+          "category":  { "type": "string",   "description": "班级类别" },
+          "period":    { "type": "string",   "description": "当前有效时间段" },
+          "periods":   { "type": "array",    "description": "多轮时间段", "items": { "$ref": "#/components/schemas/ClassRound" } },
+          "quota":     { "type": "integer",  "description": "总容量" },
+          "enrolled":  { "type": "integer",  "description": "已报名人数" },
+          "isDeleted": { "type": "integer",  "description": "删除标记（0=正常，1=已删除）" },
+          "source":    { "type": "string",   "description": "数据来源：admin/sync/student" },
+          "createdAt": { "type": "string",   "format": "date-time", "description": "创建时间" }
+        }
+      },
+
+      "ClassListResponse": {
+        "type": "object",
+        "properties": {
+          "code": { "type": "integer" },
+          "data": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/ClassDTO" }
+          }
+        }
+      },
+
+      "NoticeDTO": {
+        "type": "object",
+        "properties": {
+          "title":      { "type": "string", "description": "须知标题" },
+          "conditions": { "type": "string", "description": "报名条件" },
+          "notices":    { "type": "string", "description": "须知内容" }
+        }
+      },
+
+      "NoticeResponse": {
+        "type": "object",
+        "properties": {
+          "code": { "type": "integer" },
+          "data": { "$ref": "#/components/schemas/NoticeDTO" }
+        }
+      },
+
+      "ApplicationDTO": {
+        "type": "object",
+        "properties": {
+          "id":           { "type": "integer",  "description": "报名记录ID" },
+          "classId":      { "type": "integer",  "description": "班级ID" },
+          "className":    { "type": "string",   "description": "班级名称" },
+          "name":         { "type": "string",   "description": "学生姓名" },
+          "idCard":       { "type": "string",   "description": "身份证号" },
+          "gender":       { "type": "string",   "description": "性别" },
+          "phone":        { "type": "string",   "description": "手机号" },
+          "status":       { "type": "integer",  "description": "0=已撤回，1=已报名，2=已录取，3=未录取" },
+          "noticeAgreed": { "type": "boolean", "description": "是否同意报名须知" },
+          "isAdmitted":   { "type": "boolean", "description": "是否已录取" },
+          "source":       { "type": "string",   "description": "数据来源：student/admin/sync" },
+          "createdAt":    { "type": "string",   "format": "date-time", "description": "创建时间" }
+        }
+      },
+
+      "ApplicationPageResponse": {
+        "type": "object",
+        "properties": {
+          "code": { "type": "integer" },
+          "data": {
+            "type": "object",
+            "properties": {
+              "list":  { "type": "array", "items": { "$ref": "#/components/schemas/ApplicationDTO" } },
+              "total": { "type": "integer" },
+              "pages": { "type": "integer" }
+            }
+          }
+        }
+      }
+
+    }
+  }
+}

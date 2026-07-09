@@ -1,0 +1,40 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "特色班报名系统 - 管理端 API",
+    "version": "1.0.1",
+    "description": "用于低代码平台同步外网数据库"
+  },
+  "servers": [
+    { "url": "https://***REMOVED***", "description": "外网生产环境" }
+  ],
+  "paths": {
+
+    "/api/admin/classes": {
+      "post": {
+        "summary": "新建班级（仅主表7字段，不含 classRounds/category）",
+        "description": "新建班级时，只需填写主表7字段。classRounds 和 categories 由独立流程同步",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name":        { "type": "string",   "description": "班级名称" },
+                  "period":      { "type": "string",   "description": "当前有效时间段（格式：2026/09/01 08:00 - 2026/09/13 23:59）" },
+                  "quota":       { "type": "integer",  "description": "总容量，-1=不限" },
+                  "enrolled":    { "type": "integer",  "description": "已报名人数" },
+                  "description": { "type": "string",   "description": "班级说明" },
+                  "source":      { "type": "string",   "description": "数据来源：admin/sync/student" }
+                },
+                "required": ["name", "period", "quota", "enrolled"]
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "成功" } }
+      }
+    }
+
+  }
+}

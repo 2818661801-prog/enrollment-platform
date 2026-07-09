@@ -1,0 +1,74 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "特色班报名系统 - 管理端 API",
+    "version": "1.0.1",
+    "description": "用于低代码平台同步外网数据库"
+  },
+  "servers": [
+    { "url": "https://***REMOVED***", "description": "外网生产环境" }
+  ],
+  "paths": {
+
+    "/api/admin/classes": {
+      "get": {
+        "summary": "获取班级列表（全量，用于同步）",
+        "description": "返回班级列表。注意：classRounds 和 categories 字段在此接口中返回，但同步时由独立流程处理，不走 classes 的 create/update 接口",
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ClassListResponse" }
+              }
+            }
+          }
+        }
+      }
+    }
+
+  },
+
+  "components": {
+    "schemas": {
+
+      "ClassRound": {
+        "type": "object",
+        "properties": {
+          "round":       { "type": "integer", "description": "轮次编号（1、2...）" },
+          "periodStart": { "type": "string",  "description": "报名开始时间（格式：2026-09-01 08:00:00）" },
+          "periodEnd":   { "type": "string",  "description": "报名结束时间（格式：2026-09-13 23:59:00）" }
+        }
+      },
+
+      "ClassDTO": {
+        "type": "object",
+        "properties": {
+          "id":          { "type": "integer",  "description": "班级ID" },
+          "name":        { "type": "string",   "description": "班级名称" },
+          "period":      { "type": "string",   "description": "当前有效时间段" },
+          "classRounds": { "type": "array",    "description": "多轮时间段（独立同步，不走 classes 接口）", "items": { "$ref": "#/components/schemas/ClassRound" } },
+          "quota":       { "type": "integer",  "description": "总容量" },
+          "enrolled":    { "type": "integer",  "description": "已报名人数" },
+          "description": { "type": "string",   "description": "班级说明" },
+          "isDeleted":   { "type": "integer",  "description": "删除标记（0=正常，1=已删除）" },
+          "categories":  { "type": "array",    "description": "班级类别数组（独立同步，不走 classes 接口）", "items": { "type": "string" } },
+          "source":      { "type": "string",   "description": "数据来源：admin/sync/student" },
+          "createdAt":   { "type": "string",   "format": "date-time", "description": "创建时间" }
+        }
+      },
+
+      "ClassListResponse": {
+        "type": "object",
+        "properties": {
+          "code": { "type": "integer" },
+          "data": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/ClassDTO" }
+          }
+        }
+      }
+
+    }
+  }
+}

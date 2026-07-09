@@ -22,33 +22,9 @@
  *   GET    /api/config/notice               — 报名须知
  *
  * 认证：
- *   POST   /api/auth/login                  — 管理员账号密码登录
  *   POST   /api/auth/send-code              — 发送手机验证码
  *   POST   /api/auth/login/sms              — 验证码登录
  *
- * 管理端（需 JWT，路径 /api/admin/**）：
- *   读（GET）：
- *     GET  /api/admin/applications         — 分页查询
- *     GET  /api/admin/applications/{id}    — 报名详情
- *     GET  /api/admin/classes              — 班级列表（含已删）
- *     GET  /api/admin/categories           — 类别列表
- *     GET  /api/admin/notice               — 报名须知
- *     GET  /api/admin/config/{key}         — 读 sys_config
- *   写（POST）：
- *     POST /api/admin/applications/admit         — 批量录取
- *     POST /api/admin/applications/reject        — 批量未录取
- *     POST /api/admin/applications/delete        — 批量软删
- *     POST /api/admin/applications/clear         — 清空某班报名
- *     POST /api/admin/classes                    — 新建班级
- *     POST /api/admin/classes/update             — 更新班级
- *     POST /api/admin/classes/update-period      — 仅改时间段
- *     POST /api/admin/classes/update-quota       — 仅改配额
- *     POST /api/admin/classes/delete             — 软删班级
- *     POST /api/admin/categories                 — 新建类别
- *     POST /api/admin/categories/update          — 更新类别
- *     POST /api/admin/categories/delete          — 删除类别
- *     POST /api/admin/notice/update              — 改报名须知
- *     POST /api/admin/config/set                 — 改 sys_config
  */
 
 /**
@@ -161,13 +137,6 @@ export const fetchMyApplicationsWithPwd = async (idCard, password) => {
 
 // ==================== 认证 API ====================
 
-/** 管理员账号密码登录 → 返 token */
-export const adminLoginAPI = (username, password) =>
-  request('/api/auth/login', {
-    method: 'POST',
-    body: JSON.stringify({ username, password }),
-  })
-
 /** 学生端：发送手机验证码 */
 export const sendCodeAPI = (phone) =>
   request('/api/auth/send-code', {
@@ -180,151 +149,6 @@ export const loginByCodeAPI = (phone, code) =>
   request('/api/auth/login/sms', {
     method: 'POST',
     body: JSON.stringify({ phone, code }),
-  })
-
-// ==================== 管理端 API（需 JWT）====================
-
-/** 通用带 JWT 的 fetch（⚠️ S8 修复：优先 httpOnly Cookie，credentials:include 自动带） */
-async function adminRequest(url, options = {}) {
-  const res = await fetch(url, {
-    credentials: 'include',  // 自动带上 httpOnly Cookie
-    headers: { 'Content-Type': 'application/json' },
-    ...options,
-  })
-  if (!res.ok) {
-    if (res.status === 401) {
-      window.location.hash = '#/admin/login'
-    }
-    const err = new Error(`HTTP ${res.status}: ${res.statusText}`)
-    err.status = res.status
-    throw err
-  }
-  return res.json()
-}
-
-// ========== 读（GET） ==========
-
-/** 管理员：分页查询报名 */
-export const fetchAdminApplications = (params) => {
-  const qs = new URLSearchParams(params).toString()
-  return adminRequest(`/api/admin/applications?${qs}`)
-}
-
-/** 管理员：报名详情（2026-07-02 新增） */
-export const fetchAdminApplication = (id) =>
-  adminRequest(`/api/admin/applications/${id}`)
-
-/** 管理员：班级列表 */
-export const fetchAdminClasses = () => adminRequest('/api/admin/classes')
-
-/** 管理员：读取 sys_config（单 key） */
-export const fetchAdminConfig = (key) => adminRequest(`/api/admin/config/${key}`)
-
-/** 管理员：读取报名须知（2026-07-02 新增显式 API） */
-export const fetchAdminNotice = () => adminRequest('/api/admin/notice')
-
-/** 管理员：类别列表（2026-07-02 GET 化） */
-export const fetchAdminCategories = () => adminRequest('/api/admin/categories')
-
-// ========== 写（POST） ==========
-
-/** 管理员：批量录取（2026-07-02：PUT → POST） */
-export const admitAdminApplications = (ids, auditComment = '') =>
-  adminRequest('/api/admin/applications/admit', {
-    method: 'POST',
-    body: JSON.stringify({ ids, auditComment }),
-  })
-
-/** 管理员：批量未录取（2026-07-02：PUT → POST） */
-export const rejectAdminApplications = (ids, auditComment = '') =>
-  adminRequest('/api/admin/applications/reject', {
-    method: 'POST',
-    body: JSON.stringify({ ids, auditComment }),
-  })
-
-/** 管理员：批量撤回报名（2026-07-02：DELETE → POST） */
-export const withdrawAdminApplications = (ids) =>
-  adminRequest('/api/admin/applications/delete', {
-    method: 'POST',
-    body: JSON.stringify({ ids }),
-  })
-
-/** 管理员：清空班级报名（2026-07-02：DELETE → POST） */
-export const clearAdminClass = (classId) =>
-  adminRequest('/api/admin/applications/clear', {
-    method: 'POST',
-    body: JSON.stringify({ classId }),
-  })
-
-/** 管理员：新增班级 */
-export const createAdminClass = (data) =>
-  adminRequest('/api/admin/classes', { method: 'POST', body: JSON.stringify(data) })
-
-/** 管理员：更新班级（2026-07-02：PUT → POST） */
-export const updateAdminClass = (id, data) =>
-  adminRequest('/api/admin/classes/update', {
-    method: 'POST',
-    body: JSON.stringify({ id, ...data }),
-  })
-
-/** 管理员：仅改时间段（2026-07-02：PUT → POST） */
-export const updateAdminClassPeriod = (id, period) =>
-  adminRequest('/api/admin/classes/update-period', {
-    method: 'POST',
-    body: JSON.stringify({ id, period }),
-  })
-
-/** 管理员：仅改配额（2026-07-02：PUT → POST） */
-export const updateAdminClassQuota = (id, quota) =>
-  adminRequest('/api/admin/classes/update-quota', {
-    method: 'POST',
-    body: JSON.stringify({ id, quota }),
-  })
-
-/** 管理员：软删班级（2026-07-02：DELETE → POST） */
-export const deleteAdminClass = (id) =>
-  adminRequest('/api/admin/classes/delete', {
-    method: 'POST',
-    body: JSON.stringify({ id }),
-  })
-
-/** 管理员：恢复已删除班级（复用 update） */
-export const restoreAdminClass = (id) =>
-  updateAdminClass(id, { isDeleted: 0 })
-
-/** 管理员：改 sys_config（2026-07-02：PUT → POST） */
-export const updateAdminConfig = (key, cfgValue, updatedBy) =>
-  adminRequest('/api/admin/config/set', {
-    method: 'POST',
-    body: JSON.stringify({ key, cfgValue, updatedBy }),
-  })
-
-/** 管理员：改报名须知（2026-07-02 新增） */
-export const updateAdminNotice = (notice) =>
-  adminRequest('/api/admin/notice/update', {
-    method: 'POST',
-    body: JSON.stringify(notice),
-  })
-
-/** 管理员：新增类别（2026-07-02 新增） */
-export const createAdminCategory = (name) =>
-  adminRequest('/api/admin/categories', {
-    method: 'POST',
-    body: JSON.stringify({ name }),
-  })
-
-/** 管理员：更新类别（2026-07-02：PUT → POST） */
-export const updateAdminCategory = (id, name) =>
-  adminRequest('/api/admin/categories/update', {
-    method: 'POST',
-    body: JSON.stringify({ id, name }),
-  })
-
-/** 管理员：删除类别（2026-07-02：DELETE → POST） */
-export const deleteAdminCategory = (id) =>
-  adminRequest('/api/admin/categories/delete', {
-    method: 'POST',
-    body: JSON.stringify({ id }),
   })
 
 /** 学生端：获取类别列表（供表单下拉） */
