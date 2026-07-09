@@ -13,6 +13,7 @@ import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.nio.charset.StandardCharsets;
+import java.security.SecureRandom;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -86,7 +87,8 @@ public class AuthService {
         }
 
         // 生成6位随机数字验证码（100000~999999）
-        int code = (int) (Math.random() * 900000 + 100000);
+        SecureRandom sr = new SecureRandom();
+        int code = sr.nextInt(900000) + 100000;
         String codeStr = String.valueOf(code);
 
         String key = SMS_KEY_PREFIX + phone;
