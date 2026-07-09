@@ -65,6 +65,8 @@ public class AuthController {
         cookie.setHttpOnly(true);
         cookie.setPath("/api");
         cookie.setMaxAge(86400); // 24小时
+        cookie.setSecure(true);                              // HTTPS 才传 Cookie
+        cookie.setAttribute("SameSite", "Strict");           // 防 CSRF
         response.addCookie(cookie);
 
         // log.info("管理员登录成功：username={}", username);
