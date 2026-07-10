@@ -1,0 +1,43 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "获取类别列表",
+    "version": "1.0.0",
+    "description": "全量获取所有类别，用于同步"
+  },
+  "servers": [
+    { "url": "https://***REMOVED***", "description": "外网生产环境" }
+  ],
+  "paths": {
+    "/api/admin/categories": {
+      "get": {
+        "summary": "获取类别列表（全量）",
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "integer" },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id":   { "type": "integer", "description": "类别ID" },
+                          "name": { "type": "string",  "description": "类别名称" }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

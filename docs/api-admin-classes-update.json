@@ -1,19 +1,17 @@
 {
   "openapi": "3.0.0",
   "info": {
-    "title": "特色班报名系统 - 管理端 API",
-    "version": "1.0.1",
-    "description": "用于低代码平台同步外网数据库"
+    "title": "更新班级",
+    "version": "1.0.0",
+    "description": "更新班级主表字段，同时支持 classRounds 轮次全量覆盖（先删旧再插新）"
   },
   "servers": [
     { "url": "https://***REMOVED***", "description": "外网生产环境" }
   ],
   "paths": {
-
     "/api/admin/classes/update": {
       "post": {
-        "summary": "更新班级（仅主表7字段，不含 classRounds/category）",
-        "description": "更新班级主表字段。classRounds 和 categories 各自由独立流程同步，不走此接口",
+        "summary": "更新班级（含 classRounds 轮次全量覆盖）",
         "requestBody": {
           "content": {
             "application/json": {
@@ -27,59 +25,29 @@
                   "enrolled":    { "type": "integer",  "description": "已报名人数" },
                   "description": { "type": "string",   "description": "班级说明" },
                   "isDeleted":   { "type": "integer",  "description": "删除标记（0=正常，1=已删除）" },
-                  "source":      { "type": "string",   "description": "数据来源" }
+                  "source":      { "type": "string",   "description": "数据来源" },
+                  "classRounds": {
+                    "type": "array",
+                    "description": "轮次数组（全量覆盖：先删旧轮次再插新轮次）",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "roundNum":    { "type": "integer", "description": "轮次编号（1、2...）" },
+                        "periodStart": { "type": "string",  "description": "报名开始时间（格式：2026-09-01 08:00:00）" },
+                        "periodEnd":   { "type": "string",  "description": "报名结束时间（格式：2026-09-13 23:59:00）" }
+                      }
+                    }
+                  }
                 },
                 "required": ["id"]
               }
             }
           }
         },
-        "responses": { "200": { "description": "成功" } }
-      }
-    }
-
-  },
-
-  "components": {
-    "schemas": {
-
-      "ClassRound": {
-        "type": "object",
-        "properties": {
-          "round":       { "type": "integer", "description": "轮次编号（1、2...）" },
-          "periodStart": { "type": "string",  "description": "报名开始时间（格式：2026-09-01 08:00:00）" },
-          "periodEnd":   { "type": "string",  "description": "报名结束时间（格式：2026-09-13 23:59:00）" }
-        }
-      },
-
-      "ClassDTO": {
-        "type": "object",
-        "properties": {
-          "id":          { "type": "integer",  "description": "班级ID" },
-          "name":        { "type": "string",   "description": "班级名称" },
-          "period":      { "type": "string",   "description": "当前有效时间段" },
-          "classRounds": { "type": "array",    "description": "多轮时间段（独立同步，不走 classes 接口）", "items": { "$ref": "#/components/schemas/ClassRound" } },
-          "quota":       { "type": "integer",  "description": "总容量" },
-          "enrolled":    { "type": "integer",  "description": "已报名人数" },
-          "description": { "type": "string",   "description": "班级说明" },
-          "isDeleted":   { "type": "integer",  "description": "删除标记（0=正常，1=已删除）" },
-          "categories":  { "type": "array",    "description": "班级类别数组（独立同步，不走 classes 接口）", "items": { "type": "string" } },
-          "source":      { "type": "string",   "description": "数据来源：admin/sync/student" },
-          "createdAt":   { "type": "string",   "format": "date-time", "description": "创建时间" }
-        }
-      },
-
-      "ClassListResponse": {
-        "type": "object",
-        "properties": {
-          "code": { "type": "integer" },
-          "data": {
-            "type": "array",
-            "items": { "$ref": "#/components/schemas/ClassDTO" }
-          }
+        "responses": {
+          "200": { "description": "成功" }
         }
       }
-
     }
   }
 }

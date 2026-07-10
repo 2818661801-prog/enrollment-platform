@@ -1,0 +1,35 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "批量不录取",
+    "version": "1.0.0",
+    "description": "将报名记录设为未录取状态（status=4）"
+  },
+  "servers": [
+    { "url": "https://***REMOVED***", "description": "外网生产环境" }
+  ],
+  "paths": {
+    "/api/admin/applications/reject": {
+      "post": {
+        "summary": "批量不录取（status=4）",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ids":          { "type": "array", "items": { "type": "integer" }, "description": "报名记录ID数组" },
+                  "auditComment": { "type": "string", "description": "审核意见（可选）" }
+                },
+                "required": ["ids"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "成功" }
+        }
+      }
+    }
+  }
+}

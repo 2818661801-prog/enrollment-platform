@@ -1,0 +1,35 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "修改班级容量配额",
+    "version": "1.0.0",
+    "description": "仅修改班级的总容量（quota 字段），不影响其他字段"
+  },
+  "servers": [
+    { "url": "https://***REMOVED***", "description": "外网生产环境" }
+  ],
+  "paths": {
+    "/api/admin/classes/update-quota": {
+      "post": {
+        "summary": "修改班级配额",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id":   { "type": "integer", "description": "班级ID（必填）" },
+                  "quota": { "type": "integer", "description": "总容量" }
+                },
+                "required": ["id", "quota"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "成功" }
+        }
+      }
+    }
+  }
+}

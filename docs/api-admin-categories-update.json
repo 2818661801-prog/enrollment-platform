@@ -1,0 +1,35 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "更新类别",
+    "version": "1.0.0",
+    "description": "更新已有类别名称"
+  },
+  "servers": [
+    { "url": "https://***REMOVED***", "description": "外网生产环境" }
+  ],
+  "paths": {
+    "/api/admin/categories/update": {
+      "post": {
+        "summary": "更新类别",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id":   { "type": "integer", "description": "类别ID" },
+                  "name": { "type": "string",  "description": "新类别名称" }
+                },
+                "required": ["id", "name"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "成功" }
+        }
+      }
+    }
+  }
+}

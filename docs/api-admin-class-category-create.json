@@ -1,0 +1,35 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "新增班级-类别关联",
+    "version": "1.0.0",
+    "description": "在班级和类别之间建立关联（class_category 中间表）"
+  },
+  "servers": [
+    { "url": "https://***REMOVED***", "description": "外网生产环境" }
+  ],
+  "paths": {
+    "/api/admin/classCategory": {
+      "post": {
+        "summary": "新增班级-类别关联",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "classId":    { "type": "integer", "description": "班级ID" },
+                  "categoryId": { "type": "integer", "description": "类别ID" }
+                },
+                "required": ["classId", "categoryId"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "成功" }
+        }
+      }
+    }
+  }
+}

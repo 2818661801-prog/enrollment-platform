@@ -83,9 +83,9 @@ public class ApplicationService {
             throw new BusinessException(ResultCode.PARAM_INVALID, "该班级当前不在报名时间内");
         }
 
-        // 3) 身份证全局唯一：已报名（审核中）或已录取（永久锁定）不可再报
-        List<Application> idCardDup = appRepo.findByIdCardAndStatusIn(
-                idCard, List.of(STATUS_APPLIED, STATUS_ENROLLED));
+        // 3) 身份证全局唯一：已报名（审核中）或已录取（永久锁定）不可再报（只查未删除）
+        List<Application> idCardDup = appRepo.findByIdCardAndStatusInAndIsDeleted(
+                idCard, List.of(STATUS_APPLIED, STATUS_ENROLLED), 0);
         if (!idCardDup.isEmpty()) {
             Application existing = idCardDup.get(0);
             String className = classRepo.findById(existing.getClassId())
@@ -95,9 +95,9 @@ public class ApplicationService {
                     "该身份证持有者已报名【" + className + "】");
         }
 
-        // 3.5) 手机号全局唯一：同一手机号只能报名一个班（核心防重：手机号=JWT subject=用户唯一标识）
-        List<Application> phoneDup = appRepo.findByPhoneAndStatusIn(
-                phone, List.of(STATUS_APPLIED, STATUS_ENROLLED));
+        // 3.5) 手机号全局唯一：同一手机号只能报名一个班（核心防重：手机号=JWT subject=用户唯一标识，只查未删除）
+        List<Application> phoneDup = appRepo.findByPhoneAndStatusInAndIsDeleted(
+                phone, List.of(STATUS_APPLIED, STATUS_ENROLLED), 0);
         if (!phoneDup.isEmpty()) {
             Application existing = phoneDup.get(0);
             String className = classRepo.findById(existing.getClassId())
@@ -107,9 +107,9 @@ public class ApplicationService {
                     "该手机号已报名【" + className + "】");
         }
 
-        // 4) 本轮防重复（同一身份证+同一班级，防止同一人报两次同一班）
-        List<Application> roundDup = appRepo.findByIdCardAndClassIdAndStatusIn(
-                idCard, classId, List.of(STATUS_APPLIED, STATUS_ENROLLED, STATUS_REJECTED));
+        // 4) 本轮防重复（同一身份证+同一班级，防止同一人报两次同一班，只查未删除）
+        List<Application> roundDup = appRepo.findByIdCardAndClassIdAndStatusInAndIsDeleted(
+                idCard, classId, List.of(STATUS_APPLIED, STATUS_ENROLLED, STATUS_REJECTED), 0);
         if (!roundDup.isEmpty()) {
             throw new BusinessException(ResultCode.DUPLICATE_APPLICATION);
         }
@@ -191,7 +191,7 @@ public class ApplicationService {
     // ==================== 我的报名（读） ====================
 
     public List<ApplicationDTO> findMy(String idCard) {
-        return appRepo.findByIdCardAndStatus(idCard, STATUS_APPLIED).stream()
+        return appRepo.findByIdCardAndStatusAndIsDeleted(idCard, STATUS_APPLIED, 0).stream()
                 .map(app -> {
                     String className = classRepo.findById(app.getClassId())
                             .map(ClassInfo::getName)
@@ -202,7 +202,7 @@ public class ApplicationService {
     }
 
     public List<ApplicationDTO> findMyByPhone(String phone) {
-        return appRepo.findByPhoneAndStatusIn(phone, List.of(STATUS_APPLIED, STATUS_ENROLLED, STATUS_REJECTED)).stream()
+        return appRepo.findByPhoneAndStatusInAndIsDeleted(phone, List.of(STATUS_APPLIED, STATUS_ENROLLED, STATUS_REJECTED), 0).stream()
                 .map(app -> {
                     String className = classRepo.findById(app.getClassId())
                             .map(ClassInfo::getName)
@@ -250,7 +250,7 @@ public class ApplicationService {
 
     @Transactional
     public void clearClass(Integer classId) {
-        appRepo.findByClassId(classId).forEach(app -> {
+        appRepo.findByClassIdAndIsDeleted(classId, 0).forEach(app -> {
             app.setStatus(STATUS_WITHDRAWN);
             appRepo.save(app);
         });
@@ -279,6 +279,21 @@ public class ApplicationService {
     // ==================== 低代码平台同步 ====================
 
     /**
+     * 全量查询报名记录（不分页，给低代码平台同步用）
+     * 2026-07-10 新增：解决分页响应解析问题
+     */
+    public List<ApplicationDTO> findAllForSync() {
+        return appRepo.findByIsDeleted(0).stream()
+                .map(app -> {
+                    String className = classRepo.findById(app.getClassId())
+                            .map(ClassInfo::getName)
+                            .orElse("未知班级");
+                    return toDTO(app, className);
+                })
+                .collect(Collectors.toList());
+    }
+
+    /**
      * 全量同步报名记录（低代码平台调 sync/applications 时调用）
      * 主键：idCard + classId（一个学生一个班只有一条报名记录）
      *
@@ -287,7 +302,7 @@ public class ApplicationService {
      */
     @Transactional
     public Map<String, Object> syncFromLowCode(List<Map> dataList) {
-        List<Application> allA = appRepo.findAll();
+        List<Application> allA = appRepo.findByIsDeleted(0);
 
         // 用 idCard+classId 做 a 端 map
         Map<String, Application> aMap = new java.util.HashMap<>();
@@ -326,6 +341,7 @@ public class ApplicationService {
                 app.setNoticeAgreed(parseFlag(item.get("noticeAgreed")));
                 app.setApplyTime(LocalDateTime.now());
                 app.setRound((Integer) item.getOrDefault("round", 1));
+                app.setIsDeleted(0);  // 默认未删除
                 appRepo.save(app);
                 inserted++;
             } else {
@@ -344,11 +360,12 @@ public class ApplicationService {
             }
         }
 
-        // a有、b无 → 真正删除
+        // a有、b无 → 软删除（is_deleted=1）
         for (String keyToDelete : toDelete) {
             Application toRemove = aMap.get(keyToDelete);
             if (toRemove != null) {
-                appRepo.delete(toRemove);
+                toRemove.setIsDeleted(1);
+                appRepo.save(toRemove);
                 deleted++;
             }
         }

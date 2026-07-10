@@ -293,6 +293,22 @@
       }
     },
 
+    "/api/admin/applications/all": {
+      "get": {
+        "summary": "报名记录全量查询（不分页，解决分页响应解析问题）",
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ApplicationAllListResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+
     "/api/admin/applications/admit": {
       "post": {
         "summary": "批量录取（status=3）",
@@ -489,6 +505,37 @@
               "pages": { "type": "integer" }
             }
           }
+        }
+      },
+
+      "ApplicationAllListResponse": {
+        "type": "object",
+        "properties": {
+          "code": { "type": "integer" },
+          "data": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/ApplicationAllDTO" }
+          }
+        }
+      },
+
+      "ApplicationAllDTO": {
+        "type": "object",
+        "properties": {
+          "id":              { "type": "integer",  "description": "报名记录ID" },
+          "name":            { "type": "string",   "description": "学生姓名" },
+          "idCard":          { "type": "string",   "description": "脱敏身份证" },
+          "gender":          { "type": "string",   "description": "性别" },
+          "phone":           { "type": "string",   "description": "联系电话" },
+          "hasPhysics":      { "type": "string",   "description": "是否选考物理" },
+          "hasEnglish":       { "type": "string",   "description": "是否选考英语" },
+          "classId":         { "type": "integer",  "description": "申报班级ID" },
+          "className":       { "type": "string",   "description": "班级名称" },
+          "appliedCategory":  { "type": "string",   "description": "报考类别" },
+          "status":          { "type": "string",   "description": "状态（0=未报名，1=已报名，2=已撤回，3=已录取，4=未录取）" },
+          "applyTime":        { "type": "string",   "description": "报名时间" },
+          "auditComment":    { "type": "string",   "description": "审核意见" },
+          "round":           { "type": "integer",  "description": "报名轮次" }
         }
       }
 

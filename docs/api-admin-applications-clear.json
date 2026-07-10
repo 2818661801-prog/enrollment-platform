@@ -1,0 +1,34 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "清空班级报名记录",
+    "version": "1.0.0",
+    "description": "清空指定班级的所有报名记录（软删除）"
+  },
+  "servers": [
+    { "url": "https://***REMOVED***", "description": "外网生产环境" }
+  ],
+  "paths": {
+    "/api/admin/applications/clear": {
+      "post": {
+        "summary": "清空某班级所有报名记录",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "classId": { "type": "integer", "description": "班级ID" }
+                },
+                "required": ["classId"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "成功" }
+        }
+      }
+    }
+  }
+}

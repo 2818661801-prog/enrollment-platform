@@ -1,0 +1,35 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "修改班级报名时间段",
+    "version": "1.0.0",
+    "description": "仅修改班级的当前有效时间段（period 字段），不影响其他字段"
+  },
+  "servers": [
+    { "url": "https://***REMOVED***", "description": "外网生产环境" }
+  ],
+  "paths": {
+    "/api/admin/classes/update-period": {
+      "post": {
+        "summary": "修改班级时间段",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id":     { "type": "integer", "description": "班级ID（必填）" },
+                  "period": { "type": "string",  "description": "当前有效时间段，如：2026/09/01 - 2026/09/13" }
+                },
+                "required": ["id", "period"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "成功" }
+        }
+      }
+    }
+  }
+}

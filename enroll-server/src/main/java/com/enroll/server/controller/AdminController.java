@@ -8,8 +8,6 @@ import com.enroll.server.repository.SysConfigRepository;
 import com.enroll.server.service.ApplicationService;
 import com.enroll.server.service.ClassService;
 import com.enroll.server.util.RequestUtils;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
@@ -44,6 +42,9 @@ import java.util.Map;
  *     POST /api/admin/classes/update-period      — 仅改时间段
  *     POST /api/admin/classes/update-quota       — 仅改配额
  *     POST /api/admin/classes/delete             — 软删除班级
+ *   班级-类别关联管理：
+ *     POST /api/admin/classCategory              — 新增关联
+ *     POST /api/admin/classCategory/delete       — 删除关联（按 id）
  *   类别管理：见 AdminCategoryController.java（GET/POST/PUT/DELETE 全套）
  *   系统配置：
  *     POST /api/admin/notice/update              — 改报名须知
@@ -56,46 +57,31 @@ public class AdminController {
     private final ApplicationService applicationService;
     private final SysConfigRepository sysConfigRepo;
     private final com.enroll.server.repository.ApplicationRepository applicationRepo;
+    private final com.enroll.server.repository.ClassCategoryRepository classCategoryRepo;
 
     public AdminController(ClassService classService,
                            ApplicationService applicationService,
                            SysConfigRepository sysConfigRepo,
-                           com.enroll.server.repository.ApplicationRepository applicationRepo) {
+                           com.enroll.server.repository.ApplicationRepository applicationRepo,
+                           com.enroll.server.repository.ClassCategoryRepository classCategoryRepo) {
         this.classService = classService;
         this.applicationService = applicationService;
         this.sysConfigRepo = sysConfigRepo;
         this.applicationRepo = applicationRepo;
+        this.classCategoryRepo = classCategoryRepo;
     }
 
     // ==================== 报名管理 · 读 ====================
 
     /**
-     * 分页查询报名记录
-     * @param page     页码（从0开始）
-     * @param size     每页条数
-     * @param classId  按班级ID筛选（可选）
-     * @param status   按状态筛选（可选，0已报/1撤回/2录取/3未录取）
-     * @param idCard   身份证号模糊搜索（可选）
-     * @param name     姓名模糊搜索（可选）
+     * 报名记录全量查询（不分页，给低代码平台同步用）
+     * 返回结构：直接是数组，没有外层包装
+     * 2026-07-10 新增：解决低代码平台分页响应解析问题
      */
-    @GetMapping("/applications")
-    public Map<String, Object> listApplications(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size,
-            @RequestParam(required = false) Integer classId,
-            @RequestParam(required = false) Integer status,
-            @RequestParam(required = false) String idCard,
-            @RequestParam(required = false) String name) {
-        // 分页边界保护：page < 0 → 0，size <= 0 → 20，size > 100 → 100
-        int safePage = Math.max(0, page);
-        int safeSize = size <= 0 ? 20 : Math.min(size, 100);
-        Page<ApplicationDTO> result =
-                applicationService.adminSearch(classId, status, idCard, name, PageRequest.of(safePage, safeSize));
-        return R.ok(Map.of(
-                "list", result.getContent(),
-                "total", result.getTotalElements(),
-                "pages", result.getTotalPages()
-        ));
+    @GetMapping("/applications/all")
+    public Map<String, Object> listAllApplications() {
+        List<ApplicationDTO> list = applicationService.findAllForSync();
+        return R.ok(list);
     }
 
     /**
@@ -261,6 +247,50 @@ public class AdminController {
         sysConfigRepo.save(cfg);
         // log.info("更新报名须知: title={}", body.get("title"));
         return R.ok("保存成功", null);
+    }
+
+    // ==================== 班级-类别关联管理 · 写 ====================
+
+    /**
+     * 新增班级-类别关联（class_category 中间表）
+     * Body: { "classId": 1, "categoryId": 2 }
+     */
+    @Transactional
+    @PostMapping("/classCategory")
+    public Map<String, Object> addClassCategory(@RequestBody Map<String, Object> body) {
+        Integer classId = RequestUtils.parseId(body, "classId");
+        Integer categoryId = RequestUtils.parseId(body, "categoryId");
+        if (classId == null || categoryId == null) {
+            return R.fail(ResultCode.PARAM_INVALID, "classId 和 categoryId 不能为空");
+        }
+        // 查重：已存在则跳过
+        List<com.enroll.server.entity.ClassCategory> existing = classCategoryRepo.findByClassId(classId);
+        boolean alreadyExists = existing.stream()
+                .anyMatch(cc -> cc.getCategoryId().equals(categoryId));
+        if (alreadyExists) {
+            return R.ok("关联已存在，无需重复创建", null);
+        }
+        com.enroll.server.entity.ClassCategory cc = new com.enroll.server.entity.ClassCategory();
+        cc.setClassId(classId);
+        cc.setCategoryId(categoryId);
+        cc.setCreatedAt(java.time.LocalDateTime.now());
+        classCategoryRepo.save(cc);
+        return R.ok("关联创建成功", null);
+    }
+
+    /**
+     * 删除班级-类别关联（按主键 id）
+     * Body: { "id": 5 }
+     */
+    @Transactional
+    @PostMapping("/classCategory/delete")
+    public Map<String, Object> deleteClassCategory(@RequestBody Map<String, Object> body) {
+        Integer id = RequestUtils.parseId(body, "id");
+        if (id == null) {
+            return R.fail(ResultCode.PARAM_INVALID, "id 不能为空");
+        }
+        classCategoryRepo.deleteById(id);
+        return R.ok("关联已删除", null);
     }
 
     // ==================== 内部工具 ====================

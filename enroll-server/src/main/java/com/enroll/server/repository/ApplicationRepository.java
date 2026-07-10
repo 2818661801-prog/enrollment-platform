@@ -46,11 +46,37 @@ public interface ApplicationRepository extends JpaRepository<Application, Intege
     /** 按手机号 + status列表 查（登录时判断是否有有效报名） */
     List<Application> findByPhoneAndStatusIn(String phone, List<Integer> statuses);
 
+    // ===== is_deleted=0 过滤新增方法（2026-07-10） =====
+
+    /** 查所有未删除的报名记录 */
+    List<Application> findByIsDeleted(Integer isDeleted);
+
+    /** 按班级ID + 未删除 查 */
+    List<Application> findByClassIdAndIsDeleted(Integer classId, Integer isDeleted);
+
+    /** 按身份证号 + 未删除 查 */
+    List<Application> findByIdCardAndIsDeleted(String idCard, Integer isDeleted);
+
+    /** 按身份证号 + status列表 + 未删除 查（登录时判断有效报名） */
+    List<Application> findByIdCardAndStatusInAndIsDeleted(String idCard, List<Integer> statuses, Integer isDeleted);
+
+    /** 按身份证号 + status + 未删除 查 */
+    List<Application> findByIdCardAndStatusAndIsDeleted(String idCard, Integer status, Integer isDeleted);
+
+    /** 按手机号 + status列表 + 未删除 查（学生端 JWT 认证） */
+    List<Application> findByPhoneAndStatusInAndIsDeleted(String phone, List<Integer> statuses, Integer isDeleted);
+
+    /** 按身份证号+班级ID+status + 未删除（防重复报名） */
+    List<Application> findByIdCardAndClassIdAndStatusAndIsDeleted(String idCard, Integer classId, Integer status, Integer isDeleted);
+
+    /** 按身份证号+班级ID+status列表 + 未删除（查某几状态） */
+    List<Application> findByIdCardAndClassIdAndStatusInAndIsDeleted(String idCard, Integer classId, List<Integer> statuses, Integer isDeleted);
+
     /**
      * 管理员分页查询（支持多条件组合）
      * 动态 SQL：只有传入非 null 的条件才会拼入 WHERE
      */
-    @Query("SELECT a FROM Application a WHERE " +
+    @Query("SELECT a FROM Application a WHERE a.isDeleted = 0 AND " +
            "(:classId  IS NULL OR a.classId  = :classId) AND " +
            "(:status   IS NULL OR a.status   = :status)  AND " +
            "(:idCard   IS NULL OR a.idCard   LIKE CONCAT('%',:idCard,'%')) AND " +
@@ -68,7 +94,7 @@ public interface ApplicationRepository extends JpaRepository<Application, Intege
      * @param status  目标状态值
      */
     @Modifying
-    @Query("UPDATE Application a SET a.status = :status WHERE a.id IN :ids")
+    @Query("UPDATE Application a SET a.status = :status WHERE a.id IN :ids AND a.isDeleted = 0")
     void batchUpdateStatus(@Param("ids") List<Integer> ids, @Param("status") Integer status);
 
     /**
@@ -78,6 +104,6 @@ public interface ApplicationRepository extends JpaRepository<Application, Intege
      * @param auditComment  审核意见
      */
     @Modifying
-    @Query("UPDATE Application a SET a.status = :status, a.auditComment = :auditComment WHERE a.id IN :ids")
+    @Query("UPDATE Application a SET a.status = :status, a.auditComment = :auditComment WHERE a.id IN :ids AND a.isDeleted = 0")
     void batchUpdateStatusAndComment(@Param("ids") List<Integer> ids, @Param("status") Integer status, @Param("auditComment") String auditComment);
 }

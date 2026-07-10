@@ -1,0 +1,41 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "获取报名须知",
+    "version": "1.0.0",
+    "description": "获取当前报名须知内容"
+  },
+  "servers": [
+    { "url": "https://***REMOVED***", "description": "外网生产环境" }
+  ],
+  "paths": {
+    "/api/admin/notice": {
+      "get": {
+        "summary": "获取报名须知",
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "integer" },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "title":      { "type": "string", "description": "须知标题" },
+                        "conditions": { "type": "string", "description": "报名条件" },
+                        "notices":    { "type": "string", "description": "须知内容" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

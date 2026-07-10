@@ -67,6 +67,7 @@ CREATE TABLE `ssc_applications` (
   `apply_time`       DATETIME     NOT NULL                COMMENT '报名时间',
   `round`            INT          NOT NULL DEFAULT 1      COMMENT '报名轮次：1=第一轮，2=第二轮（存报名时确定的值）',
   `source`           VARCHAR(20)  NOT NULL DEFAULT 'student' COMMENT '数据来源：student(学生自报)/admin(管理员导入)/sync(低代码同步)',
+  `is_deleted`       INT          NOT NULL DEFAULT 0      COMMENT '管理员软删除：0=正常，1=已删除（2026-07-10 新增）',
   INDEX `idx_id_card`  (`id_card`),
   INDEX `idx_class_id` (`class_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='报名记录表';

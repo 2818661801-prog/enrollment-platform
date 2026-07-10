@@ -83,6 +83,15 @@ public class Application {
     @Column(name = "round", nullable = false)
     private Integer round = 1;
 
+    /**
+     * 管理员软删除标记（2026-07-10 新增）
+     *   0 = 正常（未删除）
+     *   1 = 已删除
+     * 与 status=2（学生撤回）是两个独立机制，互不干扰
+     */
+    @Column(name = "is_deleted", nullable = false)
+    private Integer isDeleted = 0;
+
     // ==================== 生命周期回调 ====================
 
     @PrePersist
@@ -90,6 +99,7 @@ public class Application {
         if (this.status == null) this.status = 0;       // 默认 0 = 未报名
         if (this.noticeAgreed == null) this.noticeAgreed = 0;
         if (this.applyTime == null) this.applyTime = LocalDateTime.now();
+        if (this.isDeleted == null) this.isDeleted = 0; // 默认 0 = 未删除
     }
 
     // ==================== getter / setter ====================
@@ -138,4 +148,7 @@ public class Application {
 
     public Integer getRound() { return round; }
     public void setRound(Integer round) { this.round = round; }
+
+    public Integer getIsDeleted() { return isDeleted; }
+    public void setIsDeleted(Integer isDeleted) { this.isDeleted = isDeleted; }
 }
