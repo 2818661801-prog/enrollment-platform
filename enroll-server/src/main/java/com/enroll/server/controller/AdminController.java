@@ -29,6 +29,7 @@ import java.util.Map;
  *   GET    /api/admin/classes                   — 班级列表（含已删除）
  *   GET    /api/admin/categories                — 类别列表
  *   GET    /api/admin/notice                    — 报名须知
+ *   GET    /api/admin/classCategory             — 班级-类别关联列表（2026-07-10 新增）
  *
  * 写（POST）：
  *   报名管理：
@@ -247,6 +248,17 @@ public class AdminController {
         sysConfigRepo.save(cfg);
         // log.info("更新报名须知: title={}", body.get("title"));
         return R.ok("保存成功", null);
+    }
+
+    // ==================== 班级-类别关联管理 · 读 ====================
+
+    /**
+     * 获取全部班级-类别关联（给低代码平台同步用）
+     * 返回: [{id, classId, categoryId}, ...]
+     */
+    @GetMapping("/classCategory")
+    public Map<String, Object> listClassCategories() {
+        return R.ok(classCategoryRepo.findAll());
     }
 
     // ==================== 班级-类别关联管理 · 写 ====================
