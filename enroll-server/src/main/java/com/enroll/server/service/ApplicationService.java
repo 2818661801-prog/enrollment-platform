@@ -404,6 +404,7 @@ public class ApplicationService {
                 .auditComment(e.getAuditComment())
                 .classPeriods(null) // 兼容旧字段，报名记录接口不再返回班级轮次 JSON
                 .round(e.getRound())
+                .isDeleted(e.getIsDeleted())
                 .build();
     }
 }

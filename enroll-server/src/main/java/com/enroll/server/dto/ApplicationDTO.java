@@ -20,6 +20,7 @@ public class ApplicationDTO implements Serializable {
     private String auditComment;
     private String classPeriods;  // 班级多轮时间段 JSON
     private Integer round;       // 报名轮次：1=第一轮，2=第二轮（存提交时确定的值）
+    private Integer isDeleted;   // 软删除：0=正常，1=已删除（管理员删除）
 
     public ApplicationDTO() {}
 
@@ -27,7 +28,7 @@ public class ApplicationDTO implements Serializable {
                           String phone, String hasPhysics, String hasEnglish,
                           Integer classId, String className, String appliedCategory,
                           String status, LocalDateTime applyTime, String auditComment,
-                          String classPeriods, Integer round) {
+                          String classPeriods, Integer round, Integer isDeleted) {
         this.id = id;
         this.name = name;
         this.idCard = idCard;
@@ -43,6 +44,7 @@ public class ApplicationDTO implements Serializable {
         this.auditComment = auditComment;
         this.classPeriods = classPeriods;
         this.round = round;
+        this.isDeleted = isDeleted;
     }
 
     // ==================== Getter / Setter ====================
@@ -92,6 +94,9 @@ public class ApplicationDTO implements Serializable {
     public Integer getRound() { return round; }
     public void setRound(Integer round) { this.round = round; }
 
+    public Integer getIsDeleted() { return isDeleted; }
+    public void setIsDeleted(Integer isDeleted) { this.isDeleted = isDeleted; }
+
     // ==================== Builder ====================
 
     public static Builder builder() { return new Builder(); }
@@ -112,6 +117,7 @@ public class ApplicationDTO implements Serializable {
         private String auditComment;
         private String classPeriods;
         private Integer round;
+        private Integer isDeleted;
 
         public Builder id(Integer id) { this.id = id; return this; }
         public Builder name(String name) { this.name = name; return this; }
@@ -127,12 +133,12 @@ public class ApplicationDTO implements Serializable {
         public Builder applyTime(LocalDateTime applyTime) { this.applyTime = applyTime; return this; }
         public Builder auditComment(String auditComment) { this.auditComment = auditComment; return this; }
         public Builder classPeriods(String classPeriods) { this.classPeriods = classPeriods; return this; }
-        public Builder source(String source) { return this; }
         public Builder round(Integer round) { this.round = round; return this; }
+        public Builder isDeleted(Integer isDeleted) { this.isDeleted = isDeleted; return this; }
 
         public ApplicationDTO build() {
             return new ApplicationDTO(id, name, idCard, gender, phone, hasPhysics, hasEnglish,
-                    classId, className, appliedCategory, status, applyTime, auditComment, classPeriods, round);
+                    classId, className, appliedCategory, status, applyTime, auditComment, classPeriods, round, isDeleted);
         }
     }
 }
