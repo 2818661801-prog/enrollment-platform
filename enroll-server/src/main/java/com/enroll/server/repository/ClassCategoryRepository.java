@@ -23,6 +23,11 @@ public interface ClassCategoryRepository extends JpaRepository<ClassCategory, In
     @Query("DELETE FROM ClassCategory cc WHERE cc.classId = :classId")
     void deleteByClassId(@Param("classId") Integer classId);
 
+    /** 全量清空（同步前用 native SQL 避免乐观锁问题） */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(value = "TRUNCATE TABLE ssc_class_category", nativeQuery = true)
+    void truncateAll();
+
     /** 按班级ID查所有类别名称 */
     @Query("SELECT cat.name FROM ClassCategory cc JOIN Category cat ON cat.id = cc.categoryId WHERE cc.classId = :classId")
     List<String> findCategoryNamesByClassId(@Param("classId") Integer classId);

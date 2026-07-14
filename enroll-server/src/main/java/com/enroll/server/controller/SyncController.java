@@ -13,6 +13,8 @@ import com.enroll.server.repository.ClassRoundRepository;
 import com.enroll.server.repository.SysConfigRepository;
 import com.enroll.server.service.ApplicationService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
@@ -47,6 +49,9 @@ public class SyncController {
     private final ApplicationService applicationService;
     private final ObjectMapper objectMapper;
 
+    @PersistenceContext
+    private jakarta.persistence.EntityManager entityManager;
+
     public SyncController(ClassInfoRepository classRepo,
                           ClassRoundRepository roundRepo,
                           ClassCategoryRepository classCatRepo,
@@ -60,6 +65,41 @@ public class SyncController {
         this.sysConfigRepo = sysConfigRepo;
         this.applicationService = applicationService;
         this.objectMapper = new ObjectMapper();
+    }
+
+    // ==================== 内部工具 ====================
+
+    /** 清空表（禁用外键检查后 truncate，避免外键约束阻挡） */
+    private void truncateWithForeignKeyDisabled(String table) {
+        entityManager.createNativeQuery("SET FOREIGN_KEY_CHECKS=0").executeUpdate();
+        entityManager.createNativeQuery("TRUNCATE TABLE " + table).executeUpdate();
+        entityManager.createNativeQuery("SET FOREIGN_KEY_CHECKS=1").executeUpdate();
+    }
+
+    /** 从 item 的 classRounds 字段计算 period 字符串（取第一轮） */
+    @SuppressWarnings("unchecked")
+    private String computePeriod(Map<String, Object> item) {
+        Object roundsObj = item.get("classRounds");
+        if (roundsObj == null) return null;
+        List<Map> rounds = (roundsObj instanceof List) ? (List<Map>) roundsObj : List.of();
+        if (rounds.isEmpty()) return null;
+        Map first = rounds.get(0);
+        Object ps = first.get("periodStart");
+        Object pe = first.get("periodEnd");
+        if (ps == null || pe == null) return null;
+        DateTimeFormatter dtFmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        DateTimeFormatter dFmt = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+        try {
+            String start = LocalDateTime.parse(ps.toString(), dtFmt).format(dtFmt);
+            String end = LocalDateTime.parse(pe.toString(), dtFmt).format(dtFmt);
+            return start + " - " + end;
+        } catch (Exception e) {
+            try {
+                String start = java.time.LocalDate.parse(ps.toString(), dFmt).format(dFmt);
+                String end = java.time.LocalDate.parse(pe.toString(), dFmt).format(dFmt);
+                return start + " - " + end;
+            } catch (Exception ex) { return null; }
+        }
     }
 
     // ==================== 班级同步 ====================
@@ -83,9 +123,9 @@ public class SyncController {
         List<Map> dataList = extractList(body, "data");
 
         // ① 清空（顺序：先中间表，再轮次，最后主表）
-        classCatRepo.deleteAll();
-        roundRepo.deleteAll();
-        classRepo.deleteAll();
+        truncateWithForeignKeyDisabled("ssc_class_category");
+        truncateWithForeignKeyDisabled("ssc_class_rounds");
+        truncateWithForeignKeyDisabled("ssc_classes");
 
         // ② 全量插入
         int inserted = 0;
@@ -96,6 +136,9 @@ public class SyncController {
             String name = (String) item.get("name");
             if (name == null || name.isBlank()) continue;
 
+            // 计算 period（取第一轮的 periodStart - periodEnd）
+            String period = computePeriod(item);
+
             // 插入 class 主表
             ClassInfo cls = new ClassInfo();
             cls.setName(name);
@@ -104,6 +147,7 @@ public class SyncController {
             cls.setIsDeleted(0);
             cls.setEnrolled(0);
             cls.setSource("sync");
+            cls.setPeriod(period);
             ClassInfo saved = classRepo.save(cls);
 
             // 插入轮次（class_rounds）
@@ -172,8 +216,8 @@ public class SyncController {
         List<Map> dataList = extractList(body, "data");
 
         // ① 清空 categories 和 class_category（外键约束先清中间表）
-        classCatRepo.deleteAll();
-        categoryRepo.deleteAll();
+        truncateWithForeignKeyDisabled("ssc_class_category");
+        truncateWithForeignKeyDisabled("ssc_categories");
 
         // ② 全量插入
         int inserted = 0;

@@ -33,4 +33,11 @@ public interface ClassInfoRepository extends JpaRepository<ClassInfo, Integer> {
     @Modifying
     @Query(value = "UPDATE ssc_classes SET enrolled = GREATEST(0, enrolled - 1) WHERE id = :id", nativeQuery = true)
     int decrementEnrolled(Integer id);
+
+    /**
+     * 全量清空（同步前用 native SQL 避免乐观锁问题）
+     */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(value = "TRUNCATE TABLE ssc_classes", nativeQuery = true)
+    void truncateAll();
 }

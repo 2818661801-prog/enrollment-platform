@@ -29,6 +29,13 @@ public interface ClassRoundRepository extends JpaRepository<ClassRound, Integer>
     void deleteByClassId(Integer classId);
 
     /**
+     * 全量清空（同步前用 native SQL 避免乐观锁问题）
+     */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(value = "TRUNCATE TABLE ssc_class_rounds", nativeQuery = true)
+    void truncateAll();
+
+    /**
      * 查某班级当前有效轮次（根据当前时间匹配）
      * @return 当前在报名时间内的那一轮，null 表示当前不在任何报名时间内
      */

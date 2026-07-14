@@ -2,6 +2,8 @@ package com.enroll.server.repository;
 
 import com.enroll.server.entity.Category;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
@@ -14,4 +16,11 @@ public interface CategoryRepository extends JpaRepository<Category, Integer> {
 
     /** 名称唯一约束：是否存在同名记录（排除指定 id） */
     boolean existsByNameAndIdNot(String name, Integer id);
+
+    /**
+     * 全量清空（同步前用 native SQL 避免乐观锁问题）
+     */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(value = "TRUNCATE TABLE ssc_categories", nativeQuery = true)
+    void truncateAll();
 }
