@@ -244,54 +244,33 @@ public class SyncController {
     // ==================== 类别同步 ====================
 
     /**
-     * 全量同步类别
-     * 主键：name
+     * 全量同步类别（先清再插）
      * Body: { "data": [{ "name": "经管类" }] }
      */
     @PostMapping("/categories")
+    @Transactional
     public Map<String, Object> syncCategories(@RequestBody Map<String, Object> body) {
         List<Map> dataList = extractList(body, "data");
-        int inserted = 0, updated = 0, deleted = 0;
 
-        List<Category> allA = categoryRepo.findAll();
-        Map<String, Category> aMap = new HashMap<>();
-        for (Category c : allA) {
-            aMap.put(c.getName(), c);
-        }
-        Set<String> bNames = new HashSet<>();
-        Set<String> toDelete = new HashSet<>(aMap.keySet());
+        // ① 清空 categories 和 class_category（外键约束先清中间表）
+        classCatRepo.deleteAll();
+        categoryRepo.deleteAll();
 
+        // ② 全量插入
+        int inserted = 0;
         for (Map<String, Object> item : dataList) {
             String name = (String) item.get("name");
             if (name == null || name.isBlank()) continue;
             name = name.trim();
-            bNames.add(name);
-            toDelete.remove(name);
-
-            Category existing = aMap.get(name);
-            if (existing == null) {
-                Category cat = new Category();
-                cat.setName(name);
-                categoryRepo.save(cat);
-                inserted++;
-            } else {
-                updated++;
-            }
-        }
-
-        for (String nameToDelete : toDelete) {
-            Category toRemove = aMap.get(nameToDelete);
-            if (toRemove != null) {
-                categoryRepo.delete(toRemove);
-                deleted++;
-            }
+            Category cat = new Category();
+            cat.setName(name);
+            categoryRepo.save(cat);
+            inserted++;
         }
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("total", dataList.size());
         result.put("inserted", inserted);
-        result.put("updated", updated);
-        result.put("deleted", deleted);
         return R.ok("同步成功", result);
     }
 
