@@ -65,76 +65,81 @@ public class SyncController {
     // ==================== 班级同步 ====================
 
     /**
-     * 全量同步班级
-     * 主键：name
-     * Body: { "data": [{ "name": "...", "period": "...", "classRounds": [...], "quota": 50, "isDeleted": 0 }] }
+     * 全量同步班级（先清再插）
+     * Body: {
+     *   "data": [{
+     *     "name": "成电班1",
+     *     "quota": 50,
+     *     "categoryNames": ["理工类"],
+     *     "classRounds": [
+     *       { "roundNum": 1, "periodStart": "2026-09-01 00:00:00", "periodEnd": "2026-09-13 23:59:59" }
+     *     ]
+     *   }]
+     * }
      */
     @Transactional
     @PostMapping("/classes")
     public Map<String, Object> syncClasses(@RequestBody Map<String, Object> body) {
         List<Map> dataList = extractList(body, "data");
-        int inserted = 0, updated = 0, deleted = 0, softDeleted = 0;
 
-        // ① 把a全部数据查出来，用name做key
-        List<ClassInfo> allA = classRepo.findAll();
-        Map<String, ClassInfo> aMap = new HashMap<>();
-        for (ClassInfo c : allA) {
-            aMap.put(c.getName(), c);
-        }
-        Set<String> bNames = new HashSet<>();
-        Set<String> toDelete = new HashSet<>(aMap.keySet()); // 初始：a所有name
+        // ① 清空（顺序：先中间表，再轮次，最后主表）
+        classCatRepo.deleteAll();
+        roundRepo.deleteAll();
+        classRepo.deleteAll();
 
-        // ② 遍历b的数据，upsert到a
+        // ② 全量插入
+        int inserted = 0;
+        DateTimeFormatter dtFmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        DateTimeFormatter dFmt = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+
         for (Map<String, Object> item : dataList) {
             String name = (String) item.get("name");
             if (name == null || name.isBlank()) continue;
-            bNames.add(name);
-            toDelete.remove(name); // b有的，标记为不删除
 
-            ClassInfo existing = aMap.get(name);
-            if (existing == null) {
-                // 新增：先保存 class 拿到真实 ID，再写 rounds + 中间表
-                ClassInfo cls = new ClassInfo();
-                updateClassFromMap(cls, item);
-                cls.setIsDeleted(0);
-                cls.setEnrolled(0);
-                cls.setSource("sync");
-                cls.setPeriod(computePeriod(item));
-                ClassInfo saved = classRepo.save(cls);
-                upsertClassRounds(saved.getId(), item);
-                upsertClassCategories(saved.getId(), item);
-                inserted++;
-            } else {
-                // 更新：先删旧 rounds/中间表，再更新 class，再插新 rounds/中间表
-                upsertClassRounds(existing.getId(), item);
-                upsertClassCategories(existing.getId(), item);
-                updateClassFromMap(existing, item);
-                existing.setPeriod(computePeriod(item));
-                classRepo.save(existing);
-                updated++;
-                if ("1".equals(String.valueOf(item.get("isDeleted")))) {
-                    softDeleted++;
+            // 插入 class 主表
+            ClassInfo cls = new ClassInfo();
+            cls.setName(name);
+            cls.setQuota(item.get("quota") == null ? 0 : (Integer) item.get("quota"));
+            cls.setDescription((String) item.get("description"));
+            cls.setIsDeleted(0);
+            cls.setEnrolled(0);
+            cls.setSource("sync");
+            ClassInfo saved = classRepo.save(cls);
+
+            // 插入轮次（class_rounds）
+            Object roundsObj = item.get("classRounds");
+            if (roundsObj instanceof List) {
+                for (Map<String, Object> r : (List<Map>) roundsObj) {
+                    ClassRound cr = new ClassRound();
+                    cr.setClassId(saved.getId());
+                    cr.setRoundNum(r.get("roundNum") == null ? 1 : (Integer) r.get("roundNum"));
+                    cr.setPeriodStart(parseDt(r.get("periodStart"), dtFmt, dFmt, true));
+                    cr.setPeriodEnd(parseDt(r.get("periodEnd"), dtFmt, dFmt, false));
+                    roundRepo.save(cr);
                 }
             }
-        }
 
-        // ③ a有、b无 → 真正删除（同时删 class_rounds）
-        for (String nameToDelete : toDelete) {
-            ClassInfo toRemove = aMap.get(nameToDelete);
-            if (toRemove != null) {
-                roundRepo.deleteByClassId(toRemove.getId());
-                classCatRepo.deleteByClassId(toRemove.getId());
-                classRepo.delete(toRemove);
-                deleted++;
+            // 插入类别关联（class_category）
+            Object namesObj = item.get("categoryNames");
+            if (namesObj instanceof List) {
+                for (String catName : (List<String>) namesObj) {
+                    if (catName == null || catName.isBlank()) continue;
+                    final String n = catName.trim();
+                    categoryRepo.findByName(n).ifPresent(cat -> {
+                        ClassCategory cc = new ClassCategory();
+                        cc.setClassId(saved.getId());
+                        cc.setCategoryId(cat.getId());
+                        classCatRepo.save(cc);
+                    });
+                }
             }
+
+            inserted++;
         }
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("total", dataList.size());
         result.put("inserted", inserted);
-        result.put("updated", updated);
-        result.put("deleted", deleted);
-        result.put("softDeleted", softDeleted);
         return R.ok("同步成功", result);
     }
 
@@ -230,14 +235,20 @@ public class SyncController {
         }
     }
 
+    /**
+     * 解析日期字符串，支持 ISO 格式（yyyy-MM-dd HH:mm:ss）和纯日期格式（yyyy-MM-dd）
+     * isStart=true：纯日期补 00:00:00
+     * isStart=false：纯日期补 23:59:59
+     */
     private java.time.LocalDateTime parseDt(Object val, DateTimeFormatter dtFmt,
                                              DateTimeFormatter dFmt, boolean isStart) {
         if (val == null) return null;
-        String s = val.toString();
-        try { return java.time.LocalDateTime.parse(s, dtFmt); }
-        catch (Exception e) {
+        String s = val.toString().trim();
+        try {
+            return java.time.LocalDateTime.parse(s, dtFmt);
+        } catch (Exception e) {
             java.time.LocalDate d = java.time.LocalDate.parse(s, dFmt);
-            return isStart ? d.atStartOfDay() : d.atTime(23, 59);
+            return isStart ? d.atStartOfDay() : d.atTime(23, 59, 59);
         }
     }
 
