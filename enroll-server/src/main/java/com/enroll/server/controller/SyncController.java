@@ -144,98 +144,6 @@ public class SyncController {
     }
 
     /**
-     * 从 item 的 classRounds 字段计算 period 字符串（取第一轮）
-     */
-    private String computePeriod(Map<String, Object> item) {
-        Object roundsObj = item.get("classRounds");
-        if (roundsObj == null) return null;
-        List<Map> rounds;
-        if (roundsObj instanceof String) {
-            try {
-                rounds = objectMapper.readValue((String) roundsObj,
-                    new com.fasterxml.jackson.core.type.TypeReference<List<Map>>() {});
-            } catch (Exception e) { return null; }
-        } else if (roundsObj instanceof List) {
-            rounds = (List<Map>) roundsObj;
-        } else { return null; }
-        if (rounds.isEmpty()) return null;
-        Map first = rounds.get(0);
-        Object ps = first.get("periodStart");
-        Object pe = first.get("periodEnd");
-        if (ps == null || pe == null) return null;
-        DateTimeFormatter dtFmt = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm");
-        DateTimeFormatter dFmt = DateTimeFormatter.ofPattern("yyyy/MM/dd");
-        try {
-            String start = LocalDateTime.parse(ps.toString(), dtFmt).format(dtFmt);
-            String end = LocalDateTime.parse(pe.toString(), dtFmt).format(dtFmt);
-            return start + " - " + end;
-        } catch (Exception e) {
-            try {
-                String start = java.time.LocalDate.parse(ps.toString(), dFmt).format(dFmt);
-                String end = java.time.LocalDate.parse(pe.toString(), dFmt).format(dFmt);
-                return start + " - " + end;
-            } catch (Exception ex) { return null; }
-        }
-    }
-
-    /**
-     * 同步轮次：先删旧轮次，再插新轮次
-     */
-    @SuppressWarnings("unchecked")
-    private void upsertClassRounds(Integer classId, Map<String, Object> item) {
-        roundRepo.deleteByClassId(classId);
-        Object roundsObj = item.get("classRounds");
-        if (roundsObj == null) return;
-        List<Map> rounds;
-        if (roundsObj instanceof String) {
-            try {
-                rounds = objectMapper.readValue((String) roundsObj,
-                    new com.fasterxml.jackson.core.type.TypeReference<List<Map>>() {});
-            } catch (Exception e) { return; }
-        } else if (roundsObj instanceof List) {
-            rounds = (List<Map>) roundsObj;
-        } else { return; }
-        DateTimeFormatter dtFmt = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm");
-        DateTimeFormatter dFmt = DateTimeFormatter.ofPattern("yyyy/MM/dd");
-        for (Map<String, Object> r : rounds) {
-            ClassRound cr = new ClassRound();
-            cr.setClassId(classId);
-            cr.setRoundNum((Integer) r.get("roundNum"));
-            cr.setPeriodStart(parseDt(r.get("periodStart"), dtFmt, dFmt, true));
-            cr.setPeriodEnd(parseDt(r.get("periodEnd"), dtFmt, dFmt, false));
-            roundRepo.save(cr);
-        }
-    }
-
-    /**
-     * 同步班级-类别中间表：先删旧关联，再按名称查 id 写新关联
-     */
-    @SuppressWarnings("unchecked")
-    private void upsertClassCategories(Integer classId, Map<String, Object> item) {
-        classCatRepo.deleteByClassId(classId);
-        Object namesObj = item.get("categoryNames");
-        if (namesObj == null) return;
-        List<String> names;
-        if (namesObj instanceof String) {
-            try {
-                names = objectMapper.readValue((String) namesObj, new com.fasterxml.jackson.core.type.TypeReference<List<String>>() {});
-            } catch (Exception e) { return; }
-        } else if (namesObj instanceof List) {
-            names = (List<String>) namesObj;
-        } else { return; }
-        for (String name : names) {
-            if (name == null || name.isBlank()) continue;
-            final String n = name.trim();
-            categoryRepo.findByName(n).ifPresent(cat -> {
-                ClassCategory cc = new ClassCategory();
-                cc.setClassId(classId);
-                cc.setCategoryId(cat.getId());
-                classCatRepo.save(cc);
-            });
-        }
-    }
-
-    /**
      * 解析日期字符串，支持 ISO 格式（yyyy-MM-dd HH:mm:ss）和纯日期格式（yyyy-MM-dd）
      * isStart=true：纯日期补 00:00:00
      * isStart=false：纯日期补 23:59:59
@@ -340,14 +248,4 @@ public class SyncController {
         return List.of();
     }
 
-    /** 把Map里的字段映射到ClassInfo（只更新传来的字段，periods 已废弃由 classRounds 替代） */
-    private void updateClassFromMap(ClassInfo cls, Map<String, Object> map) {
-        if (map.containsKey("name"))        cls.setName((String) map.get("name"));
-        if (map.containsKey("period"))      cls.setPeriod((String) map.get("period"));
-        if (map.containsKey("quota"))       cls.setQuota((Integer) map.get("quota"));
-        if (map.containsKey("description")) cls.setDescription((String) map.get("description"));
-        if (map.containsKey("isDeleted"))  cls.setIsDeleted((Integer) map.get("isDeleted"));
-        if (map.containsKey("source"))      cls.setSource((String) map.get("source"));
-        else cls.setSource("sync"); // 默认 sync
-    }
 }
