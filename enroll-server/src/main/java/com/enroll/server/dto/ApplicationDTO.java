@@ -7,7 +7,8 @@ public class ApplicationDTO implements Serializable {
 
     private Integer id;
     private String name;
-    private String idCard;
+    private String idCard;         // 脱敏身份证
+    private String idCardRaw;      // 完整身份证（新增）
     private String gender;
     private String phone;
     private String hasPhysics;
@@ -21,17 +22,21 @@ public class ApplicationDTO implements Serializable {
     private String classPeriods;  // 班级多轮时间段 JSON
     private Integer round;       // 报名轮次：1=第一轮，2=第二轮（存提交时确定的值）
     private Integer isDeleted;   // 软删除：0=正常，1=已删除（管理员删除）
+    private Integer innerId;     // 内网班级ID（= classes.outer_id，用于跨系统 id 映射，2026-07-15 新增）
+    private Integer enrollmentYear; // 报名年级：26/27，后端自动写入（2026-07-19 新增）
 
     public ApplicationDTO() {}
 
-    public ApplicationDTO(Integer id, String name, String idCard, String gender,
-                          String phone, String hasPhysics, String hasEnglish,
+    public ApplicationDTO(Integer id, String name, String idCard, String idCardRaw,
+                          String gender, String phone, String hasPhysics, String hasEnglish,
                           Integer classId, String className, String appliedCategory,
                           String status, LocalDateTime applyTime, String auditComment,
-                          String classPeriods, Integer round, Integer isDeleted) {
+                          String classPeriods, Integer round, Integer isDeleted, Integer innerId,
+                          Integer enrollmentYear) {
         this.id = id;
         this.name = name;
         this.idCard = idCard;
+        this.idCardRaw = idCardRaw;
         this.gender = gender;
         this.phone = phone;
         this.hasPhysics = hasPhysics;
@@ -45,6 +50,8 @@ public class ApplicationDTO implements Serializable {
         this.classPeriods = classPeriods;
         this.round = round;
         this.isDeleted = isDeleted;
+        this.innerId = innerId;
+        this.enrollmentYear = enrollmentYear;
     }
 
     // ==================== Getter / Setter ====================
@@ -57,6 +64,9 @@ public class ApplicationDTO implements Serializable {
 
     public String getIdCard() { return idCard; }
     public void setIdCard(String idCard) { this.idCard = idCard; }
+
+    public String getIdCardRaw() { return idCardRaw; }
+    public void setIdCardRaw(String idCardRaw) { this.idCardRaw = idCardRaw; }
 
     public String getGender() { return gender; }
     public void setGender(String gender) { this.gender = gender; }
@@ -97,6 +107,12 @@ public class ApplicationDTO implements Serializable {
     public Integer getIsDeleted() { return isDeleted; }
     public void setIsDeleted(Integer isDeleted) { this.isDeleted = isDeleted; }
 
+    public Integer getInnerId() { return innerId; }
+    public void setInnerId(Integer innerId) { this.innerId = innerId; }
+
+    public Integer getEnrollmentYear() { return enrollmentYear; }
+    public void setEnrollmentYear(Integer enrollmentYear) { this.enrollmentYear = enrollmentYear; }
+
     // ==================== Builder ====================
 
     public static Builder builder() { return new Builder(); }
@@ -105,6 +121,7 @@ public class ApplicationDTO implements Serializable {
         private Integer id;
         private String name;
         private String idCard;
+        private String idCardRaw;
         private String gender;
         private String phone;
         private String hasPhysics;
@@ -118,10 +135,13 @@ public class ApplicationDTO implements Serializable {
         private String classPeriods;
         private Integer round;
         private Integer isDeleted;
+        private Integer innerId;
+        private Integer enrollmentYear;
 
         public Builder id(Integer id) { this.id = id; return this; }
         public Builder name(String name) { this.name = name; return this; }
         public Builder idCard(String idCard) { this.idCard = idCard; return this; }
+        public Builder idCardRaw(String idCardRaw) { this.idCardRaw = idCardRaw; return this; }
         public Builder gender(String gender) { this.gender = gender; return this; }
         public Builder phone(String phone) { this.phone = phone; return this; }
         public Builder hasPhysics(String hasPhysics) { this.hasPhysics = hasPhysics; return this; }
@@ -135,10 +155,12 @@ public class ApplicationDTO implements Serializable {
         public Builder classPeriods(String classPeriods) { this.classPeriods = classPeriods; return this; }
         public Builder round(Integer round) { this.round = round; return this; }
         public Builder isDeleted(Integer isDeleted) { this.isDeleted = isDeleted; return this; }
+        public Builder innerId(Integer val) { this.innerId = val; return this; }
+        public Builder enrollmentYear(Integer val) { this.enrollmentYear = val; return this; }
 
         public ApplicationDTO build() {
-            return new ApplicationDTO(id, name, idCard, gender, phone, hasPhysics, hasEnglish,
-                    classId, className, appliedCategory, status, applyTime, auditComment, classPeriods, round, isDeleted);
+            return new ApplicationDTO(id, name, idCard, idCardRaw, gender, phone, hasPhysics, hasEnglish,
+                    classId, className, appliedCategory, status, applyTime, auditComment, classPeriods, round, isDeleted, innerId, enrollmentYear);
         }
     }
 }

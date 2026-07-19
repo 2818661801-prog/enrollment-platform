@@ -189,7 +189,7 @@
           <!-- ===== 班级时间提示 ===== -->
           <el-alert
             v-if="selectedClass"
-            :title="`该班报名时间：${selectedClass.period}`"
+            :title="`该班报名时间：${route.query.period || selectedClass.period}`"
             type="info"
             show-icon
             :closable="false"

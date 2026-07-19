@@ -92,6 +92,21 @@ public class Application {
     @Column(name = "is_deleted", nullable = false)
     private Integer isDeleted = 0;
 
+    /**
+     * 内网报名记录ID（2026-07-15 新增，用于跨系统 id 映射）
+     * 外网收到内网 sync 数据后，将内网的 application id 存到此字段
+     */
+    @Column(name = "outer_id")
+    private Integer outerId;
+
+    /**
+     * 报名年级（2026-07-19 新增）
+     * 2026 年报名存 26，2027 年报名存 27
+     * 后端自动从当前年份计算写入，无需前端传参
+     */
+    @Column(name = "enrollment_year", columnDefinition = "INT DEFAULT NULL COMMENT '报名年级：26=2026年，27=2027年，后端自动写入'")
+    private Integer enrollmentYear;
+
     // ==================== 生命周期回调 ====================
 
     @PrePersist
@@ -151,4 +166,10 @@ public class Application {
 
     public Integer getIsDeleted() { return isDeleted; }
     public void setIsDeleted(Integer isDeleted) { this.isDeleted = isDeleted; }
+
+    public Integer getOuterId() { return outerId; }
+    public void setOuterId(Integer outerId) { this.outerId = outerId; }
+
+    public Integer getEnrollmentYear() { return enrollmentYear; }
+    public void setEnrollmentYear(Integer enrollmentYear) { this.enrollmentYear = enrollmentYear; }
 }

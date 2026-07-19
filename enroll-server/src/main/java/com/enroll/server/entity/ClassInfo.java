@@ -44,6 +44,13 @@ public class ClassInfo {
     @Column(name = "source", nullable = false, length = 20)
     private String source = "admin";  // 默认 admin（保守起见）
 
+    /**
+     * 内网班级ID（2026-07-15 新增，用于跨系统 id 映射）
+     * 外网收到内网 sync 数据后，将内网的 class id 存到此字段
+     */
+    @Column(name = "outer_id")
+    private Integer outerId;
+
     // ==================== getter / setter ====================
 
     public Integer getId() { return id; }
@@ -70,4 +77,7 @@ public class ClassInfo {
 
     public String getSource() { return source; }
     public void setSource(String source) { this.source = source; }
+
+    public Integer getOuterId() { return outerId; }
+    public void setOuterId(Integer outerId) { this.outerId = outerId; }
 }

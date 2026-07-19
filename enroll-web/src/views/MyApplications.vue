@@ -1,13 +1,16 @@
 <!--
-  MyApplications.vue · 我的报名页
-  两种模式：
-    1. 已登录（student_token）：自动调用 /me 展示报名记录
-    2. 未登录：显示登录提示，点击跳转 StudentLogin
-  支持查看/撤回/修改报名
+  MyApplications.vue · 我的报名页（卡片式纵向布局 · 2026-07-19）
+  设计原则（来自 ui-ux-pro-max skill）：
+  - 去横向滚动条：不用 el-table，改用纵向卡片流
+  - 信息层次清晰：姓名/班级/状态/时间 分区展示
+  - 状态标签彩色突出：审核中=绿，已录取=黄，已撤回=灰，未录取=红
+  - 移动端单列，PC 端最多 2 列
+  - 退出登录在卡片头部显眼位置
 -->
 <template>
   <div class="myapps-page">
     <div class="myapps-body">
+      <!-- 返回按钮 -->
       <el-button text class="back-btn" @click="goBack">
         <el-icon><ArrowLeft /></el-icon> 返回
       </el-button>
@@ -30,65 +33,76 @@
         <p>加载中...</p>
       </div>
 
-      <!-- 已登录：报名记录 -->
-      <el-card v-else-if="records.length > 0" class="result-card">
-        <template #header>
-          <div class="result-header">
-            <span>我的报名（共 {{ records.length }} 条）</span>
-            <el-button text type="info" size="small" @click="onLogout" v-if="isLoggedIn">退出登录</el-button>
-          </div>
-        </template>
-        <el-table :data="records" border stripe>
-          <el-table-column prop="name" label="姓名" width="80" />
-          <el-table-column prop="className" label="申报班级" min-width="200" show-overflow-tooltip />
-          <el-table-column label="轮次" width="80">
-            <template #default="{ row }">
-              <el-tag size="small">第{{ row.round }}轮</el-tag>
-            </template>
-          </el-table-column>
-          <el-table-column prop="idCard" label="身份证号" width="160" />
-          <el-table-column prop="status" label="状态" width="90">
-            <template #default="{ row }">
-              <el-tag v-if="row.status==='1'" type="success" size="small">审核中</el-tag>
-              <el-tag v-else-if="row.status==='2'" type="info" size="small">已撤回</el-tag>
-              <el-tag v-else-if="row.status==='3'" type="warning" size="small">已录取</el-tag>
-              <el-tag v-else-if="row.status==='4'" type="danger" size="small">未录取</el-tag>
-              <el-tag v-else type="info" size="small">未报名</el-tag>
-            </template>
-          </el-table-column>
-          <el-table-column label="审核意见" min-width="160">
-            <template #default="{ row }">
-              <span v-if="row.status === '4'">{{ row.auditComment || '不符合报名条件' }}</span>
-              <span v-else-if="row.auditComment">{{ row.auditComment }}</span>
-              <span v-else>-</span>
-            </template>
-          </el-table-column>
-          <el-table-column prop="applyTime" label="报名时间" width="160">
-            <template #default="{ row }">
-              {{ row.applyTime ? row.applyTime.replace('T', ' ') : '-' }}
-            </template>
-          </el-table-column>
-          <el-table-column label="操作" width="150">
-            <template #default="{ row }">
-              <el-button
-                v-if="row.status === '1' || row.status === '4'"
-                text type="primary" size="small"
-                @click="onEdit(row)"
-              >
-                修改
-              </el-button>
-              <el-button
-                v-if="row.status === '1' || row.status === '4'"
-                text type="danger" size="small"
-                @click="onWithdraw(row)"
-              >
-                撤回
-              </el-button>
-            </template>
-          </el-table-column>
-        </el-table>
-      </el-card>
+      <!-- 已登录：报名记录卡片列表 -->
+      <div v-else-if="records.length > 0" class="records-section">
+        <!-- 顶部：标题 + 退出登录 -->
+        <div class="records-header">
+          <span class="records-count">我的报名（共 {{ records.length }} 条）</span>
+          <el-button text type="danger" size="small" @click="onLogout">
+            <el-icon><SwitchButton /></el-icon> 退出登录
+          </el-button>
+        </div>
 
+        <!-- 卡片网格 -->
+        <div class="record-cards">
+          <div
+            v-for="record in records"
+            :key="record.id"
+            class="record-card"
+            :class="`status-${record.status}`"
+          >
+            <!-- 卡片顶部：姓名 + 状态标签 -->
+            <div class="card-top">
+              <div class="card-person">
+                <span class="person-name">{{ record.name }}</span>
+                <el-tag
+                  size="small"
+                  :type="statusTagType(record.status)"
+                  class="status-tag"
+                >
+                  {{ statusLabel(record.status) }}
+                </el-tag>
+              </div>
+              <div class="card-actions">
+                <el-button
+                  v-if="record.status === '1' || record.status === '4'"
+                  text type="primary" size="small"
+                  @click="onEdit(record)"
+                >修改</el-button>
+                <el-button
+                  v-if="record.status === '1' || record.status === '4'"
+                  text type="danger" size="small"
+                  @click="onWithdraw(record)"
+                >撤回</el-button>
+              </div>
+            </div>
+
+            <!-- 卡片中部：班级信息 -->
+            <div class="card-info">
+              <div class="info-row">
+                <span class="info-label">申报班级</span>
+                <span class="info-value">{{ record.className || '-' }}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">报名轮次</span>
+                <span class="info-value">
+                  <el-tag size="small" type="warning" class="round-tag">第{{ record.round }}轮</el-tag>
+                </span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">报名时间</span>
+                <span class="info-value">{{ formatTime(record.applyTime) }}</span>
+              </div>
+              <div v-if="record.auditComment" class="info-row">
+                <span class="info-label">审核意见</span>
+                <span class="info-value" :class="record.status === '3' ? 'audit-comment-pass' : record.status === '4' ? 'audit-comment-reject' : ''">{{ record.auditComment }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 无记录 -->
       <el-empty v-else description="暂无报名记录" />
 
       <!-- 修改弹窗 -->
@@ -127,7 +141,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { ArrowLeft, User, Loading } from '@element-plus/icons-vue'
+import { ArrowLeft, User, Loading, SwitchButton } from '@element-plus/icons-vue'
 import { withdrawApplicationAPI, updateApplicationAPI } from '../utils/api.js'
 import AppFooter from '../components/AppFooter.vue'
 
@@ -150,12 +164,20 @@ function goBack() { router.push('/home') }
 function goLogin() { router.push('/student-login') }
 
 function onLogout() {
-  localStorage.removeItem('student_token')
-  localStorage.removeItem('student_phone')
-  isLoggedIn.value = false
-  records.value = []
-  ElMessage.success('已退出登录')
-  router.push('/student-login')
+  ElMessageBox.confirm('确定退出登录吗？', '提示', {
+    confirmButtonText: '确定',
+    cancelButtonText: '取消',
+    type: 'warning',
+    alignCenter: true,
+    roundButton: true,
+  }).then(() => {
+    localStorage.removeItem('student_token')
+    localStorage.removeItem('student_phone')
+    isLoggedIn.value = false
+    records.value = []
+    ElMessage.success('已退出登录')
+    router.push('/student-login')
+  }).catch(() => {})
 }
 
 async function fetchMyRecords() {
@@ -225,13 +247,50 @@ async function onWithdraw(row) {
   } catch {}
 }
 
+// 状态标签颜色
+function statusTagType(status) {
+  switch (status) {
+    case '1': return 'success'   // 审核中 → 绿
+    case '2': return 'info'      // 已撤回 → 灰
+    case '3': return 'warning'   // 已录取 → 黄
+    case '4': return 'danger'    // 未录取 → 红
+    default:  return 'info'
+  }
+}
+
+// 状态文字
+function statusLabel(status) {
+  switch (status) {
+    case '1': return '审核中'
+    case '2': return '已撤回'
+    case '3': return '已录取'
+    case '4': return '未录取'
+    default:  return '未知'
+  }
+}
+
+// 格式化时间
+function formatTime(applyTime) {
+  if (!applyTime) return '-'
+  return applyTime.replace('T', ' ')
+}
+
 onMounted(fetchMyRecords)
 </script>
 
 <style scoped>
 .myapps-page { min-height: 100vh; display: flex; flex-direction: column; }
-.myapps-body { max-width: 800px; margin: 24px auto; padding: 0 20px; flex: 1; width: 100%; box-sizing: border-box; }
+.myapps-body {
+  max-width: 900px;
+  margin: 24px auto;
+  padding: 0 20px;
+  flex: 1;
+  width: 100%;
+  box-sizing: border-box;
+}
 .back-btn { margin-bottom: 12px; font-size: 14px; color: var(--text-secondary); }
+
+/* 登录卡片 */
 .login-card { margin-bottom: 20px; }
 .login-tip {
   display: flex;
@@ -242,6 +301,8 @@ onMounted(fetchMyRecords)
 .login-tip-text { flex: 1; }
 .login-tip-title { margin: 0 0 4px; font-size: 15px; font-weight: 600; color: #333; }
 .login-tip-desc { margin: 0; font-size: 13px; color: #999; }
+
+/* 加载 */
 .loading-wrap {
   display: flex;
   flex-direction: column;
@@ -250,21 +311,143 @@ onMounted(fetchMyRecords)
   padding: 60px 0;
   color: #999;
 }
-.result-card { margin-bottom: 20px; }
-.result-card :deep(.el-card__header) { font-weight: 600; }
-.result-card :deep(.el-card__body) {
+
+/* 记录区域头部 */
+.records-section { margin-bottom: 20px; }
+.records-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+.records-count {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* 卡片网格 */
+.record-cards {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+/* 单张卡片 */
+.record-card {
+  background: #fff;
+  border: 1px solid #e8ecf2;
+  border-radius: 10px;
+  padding: 16px;
   display: flex;
   flex-direction: column;
-  align-items: center;   /* 表格水平居中 */
-  justify-content: center;
+  gap: 12px;
+  transition: box-shadow 0.2s, border-color 0.2s;
 }
-.result-header { display: flex; justify-content: space-between; align-items: center; }
+.record-card:hover {
+  border-color: #337ffe;
+  box-shadow: 0 4px 12px rgba(51, 126, 255, 0.1);
+}
+
+/* 状态色条 */
+.record-card::before {
+  content: '';
+  display: block;
+  height: 3px;
+  border-radius: 3px 3px 0 0;
+  margin: -16px -16px 0 -16px;
+}
+.status-1::before { background: #22c55e; }  /* 审核中-绿 */
+.status-2::before { background: #94a3b8; }  /* 已撤回-灰 */
+.status-3::before { background: #f59e0b; }  /* 已录取-黄 */
+.status-4::before { background: #ef4444; }  /* 未录取-红 */
+
+/* 卡片顶部：姓名+操作 */
+.card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+.card-person {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+.person-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.status-tag { flex-shrink: 0; }
+.card-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+/* 卡片中部：信息行 */
+.card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 8px;
+  border-top: 1px solid #f1f5f9;
+}
+.info-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13px;
+}
+.info-label {
+  color: #94a3b8;
+  flex-shrink: 0;
+  width: 68px;
+  line-height: 1.5;
+}
+.info-value {
+  color: #334155;
+  font-weight: 500;
+  line-height: 1.5;
+  flex: 1;
+  min-width: 0;
+}
+.audit-comment-pass   { color: #16a34a; }   /* 已录取-绿色 */
+.audit-comment-reject { color: #ef4444; }   /* 未录取-红色 */
+
+/* 轮次标签醒目样式 */
+.round-tag {
+  font-weight: 700 !important;
+  font-size: 12px !important;
+  border-color: #f59e0b !important;
+  background: #fef3c7 !important;
+  color: #b45309 !important;
+}
+
+/* ===== 移动端适配 ===== */
 @media (max-width: 768px) {
-  .myapps-body { margin: 12px auto; padding: 0 8px; }
-  .login-tip { flex-direction: column; text-align: center; }
-  /* 移动端表格不可横向滑动：列少时自动适应，有溢出则截断 */
-  .result-card :deep(.el-table) { overflow-x: hidden; }
-  .result-card :deep(.el-table__body-wrapper) { overflow-x: hidden; }
-  .result-card :deep(.el-table__body) { overflow-x: hidden; }
+  .myapps-body { margin: 12px auto; padding: 0 12px; }
+  .record-cards { grid-template-columns: 1fr; gap: 12px; }
+  .record-card { padding: 14px; }
+  .info-label { width: 60px; font-size: 12px; }
+  .info-value { font-size: 12px; }
+  .person-name { font-size: 15px; }
+  .card-actions { gap: 2px; }
+}
+
+/* 退出登录弹窗移动端适配 */
+@media (max-width: 768px) {
+  .el-message-box {
+    width: 85vw !important;
+    max-width: 320px !important;
+  }
+  .el-message-box__message { font-size: 14px !important; line-height: 1.5 !important; }
+  .el-message-box__title { font-size: 16px !important; }
 }
 </style>

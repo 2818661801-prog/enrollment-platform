@@ -89,7 +89,8 @@ GET /api/admin/notice
       "quota": 50,
       "description": "电子科技大学特色班",
       "categoryNames": ["成电班"],
-      "isDeleted": 0
+      "isDeleted": 0,
+      "innerId": 9
     }
   ]
 }
@@ -124,6 +125,7 @@ GET /api/admin/notice
 | description | string | 否 | 班级描述 |
 | categoryNames | array | 否 | 班级类别标签（同步时按名称写入中间表 ssc_class_category）|
 | isDeleted | int | 否 | 0=正常，1=软删除 |
+| innerId | int | 否 | 内网班级ID（外网收到后存到 outer_id 字段，用于跨系统 id 映射）|
 
 **⚠️ periods 字段已废弃**（v2.2 起由 classRounds 数组替代）
 
@@ -178,7 +180,8 @@ GET /api/admin/notice
       "appliedCategory": "理工类",
       "status": 1,
       "noticeAgreed": 1,
-      "round": 1
+      "round": 1,
+      "enrollmentYear": 26
     }
   ]
 }
@@ -213,6 +216,7 @@ GET /api/admin/notice
 | status | int | 否 | 状态（0未报/1已报/2撤回/3录取/4未录取）|
 | noticeAgreed | int | 否 | 是否同意须知（0否/1是）|
 | round | int | 否 | 报名轮次（1/2）|
+| enrollmentYear | int | 否 | 报名年级（26=2026年，27=2027年），后端自动写入，也可由同步接口传入 |
 
 ---
 
@@ -349,6 +353,7 @@ GET /api/admin/notice
 | apply_time | datetime | 报名时间 |
 | round | int | 轮次 |
 | source | string | 数据来源 |
+| enrollment_year | int | 报名年级（26=2026年，27=2027年），后端自动写入，前端/同步接口不需传参 |
 
 ### 系统配置（sys_config）
 

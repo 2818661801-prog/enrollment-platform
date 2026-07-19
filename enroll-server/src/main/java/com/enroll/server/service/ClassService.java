@@ -138,6 +138,7 @@ public class ClassService {
             List<ClassRound> savedRounds = saveRounds(id, roundsObj);
             if (!savedRounds.isEmpty()) {
                 cls.setPeriod(formatPeriod(savedRounds.get(0)));
+                roundRepo.saveAll(savedRounds);
             }
         }
 

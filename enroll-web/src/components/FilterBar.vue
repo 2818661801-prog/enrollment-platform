@@ -155,7 +155,7 @@
         <img :src="lockIcon" alt="" class="user-icon" />
         <span>登录</span>
       </button>
-      <button v-if="isLoggedIn" type="button" class="user-btn" style="flex: 1; justify-content: center" @click="onLogout">
+      <button v-if="isLoggedIn" type="button" class="user-btn logout-btn" style="flex: 1; justify-content: center" @click="onLogout">
         <img :src="lockIcon" alt="" class="user-icon" />
         <span>退出</span>
       </button>
@@ -171,7 +171,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import lockIcon from '../assets/images/lock.svg'
 import folderIcon from '../assets/images/folder.svg'
 import { getClassTimeStatus, formatTime } from '../utils/data.js'
@@ -283,10 +283,19 @@ function goMyApps() {
 }
 
 function onLogout() {
-  localStorage.removeItem('student_token')
-  localStorage.removeItem('student_phone')
-  emit('logout')
-  // 提示由 HomePage 的 onLogout 统一处理，避免重复提示
+  ElMessageBox.confirm('确定退出登录吗？', '提示', {
+    confirmButtonText: '确定',
+    cancelButtonText: '取消',
+    type: 'warning',
+    alignCenter: true,
+    roundButton: true,
+  }).then(() => {
+    localStorage.removeItem('student_token')
+    localStorage.removeItem('student_phone')
+    emit('logout')
+  }).catch(() => {
+    // 取消，什么都不做
+  })
 }
 
 // 点击外部不关闭（mousedown 拦截，不拦截 click）
@@ -558,6 +567,24 @@ onUnmounted(() => {
     font-size: 12px;
     padding: 0 4px;
     height: 34px;
+  }
+  /* 移动端退出按钮：红色醒目 */
+  .mobile-actions-row .logout-btn {
+    color: #f56c6c !important;
+  }
+}
+/* ===== 退出登录弹窗移动端适配 ===== */
+@media (max-width: 768px) {
+  .el-message-box {
+    width: 85vw !important;
+    max-width: 320px !important;
+  }
+  .el-message-box__message {
+    font-size: 14px !important;
+    line-height: 1.5 !important;
+  }
+  .el-message-box__title {
+    font-size: 16px !important;
   }
 }
 </style>

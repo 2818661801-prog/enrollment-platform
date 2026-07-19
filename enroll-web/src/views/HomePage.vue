@@ -316,7 +316,16 @@ const flatCards = computed(() => {
       return s === selectedTimeStatus.value
     })
   }
-  return result
+  // 按报名开始时间升序（最早在前）
+  return result.sort((a, b) => {
+    try {
+      const aStart = parsePeriod(a._period).start.getTime()
+      const bStart = parsePeriod(b._period).start.getTime()
+      return aStart - bStart
+    } catch {
+      return 0
+    }
+  })
 })
 
 /**

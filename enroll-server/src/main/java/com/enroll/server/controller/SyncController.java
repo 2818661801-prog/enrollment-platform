@@ -133,6 +133,10 @@ public class SyncController {
 
             // 计算 period（取第一轮的 periodStart - periodEnd）
             String period = computePeriod(item);
+            // 防御：如果 period 为空，给默认值（2026-07-15）
+            if (period == null || period.isBlank()) {
+                period = "待定";
+            }
 
             // 插入 class 主表
             ClassInfo cls = new ClassInfo();
@@ -143,6 +147,11 @@ public class SyncController {
             cls.setEnrolled(0);
             cls.setSource("sync");
             cls.setPeriod(period);
+            // 存内网传过来的 innerId 到 outer_id（用于跨系统 id 映射，2026-07-15）
+            Object innerIdVal = item.get("innerId");
+            if (innerIdVal != null) {
+                cls.setOuterId((Integer) innerIdVal);
+            }
             ClassInfo saved = classRepo.save(cls);
 
             // 插入轮次（class_rounds）

@@ -1,9 +1,9 @@
 -- ============================================================
--- 特色班报名系统 · 初始化 SQL（全新建表）
--- 执行：直接全部跑一遍即可
--- MySQL 8.0+
+-- 特色班报名系统 · 内网初始化 SQL（低代码平台用）
 --
--- 注意：初始数据为最小参考集（7个班），生产环境请按需调整
+-- 与外网 INIT.sql 的区别：
+--   - ssc_class_rounds.period_start/end 用 VARCHAR(50) 存格式化字符串
+--   - 避免 DateTime 转换坑（坑37）
 -- ============================================================
 
 -- ---------- 0. categories 表（类别字典）----------
@@ -22,7 +22,7 @@ CREATE TABLE `ssc_classes` (
   `description` TEXT                               COMMENT '班级说明',
   `is_deleted`  INT          NOT NULL                COMMENT '软删除：0=正常，1=已删除',
   `source`      VARCHAR(20)  NOT NULL DEFAULT 'admin' COMMENT '数据来源：admin(管理员建)/sync(低代码同步)/student(预留)',
-  `outer_id`    INT          DEFAULT NULL            COMMENT '内网班级ID（sync后回填，用于跨系统 id 映射）'
+  `outer_id`    INT          DEFAULT NULL            COMMENT '外网班级ID（sync后回填，用于跨系统 id 映射）'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='特色班表';
 
 -- ---------- 2. class_category 中间表（班级-类别 N:N 关联）----------
@@ -36,17 +36,15 @@ CREATE TABLE `ssc_class_category` (
   KEY `idx_class_id`    (`class_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='班级-类别中间表';
 
--- ---------- 3. class_rounds 表（班级轮次）----------
+-- ---------- 3. class_rounds 表（班级轮次）—— VARCHAR 版本 ----------
 CREATE TABLE `ssc_class_rounds` (
-  `id`           INT      PRIMARY KEY AUTO_INCREMENT,
-  `class_id`     INT      NOT NULL                       COMMENT '班级ID，关联 ssc_classes.id',
-  `round_num`    INT      NOT NULL                       COMMENT '轮次编号（1/2/3...）',
-  `period_start` DATETIME NOT NULL                       COMMENT '报名开始时间',
-  `period_end`   DATETIME NOT NULL                       COMMENT '报名结束时间',
-  `created_at`   DATETIME DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE KEY `uk_class_round`    (`class_id`, `round_num`),
-  KEY `idx_period_start` (`period_start`),
-  KEY `idx_period_end`   (`period_end`),
+  `id`           INT         PRIMARY KEY AUTO_INCREMENT,
+  `class_id`     INT         NOT NULL                       COMMENT '班级ID，关联 ssc_classes.id',
+  `round_num`    INT         NOT NULL                       COMMENT '轮次编号（1/2/3...）',
+  `period_start` VARCHAR(50) NOT NULL                       COMMENT '报名开始时间（格式：yyyy-MM-dd HH:mm:ss）',
+  `period_end`   VARCHAR(50) NOT NULL                       COMMENT '报名结束时间（格式：yyyy-MM-dd HH:mm:ss）',
+  `created_at`   DATETIME    DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY `uk_class_round` (`class_id`, `round_num`),
   KEY `idx_class_id`     (`class_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='班级轮次表';
 
@@ -66,14 +64,12 @@ CREATE TABLE `ssc_applications` (
   `notice_agreed`    INT          NOT NULL                COMMENT '是否同意报名须知（0=否，1=是）',
   `audit_comment`    VARCHAR(500) DEFAULT NULL            COMMENT '审核意见（管理员填写）',
   `apply_time`       DATETIME     NOT NULL                COMMENT '报名时间',
-  `round`            INT          NOT NULL DEFAULT 1      COMMENT '报名轮次：1=第一轮，2=第二轮（存报名时确定的值）',
-  `source`           VARCHAR(20)  NOT NULL DEFAULT 'student' COMMENT '数据来源：student(学生自报)/admin(管理员导入)/sync(低代码同步)',
-  `is_deleted`       INT          NOT NULL DEFAULT 0      COMMENT '管理员软删除：0=正常，1=已删除（2026-07-10 新增）',
-  `outer_id`         INT          DEFAULT NULL            COMMENT '内网报名记录ID（sync后回填，用于跨系统 id 映射）',
-  `enrollment_year`  INT          DEFAULT NULL            COMMENT '报名年级：26=2026年，27=2027年，后端自动写入（2026-07-19 新增）',
+  `round`            INT          NOT NULL DEFAULT 1      COMMENT '报名轮次：1=第一轮，2=第二轮',
+  `source`           VARCHAR(20)  NOT NULL DEFAULT 'student' COMMENT '数据来源：student/admin/sync',
+  `is_deleted`       INT          NOT NULL DEFAULT 0      COMMENT '管理员软删除：0=正常，1=已删除',
+  `outer_id`         INT          DEFAULT NULL            COMMENT '外网报名记录ID（sync后回填，用于跨系统 id 映射）',
   INDEX `idx_id_card`  (`id_card`),
-  INDEX `idx_class_id` (`class_id`),
-  INDEX `idx_enrollment_year` (`enrollment_year`)
+  INDEX `idx_class_id` (`class_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='报名记录表';
 
 -- ---------- 5. sys_config 表（系统配置）----------
@@ -95,51 +91,44 @@ INSERT INTO `ssc_categories` (`id`, `name`) VALUES
 INSERT INTO `ssc_classes` (`id`, `name`, `period`, `quota`, `enrolled`, `is_deleted`, `source`) VALUES
 (1, '2026级拔尖创新人才实验班（杭电班）',
  '2026/09/01 08:00 - 2026/09/13 23:59',
- 60, 0, 0, 'admin'),
+ -1, 0, 0, 'admin'),
 (2, '2026级计算机科学与技术（成电联合培养·计算机学院成电班）',
  '2026/09/01 08:00 - 2026/09/13 23:59',
- 45, 0, 0, 'admin'),
+ -1, 0, 0, 'admin'),
 (3, '2026级电子信息工程（成电联合培养·电子工程学院成电班）',
  '2026/09/01 08:00 - 2026/09/13 23:59',
- 35, 0, 0, 'admin'),
+ -1, 0, 0, 'admin'),
 (4, '2026级会计学ACCA班',
  '2026/08/15 08:00 - 2026/09/16 23:59',
- 50, 0, 0, 'admin'),
+ -1, 0, 0, 'admin'),
 (5, '2026级金融学CFA班',
  '2026/08/15 08:00 - 2026/09/16 23:59',
- 50, 0, 0, 'admin'),
+ -1, 0, 0, 'admin'),
 (6, '2026级会计学（智能财务）特色方向班',
  '2026/08/15 08:00 - 2026/08/25 23:59',
- 39, 0, 0, 'admin'),
+ -1, 0, 0, 'admin'),
 (7, '2026级湖畔实验班（计算机）',
  '2026/08/05 08:00 - 2026/08/15 23:59',
- 30, 0, 0, 'admin');
+ -1, 0, 0, 'admin');
 
 -- ---------- 8. 初始数据：班级-类别中间表 ----------
--- 班1（拔尖创新人才实验班）属于经管类和理工类，其他班暂无类别
 INSERT INTO `ssc_class_category` (`class_id`, `category_id`) VALUES
-(1, 1),   -- 班1：经管类
-(1, 2);   -- 班1：理工类
+(1, 1),
+(1, 2);
 
--- ---------- 9. 初始数据：班级轮次 ----------
--- 成电班（id=2,3）有两轮，其他班只有一轮
+-- ---------- 9. 初始数据：班级轮次（VARCHAR 格式）----------
 INSERT INTO `ssc_class_rounds` (`class_id`, `round_num`, `period_start`, `period_end`) VALUES
--- 班1：单轮
 (1, 1, '2026-09-01 08:00:00', '2026-09-13 23:59:00'),
--- 班2：两轮
 (2, 1, '2026-09-01 08:00:00', '2026-09-13 23:59:00'),
 (2, 2, '2026-09-15 08:00:00', '2026-09-16 23:59:00'),
--- 班3：两轮
 (3, 1, '2026-09-01 08:00:00', '2026-09-13 23:59:00'),
 (3, 2, '2026-09-15 08:00:00', '2026-09-16 23:59:00'),
--- 班4-7：单轮
 (4, 1, '2026-08-15 08:00:00', '2026-09-16 23:59:00'),
 (5, 1, '2026-08-15 08:00:00', '2026-09-16 23:59:00'),
 (6, 1, '2026-08-15 08:00:00', '2026-08-25 23:59:00'),
 (7, 1, '2026-08-05 08:00:00', '2026-08-15 23:59:00');
 
 -- ---------- 10. 初始数据：sys_config（报名须知）----------
--- conditions 和 notices 使用 \n 换行符分隔
 INSERT INTO `ssc_sys_config` (`id`, `title`, `conditions`, `notices`, `updated_by`) VALUES
 (1,
  '2026年特色班报名须知',

@@ -73,11 +73,6 @@
       <span class="counter-sep"> / </span>
       <span>{{ String(slideCount).padStart(2, '0') }}</span>
     </div>
-
-    <!-- 进度条 -->
-    <div class="progress-bar">
-      <div class="progress-fill" :style="{ width: `${progress}%` }" />
-    </div>
   </div>
 </template>
 
@@ -165,14 +160,11 @@ const slides = computed(() => [
 
 const slideCount = computed(() => slides.value.length)
 const current = ref(0)            // 当前 slide 索引
-const progress = ref(0)           // 进度条 0~100
 const isPaused = ref(false)       // hover 暂停标记
-const AUTO_INTERVAL = 4500        // 自动播放间隔（ms）
-const AUTO_TICK = 50              // 进度条推进 tick（ms）
+const AUTO_INTERVAL = 5000        // 自动播放间隔（ms）
 const SWIPE_THRESHOLD = 50        // 触屏滑动阈值（px）
 
 let autoTimer = null              // 切换定时器
-let progressTimer = null          // 进度条推进定时器
 let startX = 0                    // 触屏起点 X
 
 /** 计算当前 slide 在容器中的偏移百分比（6 张 → 每张 100/6 %） */
@@ -198,23 +190,15 @@ function resetProgress() {
   progress.value = 0
 }
 
-/** 启动自动播放 + 进度条 */
+/** 启动自动播放 */
 function startAuto() {
   stopAuto()
   autoTimer = setInterval(next, AUTO_INTERVAL)
-  progressTimer = setInterval(() => {
-    if (!isPaused.value) {
-      progress.value += (AUTO_TICK / AUTO_INTERVAL) * 100
-      if (progress.value >= 100) progress.value = 0
-    }
-  }, AUTO_TICK)
 }
 
 function stopAuto() {
   if (autoTimer) clearInterval(autoTimer)
-  if (progressTimer) clearInterval(progressTimer)
   autoTimer = null
-  progressTimer = null
 }
 
 function onMouseEnter() { isPaused.value = true }
@@ -242,7 +226,6 @@ onMounted(() => {
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
   if (reduceMotion) {
     stopAuto()
-    progress.value = 0
   }
 })
 
@@ -492,23 +475,6 @@ onUnmounted(() => {
 }
 .counter-sep { opacity: 0.5; margin: 0 2px; }
 
-/* ==================== 进度条 ==================== */
-.progress-bar {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  height: 3px;
-  background: rgba(0, 0, 0, 0.15);
-  z-index: 6;
-  overflow: hidden;
-}
-.progress-fill {
-  height: 100%;
-  background: linear-gradient(90deg, #3b7bf8 0%, #a78bfa 100%);
-  transition: width 0.05s linear;
-}
-
 /* ==================== 响应式 ≤768px ==================== */
 @media (max-width: 768px) {
   .hero-banner {
@@ -537,6 +503,5 @@ onUnmounted(() => {
   .welcome-dot { animation: none; }
   .banner-cta { transition: none; }
   .dot { transition: none; }
-  .progress-fill { transition: none; }
 }
 </style>

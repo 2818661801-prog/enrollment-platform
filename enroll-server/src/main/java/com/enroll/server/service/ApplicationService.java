@@ -136,6 +136,8 @@ public class ApplicationService {
         app.setNoticeAgreed(parseFlag(agreed));
         app.setApplyTime(LocalDateTime.now());
         app.setRound(currentRound);
+        // enrollmentYear：后端自动取当前年份后两位（26=2026年，27=2027年）
+        app.setEnrollmentYear(java.time.LocalDate.now().getYear() % 100);
         Application saved = appRepo.save(app);
 
         // S16 修复：enrolled+1 已由上面的原子 UPDATE 完成，无需再 save classRepo
@@ -285,10 +287,11 @@ public class ApplicationService {
     public List<ApplicationDTO> findAllForSync() {
         return appRepo.findByIsDeleted(0).stream()
                 .map(app -> {
-                    String className = classRepo.findById(app.getClassId())
-                            .map(ClassInfo::getName)
-                            .orElse("未知班级");
-                    return toDTO(app, className);
+                    // 查班级名和内网班级ID（outer_id = innerId，用于跨系统 id 映射）
+                    ClassInfo cls = classRepo.findById(app.getClassId()).orElse(null);
+                    String className = cls != null ? cls.getName() : "未知班级";
+                    Integer innerId = cls != null ? cls.getOuterId() : null;
+                    return toDTO(app, className, innerId);
                 })
                 .collect(Collectors.toList());
     }
@@ -341,6 +344,7 @@ public class ApplicationService {
                 app.setNoticeAgreed(parseFlag(item.get("noticeAgreed")));
                 app.setApplyTime(LocalDateTime.now());
                 app.setRound((Integer) item.getOrDefault("round", 1));
+                app.setEnrollmentYear((Integer) item.getOrDefault("enrollmentYear", java.time.LocalDate.now().getYear() % 100));
                 app.setIsDeleted(0);  // 默认未删除
                 appRepo.save(app);
                 inserted++;
@@ -388,10 +392,15 @@ public class ApplicationService {
     }
 
     public ApplicationDTO toDTO(Application e, String className) {
+        return toDTO(e, className, null);
+    }
+
+    public ApplicationDTO toDTO(Application e, String className, Integer innerId) {
         return ApplicationDTO.builder()
                 .id(e.getId())
                 .name(e.getName())
                 .idCard(e.getIdCardMasked())
+                .idCardRaw(e.getIdCard())
                 .gender(e.getGender())
                 .phone(e.getPhone())
                 .hasPhysics(e.getHasPhysics())
@@ -405,6 +414,8 @@ public class ApplicationService {
                 .classPeriods(null) // 兼容旧字段，报名记录接口不再返回班级轮次 JSON
                 .round(e.getRound())
                 .isDeleted(e.getIsDeleted())
+                .innerId(innerId)
+                .enrollmentYear(e.getEnrollmentYear())
                 .build();
     }
 }

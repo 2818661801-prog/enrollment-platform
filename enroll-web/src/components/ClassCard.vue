@@ -210,13 +210,16 @@ function onClick() {
   overflow: hidden;
 }
 
-/* 类别标签：右上角小标签，浅蓝底 */
+/* 类别标签：右上角小标签，浅蓝底，横向排列 */
 .card-tags {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: 4px;
-  flex-shrink: 0;
-  align-items: flex-end;
+  flex-shrink: 1;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  max-width: 55%;
 }
 .card-tag {
   font-size: 11px;
@@ -316,16 +319,18 @@ function onClick() {
 .card-btn--open:hover {
   background: #2563eb;         /* hover：稍深一档 */
 }
-/* not_started：浅灰底，提示性文案 */
+/* not_started：浅灰底，提示性文案，加粗醒目 */
 .card-btn--not_started {
-  background: var(--disabled, #f1f5f9);
-  color: var(--disabled-text, #94a3b8);
+  background: #e2e8f0;
+  color: #64748b;
+  font-weight: 700;
   cursor: not-allowed;
 }
-/* closed：浅灰底，文案 */
+/* closed：浅灰底，加粗醒目 */
 .card-btn--closed {
-  background: var(--disabled, #f1f5f9);
-  color: var(--disabled-text, #94a3b8);
+  background: #e2e8f0;
+  color: #64748b;
+  font-weight: 700;
   cursor: not-allowed;
 }
 /* 已报名：绿色（与开放状态接近，但不等于可点击） */
@@ -358,6 +363,12 @@ function onClick() {
   }
   .card-head {
     min-height: 44px;
+    flex-direction: column;      /* 标签放名称下方，不挤一排 */
+    align-items: flex-start;
+  }
+  .card-tags {
+    justify-content: flex-start; /* 标签左对齐，不右对齐 */
+    margin-top: 8px;
   }
   .card-btn {
     height: 36px;
