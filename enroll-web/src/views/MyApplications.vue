@@ -221,8 +221,24 @@ function onEdit(row) {
 }
 
 async function onEditSubmit() {
-  if (!editForm.name.trim()) {
+  // 姓名校验
+  const name = editForm.name.trim()
+  if (!name) {
     ElMessage.warning('姓名不能为空')
+    return
+  }
+  if (name.length < 2) {
+    ElMessage.warning('姓名至少2个字符')
+    return
+  }
+  // 手机号校验：1开头11位数字
+  const phone = editForm.phone.trim()
+  if (!phone) {
+    ElMessage.warning('手机号不能为空')
+    return
+  }
+  if (!/^1d{10}$/.test(phone)) {
+    ElMessage.warning('请输入正确的11位手机号（1开头）')
     return
   }
   editLoading.value = true
