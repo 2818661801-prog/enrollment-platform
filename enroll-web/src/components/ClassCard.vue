@@ -279,6 +279,7 @@ function showDescription() {
   background: none;
   border: none;
   cursor: pointer;
+  pointer-events: auto; /* 穿透 is-disabled 禁用 */
   display: flex;
   align-items: center;
   justify-content: center;
