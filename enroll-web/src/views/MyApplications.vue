@@ -237,7 +237,7 @@ async function onEditSubmit() {
     ElMessage.warning('手机号不能为空')
     return
   }
-  if (!/^1d{10}$/.test(phone)) {
+  if (!/^1[0-9]{10}$/.test(phone)) {
     ElMessage.warning('请输入正确的11位手机号（1开头）')
     return
   }
