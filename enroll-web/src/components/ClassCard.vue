@@ -340,18 +340,12 @@ function showDescription() {
 
 /* 内容区 */
 .desc-dialog-body {
-  margin: 16px 24px 24px;
-  padding: 18px 18px 18px 44px;
+  margin: 14px 16px 20px;
+  padding: 16px;
   background: #f8fafc;
   border-radius: 8px;
   border: 1px solid #e8ecf2;
   position: relative;
-}
-.desc-dialog-quote {
-  position: absolute;
-  left: 16px;
-  top: 18px;
-  opacity: 0.5;
 }
 .desc-dialog-text {
   font-size: 14px;
@@ -387,7 +381,7 @@ function showDescription() {
   .desc-dialog :deep(.el-dialog) { max-width: 92vw !important; margin: 0 auto !important; }
   .desc-dialog-head { padding: 20px 16px 0; }
   .desc-dialog-subtitle { margin: 6px 16px 0; }
-  .desc-dialog-body { margin: 12px 16px 20px; padding: 14px 14px 14px 38px; }
+  .desc-dialog-body { margin: 10px 12px 16px; padding: 14px; }
   .desc-dialog-footer { padding: 0 16px 20px; }
 }
 
