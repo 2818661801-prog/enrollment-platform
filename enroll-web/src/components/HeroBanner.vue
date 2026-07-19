@@ -119,11 +119,12 @@ function buildClassesOverview(classes) {
  * - subtitle：第 1/2/4 张动态生成（数据驱动）
  * - 后期可改为接口动态加载（sys_config.banner_texts）
  */
+const currentYear = new Date().getFullYear()
 const slides = computed(() => [
   {
     img: new URL('../assets/images/02.jpg', import.meta.url).href,
     tag: '欢迎来到杭电信工特色班',
-    title: '筑梦杭电信工 不负韶华',
+    title: currentYear + ' 特色班报名通道已开启',
     subtitle: dynamicSubtitle(props.classesCount),  // 变数：班级数量
   },
   {
@@ -153,7 +154,7 @@ const slides = computed(() => [
   {
     img: new URL('../assets/images/06.jpg', import.meta.url).href,
     tag: '门为你开',
-    title: '2026 特色班报名通道已开启',
+    title: '筑梦杭电信工 不负韶华',
     subtitle: '扫码填报 / 在线查询 / 录取查询一站直达',
   },
 ])
@@ -201,8 +202,14 @@ function stopAuto() {
   autoTimer = null
 }
 
-function onMouseEnter() { isPaused.value = true }
-function onMouseLeave() { isPaused.value = false }
+function onMouseEnter() {
+  isPaused.value = true
+  stopAuto()
+}
+function onMouseLeave() {
+  isPaused.value = false
+  startAuto()
+}
 
 function onTouchStart(e) {
   startX = e.touches[0].clientX

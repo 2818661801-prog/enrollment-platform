@@ -61,7 +61,7 @@
     {"name": "data[].round", "type": "int", "desc": "报名轮次（1=第一轮,2=第二轮）"},
     {"name": "data[].isDeleted", "type": "int", "desc": "软删除标记（0=正常）"},
     {"name": "data[].innerId", "type": "int", "desc": "内网班级ID（外网 classes.outer_id）"},
-    {"name": "data[].enrollmentYear", "type": "int", "desc": "报名年级（26=2026年,27=2027年），外网后端自动写入"}
+    {"name": "data[].enrollmentYear", "type": "int", "desc": "报名年级（2026=2026年,2027=2027年），外网后端自动写入"}
   ],
 
   "statusValues": {

@@ -181,7 +181,7 @@ GET /api/admin/notice
       "status": 1,
       "noticeAgreed": 1,
       "round": 1,
-      "enrollmentYear": 26
+      "enrollmentYear": 2026
     }
   ]
 }
@@ -216,7 +216,7 @@ GET /api/admin/notice
 | status | int | 否 | 状态（0未报/1已报/2撤回/3录取/4未录取）|
 | noticeAgreed | int | 否 | 是否同意须知（0否/1是）|
 | round | int | 否 | 报名轮次（1/2）|
-| enrollmentYear | int | 否 | 报名年级（26=2026年，27=2027年），后端自动写入，也可由同步接口传入 |
+| enrollmentYear | int | 否 | 报名年级（2026=2026年，2027=2027年），后端自动写入，也可由同步接口传入 |
 
 ---
 

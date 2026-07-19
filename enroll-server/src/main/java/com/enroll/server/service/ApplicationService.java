@@ -1,4 +1,4 @@
-package com.enroll.server.service;
+﻿package com.enroll.server.service;
 
 import com.enroll.server.dto.ApplicationDTO;
 import com.enroll.server.dto.ResultCode;
@@ -136,8 +136,8 @@ public class ApplicationService {
         app.setNoticeAgreed(parseFlag(agreed));
         app.setApplyTime(LocalDateTime.now());
         app.setRound(currentRound);
-        // enrollmentYear：后端自动取当前年份后两位（26=2026年，27=2027年）
-        app.setEnrollmentYear(java.time.LocalDate.now().getYear() % 100);
+        // enrollmentYear：后端自动取当前年份（2026/2027）
+        app.setEnrollmentYear(java.time.LocalDate.now().getYear());
         Application saved = appRepo.save(app);
 
         // S16 修复：enrolled+1 已由上面的原子 UPDATE 完成，无需再 save classRepo
@@ -344,7 +344,7 @@ public class ApplicationService {
                 app.setNoticeAgreed(parseFlag(item.get("noticeAgreed")));
                 app.setApplyTime(LocalDateTime.now());
                 app.setRound((Integer) item.getOrDefault("round", 1));
-                app.setEnrollmentYear((Integer) item.getOrDefault("enrollmentYear", java.time.LocalDate.now().getYear() % 100));
+                app.setEnrollmentYear((Integer) item.getOrDefault("enrollmentYear", java.time.LocalDate.now().getYear()));
                 app.setIsDeleted(0);  // 默认未删除
                 appRepo.save(app);
                 inserted++;
