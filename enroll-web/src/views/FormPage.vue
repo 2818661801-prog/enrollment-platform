@@ -633,4 +633,9 @@ async function onSubmit() {
   font-size: 14px;
   padding: 4px 12px;
 }
+
+/* 校验通过-绿色勾 */
+:deep(.el-input__suffix .el-icon) {
+  color: #22c55e;
+}
 </style>
