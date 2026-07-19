@@ -156,6 +156,16 @@ export const fetchCategories = () => request('/api/categories')
 
 // ==================== 公开 API（学生端）====================
 
+/** 获取服务器当前年份（无则 fallback 本地）*/
+export const fetchServerYear = async () => {
+  try {
+    const res = await request('/api/year')
+    return res.year != null ? res.year : null
+  } catch {
+    return null
+  }
+}
+
 /** 获取报名须知（学生端）*/
 export const fetchNotice = async () => {
   try {

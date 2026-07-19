@@ -7,6 +7,7 @@
     <div class="home-body">
       <!-- ===== Banner 轮播区（与主体内容共享 1200px 容器 + 边距） ===== -->
       <HeroBanner
+        :server-year="serverYear"
         :classes-count="classes.length"
         :classes="classes"
         @cta-click="showNotice = true"
@@ -115,7 +116,7 @@ import { ref, reactive, computed, onMounted, onUnmounted, watch, nextTick } from
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { getClassTimeStatus, parsePeriod, syncServerTime, formatTime } from '../utils/data.js'
-import { fetchClasses, fetchNotice, fetchMyApplicationsMe } from '../utils/api.js'
+import { fetchClasses, fetchNotice, fetchMyApplicationsMe, fetchServerYear } from '../utils/api.js'
 import AppFooter from '../components/AppFooter.vue'
 import ClassCard from '../components/ClassCard.vue'
 import HeroBanner from '../components/HeroBanner.vue'
@@ -127,6 +128,8 @@ const selectedRound = ref(null)  // null=全部轮次，数字=只看第N轮
 const selectedTimeStatus = ref(null)  // null=全部状态，open/not_started/closed
 // 是否已登录（学生端 JWT）
 const isLoggedIn = ref(false)
+// 服务器年份（用于 HeroBanner 动态标题，获取失败则用本地）
+const serverYear = ref(new Date().getFullYear())
 // 班级列表：从后端 API 拿
 const classes = ref([])
 const loading = ref(false)

@@ -81,6 +81,7 @@ import { ref, onMounted, onUnmounted, computed } from 'vue'
 import docIcon from '../assets/images/checklist.svg'
 
 const props = defineProps({
+  serverYear: { type: Number, default: () => new Date().getFullYear() },
   classesCount: { type: Number, default: 0 },   // 班级总数（动态副标题用）
   classes:      { type: Array,  default: () => [] },  // 班级列表（动态生成类别、年份）
 })
@@ -119,12 +120,11 @@ function buildClassesOverview(classes) {
  * - subtitle：第 1/2/4 张动态生成（数据驱动）
  * - 后期可改为接口动态加载（sys_config.banner_texts）
  */
-const currentYear = new Date().getFullYear()
 const slides = computed(() => [
   {
     img: new URL('../assets/images/02.jpg', import.meta.url).href,
     tag: '欢迎来到杭电信工特色班',
-    title: currentYear + ' 特色班报名通道已开启',
+    title: props.serverYear + ' 特色班报名通道已开启',
     subtitle: dynamicSubtitle(props.classesCount),  // 变数：班级数量
   },
   {

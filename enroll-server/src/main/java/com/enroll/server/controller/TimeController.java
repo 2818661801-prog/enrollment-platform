@@ -46,6 +46,12 @@ public class TimeController {
         return Map.of("serverTime", now);
     }
 
+    @GetMapping("/year")
+    public Map<String, Object> getServerYear() {
+        int year = java.time.LocalDate.now().getYear();
+        return Map.of("year", year);
+    }
+
     /** 清理过期 IP（防止内存泄漏，惰性清理） */
     public static void cleanExpired() {
         long now = System.currentTimeMillis();
