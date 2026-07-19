@@ -219,15 +219,11 @@ function showDescription() {
 
 /* ==================== 标题行 ==================== */
 .card-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  min-height: 48px;            /* 防止标签少时整体塌陷 */
+  position: relative;           /* 让 desc-btn 绝对定位右上角 */
+  min-height: 48px;
 }
 .card-name {
-  flex: 1;
-  min-width: 0;
+  padding-right: 44px;         /* 给右上角按钮留空位 */
   font-size: 17px;
   font-weight: 700;
   line-height: 1.4;
@@ -249,7 +245,6 @@ function showDescription() {
   align-items: center;
   flex-wrap: wrap;
   justify-content: flex-end;
-  max-width: 55%;
 }
 .card-tag {
   font-size: 11px;
@@ -259,9 +254,11 @@ function showDescription() {
   border-radius: 3px;          /* 圆角（与卡片整体调性一致） */
 }
 
-/* 介绍按钮：在名称右侧，和类别标签分开 */
+/* 介绍按钮：绝对定位右上角，和类别标签完全分离 */
 .desc-btn {
-  flex-shrink: 0;
+  position: absolute;
+  top: 0;
+  right: 0;
   width: 32px;
   height: 32px;
   padding: 0;
@@ -422,6 +419,7 @@ function showDescription() {
     font-size: 16px;
   }
   .card-head {
+    display: flex;
     min-height: 44px;
     flex-direction: column;      /* 标签放名称下方，不挤一排 */
     align-items: flex-start;
@@ -431,9 +429,6 @@ function showDescription() {
     margin-top: 8px;
   }
   /* 移动端介绍按钮：绝对定位在右上角，不影响标题行布局 */
-  .card-head {
-    position: relative;           /* 让 desc-btn 相对 card-head 定位 */
-  }
   .desc-btn {
     position: absolute;
     top: 0;
