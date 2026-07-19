@@ -1,0 +1,80 @@
+{
+  "接口名称": "同步报名记录",
+  "方法": "POST",
+  "路径": "/api/admin/sync/applications",
+  "主键": "idCard + classId",
+
+  "请求示例": {
+    "data": [
+      {
+        "idCard": "110101***REMOVED***4",
+        "classId": 1,
+        "name": "张三",
+        "gender": "男",
+        "phone": "***REMOVED***",
+        "hasPhysics": "是",
+        "hasEnglish": "否",
+        "appliedCategory": "理工类",
+        "status": 1,
+        "noticeAgreed": 1,
+        "round": 1,
+        "enrollmentYear": 26
+      }
+    ]
+  },
+
+  "请求字段说明": [
+    {"字段": "idCard", "类型": "string", "必填": true, "说明": "身份证号（主键 part 1）"},
+    {"字段": "classId", "类型": "int", "必填": true, "说明": "班级ID（主键 part 2）"},
+    {"字段": "name", "类型": "string", "必填": false, "说明": "学生姓名"},
+    {"字段": "gender", "类型": "string", "必填": false, "说明": "性别"},
+    {"字段": "phone", "类型": "string", "必填": false, "说明": "手机号"},
+    {"字段": "hasPhysics", "类型": "string", "必填": false, "说明": "是否选考物理（是/否）"},
+    {"字段": "hasEnglish", "类型": "string", "必填": false, "说明": "是否选考英语（是/否）"},
+    {"字段": "appliedCategory", "类型": "string", "必填": false, "说明": "报考类别"},
+    {"字段": "status", "类型": "int", "必填": false, "说明": "状态（1=已报名, 2=已撤回, 3=已录取, 4=未录取）"},
+    {"字段": "noticeAgreed", "类型": "int", "必填": false, "说明": "是否同意须知（0=否, 1=是）"},
+    {"字段": "round", "类型": "int", "必填": false, "说明": "报名轮次（1=第一轮, 2=第二轮）"},
+    {"字段": "enrollmentYear", "类型": "int", "必填": false, "说明": "报名年级（26=2026年, 27=2027年），后端自动写入，也可由同步接口传入"}
+  ],
+
+  "响应示例": {
+    "code": 200,
+    "message": "同步成功",
+    "data": {
+      "total": 1,
+      "inserted": 1,
+      "updated": 0,
+      "deleted": 0
+    }
+  },
+
+  "响应字段说明": [
+    {"字段": "code", "类型": "int", "说明": "状态码（200=成功）"},
+    {"字段": "message", "类型": "string", "说明": "状态信息"},
+    {"字段": "data.total", "类型": "int", "说明": "本次同步总条数"},
+    {"字段": "data.inserted", "类型": "int", "说明": "新增条数"},
+    {"字段": "data.updated", "类型": "int", "说明": "更新条数"},
+    {"字段": "data.deleted", "类型": "int", "说明": "真正删除条数"},
+    {"字段": "data.softDeleted", "类型": "int", "说明": "软删除条数"}
+  ],
+
+  "同步逻辑": {
+    "b有a无": "新增",
+    "b有a有": "更新",
+    "b有isDeleted=1": "软删",
+    "a有b无": "真正删除"
+  },
+
+  "状态值说明": {
+    "status": {
+      "0": "未报名（名义值，实际不使用）",
+      "1": "已报名（审核中）",
+      "2": "已撤回",
+      "3": "已录取",
+      "4": "未录取"
+    }
+  },
+
+  "备注": "enrollmentYear 字段于 2026-07-19 新增，后端自动计算（LocalDate.now().getYear() % 100），同步接口可传入覆盖"
+}

@@ -1,0 +1,79 @@
+{
+  "method": "GET",
+  "path": "/api/admin/applications/all",
+
+  "request": {
+    "headers": {
+      "Authorization": "Bearer {admin_token}",
+      "Content-Type": "application/json"
+    }
+  },
+
+  "response": {
+    "code": 200,
+    "message": "操作成功",
+    "data": [
+      {
+        "id": 1,
+        "name": "张三",
+        "idCard": "110101********1234",
+        "idCardRaw": "110101***REMOVED***4",
+        "gender": "男",
+        "phone": "***REMOVED***",
+        "classId": 1,
+        "className": "TestClass",
+        "hasPhysics": "是",
+        "hasEnglish": "否",
+        "appliedCategory": null,
+        "status": "1",
+        "noticeAgreed": 1,
+        "applyTime": "2026-07-07T17:44:19",
+        "auditComment": null,
+        "classPeriods": null,
+        "round": 1,
+        "isDeleted": 0,
+        "innerId": null,
+        "enrollmentYear": 26
+      }
+    ]
+  },
+
+  "fields": [
+    {"name": "code", "type": "int", "desc": "状态码（200=成功）"},
+    {"name": "message", "type": "string", "desc": "状态信息"},
+    {"name": "data", "type": "array", "desc": "报名记录数组（全量，无分页）"},
+    {"name": "data[].id", "type": "int", "desc": "外网报名记录ID（低代码存为 outerId）"},
+    {"name": "data[].name", "type": "string", "desc": "学生姓名"},
+    {"name": "data[].idCard", "type": "string", "desc": "脱敏身份证（中间8位***）"},
+    {"name": "data[].idCardRaw", "type": "string", "desc": "原始身份证号（低代码同步主键）"},
+    {"name": "data[].gender", "type": "string", "desc": "性别"},
+    {"name": "data[].phone", "type": "string", "desc": "手机号"},
+    {"name": "data[].classId", "type": "int", "desc": "外网班级ID"},
+    {"name": "data[].className", "type": "string", "desc": "班级名称"},
+    {"name": "data[].hasPhysics", "type": "string", "desc": "是否选考物理（是/否）"},
+    {"name": "data[].hasEnglish", "type": "string", "desc": "是否选考英语（是/否）"},
+    {"name": "data[].appliedCategory", "type": "string", "desc": "报考类别"},
+    {"name": "data[].status", "type": "string", "desc": "状态（'1'=已报名,'2'=已撤回,'3'=已录取,'4'=未录取）"},
+    {"name": "data[].noticeAgreed", "type": "int", "desc": "是否同意须知（0=否,1=是）"},
+    {"name": "data[].applyTime", "type": "string", "desc": "报名时间（ISO格式）"},
+    {"name": "data[].auditComment", "type": "string", "desc": "审核意见（null=未审核）"},
+    {"name": "data[].classPeriods", "type": "string", "desc": "废弃字段（null）"},
+    {"name": "data[].round", "type": "int", "desc": "报名轮次（1=第一轮,2=第二轮）"},
+    {"name": "data[].isDeleted", "type": "int", "desc": "软删除标记（0=正常）"},
+    {"name": "data[].innerId", "type": "int", "desc": "内网班级ID（外网 classes.outer_id）"},
+    {"name": "data[].enrollmentYear", "type": "int", "desc": "报名年级（26=2026年,27=2027年），外网后端自动写入"}
+  ],
+
+  "statusValues": {
+    "1": "已报名（审核中）",
+    "2": "已撤回",
+    "3": "已录取",
+    "4": "未录取"
+  },
+
+  "notes": [
+    "status 是 string 类型，不是 int",
+    "enrollmentYear 外网后端自动生成（LocalDate.now().getYear() % 100），2026-07-19 之前的旧数据可能为 null",
+    "低代码同步时：enrollmentYear=outerApp.enrollmentYear 即可"
+  ]
+}

@@ -65,12 +65,12 @@
               </div>
               <div class="card-actions">
                 <el-button
-                  v-if="record.status === '1' || record.status === '4'"
+                  v-if="record.status === '1'"
                   text type="primary" size="small"
                   @click="onEdit(record)"
                 >修改</el-button>
                 <el-button
-                  v-if="record.status === '1' || record.status === '4'"
+                  v-if="record.status === '1'"
                   text type="danger" size="small"
                   @click="onWithdraw(record)"
                 >撤回</el-button>

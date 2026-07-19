@@ -1,0 +1,259 @@
+{
+  "version": "v2.4",
+  "updated": "2026-07-07",
+  "theme": "班级-类别中间表（替代 category_names JSON）",
+
+  "一、查询接口": {
+    "说明": "同步按钮第①步：低代码平台了解 enroll_db 现状。所有接口均通过 admin JWT 认证（低代码平台调用时需携带 Authorization: Bearer token）",
+    "同步按钮完整流程": {
+      "step1": "b查a  GET /api/admin/classes → 低代码平台了解 enroll_db 现状",
+      "step2": "在b里做增删改 → 低代码平台操作自己的内网 DB",
+      "step3": "b查b → 低代码平台拿到 b 的完整数据",
+      "step4": "增删a  POST /api/admin/sync/{table} → 全量同步到 enroll_db"
+    },
+    "接口列表": [
+      {
+        "名称": "查询全部班级（含软删）",
+        "方法": "GET",
+        "路径": "/api/admin/classes"
+      },
+      {
+        "名称": "查询全部类别",
+        "方法": "GET",
+        "路径": "/api/admin/categories"
+      },
+      {
+        "名称": "查询全部报名记录",
+        "方法": "GET",
+        "路径": "/api/admin/applications",
+        "参数": "page=0&size=20&classId=1&status=1&idCard=xxx&name=xxx"
+      },
+      {
+        "名称": "查询报名须知",
+        "方法": "GET",
+        "路径": "/api/admin/notice"
+      }
+    ]
+  },
+
+  "二、同步接口": {
+    "说明": "同步按钮第④步：全量同步到 enroll_db",
+    "同步逻辑": {
+      "b有a无": "新增",
+      "b有a有": "更新",
+      "b有isDeleted=1": "软删（更新 is_deleted=1）",
+      "a有b无": "真正删除"
+    },
+    "接口列表": [
+      {
+        "名称": "同步班级",
+        "方法": "POST",
+        "路径": "/api/admin/sync/classes",
+        "主键": "name",
+        "请求示例": {
+          "data": [
+            {
+              "name": "成电班",
+              "period": "2026/09/01 08:00 - 2026/09/13 23:59",
+              "classRounds": [
+                {"roundNum": 1, "periodStart": "2026/09/01 08:00", "periodEnd": "2026/09/13 23:59"},
+                {"roundNum": 2, "periodStart": "2026/09/15 08:00", "periodEnd": "2026/09/16 23:59"}
+              ],
+              "quota": 50,
+              "description": "电子科技大学特色班",
+              "categoryNames": ["成电班"],
+              "isDeleted": 0,
+              "innerId": 9
+            }
+          ]
+        },
+        "响应示例": {
+          "code": 200,
+          "message": "同步成功",
+          "data": {"total": 1, "inserted": 0, "updated": 1, "deleted": 0, "softDeleted": 0}
+        },
+        "字段说明": {
+          "name": {"类型": "string", "必填": true, "说明": "班级名称（主键）"},
+          "period": {"类型": "string", "必填": false, "说明": "当前有效时间段"},
+          "classRounds": {"类型": "array", "必填": true, "说明": "轮次列表"},
+          "classRounds[].roundNum": {"类型": "int", "必填": true, "说明": "轮次编号（1/2/3...）"},
+          "classRounds[].periodStart": {"类型": "string", "必填": true, "说明": "报名开始时间（格式：yyyy/MM/dd 或 yyyy/MM/dd HH:mm）"},
+          "classRounds[].periodEnd": {"类型": "string", "必填": true, "说明": "报名结束时间（格式：yyyy/MM/dd 或 yyyy/MM/dd HH:mm）"},
+          "quota": {"类型": "int", "必填": false, "说明": "名额（-1=不限，>=0=具体名额）"},
+          "description": {"类型": "string", "必填": false, "说明": "班级描述"},
+          "categoryNames": {"类型": "array", "必填": false, "说明": "班级类别标签"},
+          "isDeleted": {"类型": "int", "必填": false, "说明": "0=正常，1=软删除"},
+          "innerId": {"类型": "int", "必填": false, "说明": "内网班级ID"}
+        }
+      },
+      {
+        "名称": "同步类别",
+        "方法": "POST",
+        "路径": "/api/admin/sync/categories",
+        "主键": "name",
+        "请求示例": {
+          "data": [
+            {"name": "理工类"},
+            {"name": "经管类"}
+          ]
+        },
+        "响应示例": {
+          "code": 200,
+          "message": "同步成功",
+          "data": {"total": 2, "inserted": 1, "updated": 1, "deleted": 0}
+        }
+      },
+      {
+        "名称": "同步报名记录",
+        "方法": "POST",
+        "路径": "/api/admin/sync/applications",
+        "主键": "idCard + classId",
+        "请求示例": {
+          "data": [
+            {
+              "idCard": "110101***REMOVED***4",
+              "classId": 1,
+              "name": "张三",
+              "gender": "男",
+              "phone": "***REMOVED***",
+              "hasPhysics": "是",
+              "hasEnglish": "否",
+              "appliedCategory": "理工类",
+              "status": 1,
+              "noticeAgreed": 1,
+              "round": 1,
+              "enrollmentYear": 26
+            }
+          ]
+        },
+        "响应示例": {
+          "code": 200,
+          "message": "同步成功",
+          "data": {"total": 1, "inserted": 1, "updated": 0, "deleted": 0}
+        },
+        "字段说明": {
+          "idCard": {"类型": "string", "必填": true, "说明": "身份证号（主键 part 1）"},
+          "classId": {"类型": "int", "必填": true, "说明": "班级ID（主键 part 2）"},
+          "name": {"类型": "string", "必填": false, "说明": "学生姓名"},
+          "gender": {"类型": "string", "必填": false, "说明": "性别"},
+          "phone": {"类型": "string", "必填": false, "说明": "手机号"},
+          "hasPhysics": {"类型": "string", "必填": false, "说明": "是否选考物理"},
+          "hasEnglish": {"类型": "string", "必填": false, "说明": "是否选考英语"},
+          "appliedCategory": {"类型": "string", "必填": false, "说明": "报考类别"},
+          "status": {"类型": "int", "必填": false, "说明": "状态（0未报/1已报/2撤回/3录取/4未录取）"},
+          "noticeAgreed": {"类型": "int", "必填": false, "说明": "是否同意须知（0否/1是）"},
+          "round": {"类型": "int", "必填": false, "说明": "报名轮次（1/2）"},
+          "enrollmentYear": {"类型": "int", "必填": false, "说明": "报名年级（26=2026年，27=2027年），后端自动写入，也可由同步接口传入"}
+        }
+      },
+      {
+        "名称": "同步系统配置",
+        "方法": "POST",
+        "路径": "/api/admin/sync/config",
+        "说明": "sys_config 只有一条记录（id=1），直接 upsert",
+        "请求示例": {
+          "data": [
+            {
+              "title": "2026年特色班报名须知",
+              "conditions": "报名者须为2026级新生\n每人限报1个特色班\n报名信息填写须真实有效",
+              "notices": "部分特色班设有两轮报名...\n报名时间截止后不可修改\n录取结果另行通知\n如有疑问请联系教务处",
+              "updatedBy": "admin"
+            }
+          ]
+        },
+        "响应示例": {
+          "code": 200,
+          "message": "同步成功",
+          "data": {"total": 1, "inserted": 1, "updated": 0}
+        },
+        "字段说明": {
+          "title": {"类型": "string", "必填": false, "说明": "报名须知标题"},
+          "conditions": {"类型": "string", "必填": false, "说明": "报名条件（换行分隔）"},
+          "notices": {"类型": "string", "必填": false, "说明": "报名须知（换行分隔）"},
+          "updatedBy": {"类型": "string", "必填": false, "说明": "最后修改人"}
+        }
+      }
+    ]
+  },
+
+  "三、通用响应格式": {
+    "成功": {
+      "code": 200,
+      "message": "操作成功",
+      "data": {}
+    },
+    "失败": {
+      "code": "<错误码>",
+      "message": "<错误信息>",
+      "data": null
+    },
+    "常见错误码": [
+      {"code": 200, "说明": "成功"},
+      {"code": 4001, "说明": "缺少登录凭证"},
+      {"code": 4002, "说明": "登录失败"},
+      {"code": 5000, "说明": "服务器内部错误"}
+    ]
+  },
+
+  "四、数据字典": {
+    "classes（班级）": {
+      "id": {"类型": "int", "说明": "主键"},
+      "name": {"类型": "string", "说明": "班级名称"},
+      "period": {"类型": "string", "说明": "当前有效时间段（由 class_rounds 第一轮自动计算）"},
+      "classRounds": {"类型": "array", "说明": "报名轮次数组 [{roundNum, periodStart, periodEnd}]，ISO 格式"},
+      "quota": {"类型": "int", "说明": "名额（-1=不限）"},
+      "enrolled": {"类型": "int", "说明": "已报名人数"},
+      "description": {"类型": "string", "说明": "描述"},
+      "isDeleted": {"类型": "int", "说明": "0正常/1已删除"},
+      "categories": {"类型": "array", "说明": "关联的类别名称数组，如 [\"经管类\",\"理工类\"]，由中间表查询返回"},
+      "source": {"类型": "string", "说明": "数据来源（admin/sync/student）"}
+    },
+    "class_category（班级-类别中间表）": {
+      "id": {"类型": "int", "说明": "主键"},
+      "class_id": {"类型": "int", "说明": "班级ID，关联 classes.id"},
+      "category_id": {"类型": "int", "说明": "类别ID，关联 categories.id"},
+      "created_at": {"类型": "datetime", "说明": "创建时间"},
+      "备注": "一个班级可属多个类别（N:N），通过中间表实现"
+    },
+    "class_rounds（班级轮次）": {
+      "id": {"类型": "int", "说明": "主键"},
+      "class_id": {"类型": "int", "说明": "班级ID，关联 classes.id"},
+      "round_num": {"类型": "int", "说明": "轮次编号（1/2/3...）"},
+      "period_start": {"类型": "datetime", "说明": "报名开始时间"},
+      "period_end": {"类型": "datetime", "说明": "报名结束时间"},
+      "created_at": {"类型": "datetime", "说明": "创建时间"}
+    },
+    "applications（报名记录）": {
+      "id": {"类型": "int", "说明": "主键"},
+      "name": {"类型": "string", "说明": "学生姓名"},
+      "id_card": {"类型": "string", "说明": "身份证号"},
+      "id_card_masked": {"类型": "string", "说明": "脱敏身份证（中间8位***）"},
+      "gender": {"类型": "string", "说明": "性别"},
+      "phone": {"类型": "string", "说明": "手机号"},
+      "has_physics": {"类型": "string", "说明": "是否选考物理"},
+      "has_english": {"类型": "string", "说明": "是否选考英语"},
+      "class_id": {"类型": "int", "说明": "班级ID"},
+      "applied_category": {"类型": "string", "说明": "报考类别"},
+      "status": {"类型": "int", "说明": "状态（0未报/1已报/2撤回/3录取/4未录取）"},
+      "notice_agreed": {"类型": "int", "说明": "是否同意须知（0否/1是）"},
+      "apply_time": {"类型": "datetime", "说明": "报名时间"},
+      "round": {"类型": "int", "说明": "轮次"},
+      "source": {"类型": "string", "说明": "数据来源"},
+      "enrollment_year": {"类型": "int", "说明": "报名年级（26=2026年，27=2027年），后端自动写入，前端/同步接口不需传参"}
+    },
+    "sys_config（系统配置）": {
+      "id": {"类型": "int", "说明": "主键（固定为1）"},
+      "title": {"类型": "string", "说明": "报名须知标题"},
+      "conditions": {"类型": "string", "说明": "报名条件（换行分隔）"},
+      "notices": {"类型": "string", "说明": "报名须知（换行分隔）"},
+      "updated_at": {"类型": "datetime", "说明": "最后修改时间"},
+      "updated_by": {"类型": "string", "说明": "最后修改人"}
+    }
+  },
+
+  "五、已废弃字段": [
+    {"字段": "classes.category_names", "替代": "class_category 中间表 + categories 数组"},
+    {"字段": "classes.periods JSON", "替代": "class_rounds 表 + classRounds 数组"},
+    {"字段": "sys_config.admin_phone", "替代": "无（已删除）"}
+  ]
+}
