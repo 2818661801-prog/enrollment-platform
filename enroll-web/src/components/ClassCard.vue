@@ -236,7 +236,7 @@ function showDescription() {
   min-height: 48px;
 }
 .card-name {
-  padding-right: 44px;         /* 给右上角按钮留空位 */
+  padding-right: 36px;         /* 给右上角按钮留空位 */
   font-size: 17px;
   font-weight: 700;
   line-height: 1.4;
@@ -271,8 +271,8 @@ function showDescription() {
 /* 介绍按钮：绝对定位右上角，和类别标签完全分离 */
 .desc-btn {
   position: absolute;
-  top: 0;
-  right: 0;
+  top: -6px;
+  right: -6px;
   width: 32px;
   height: 32px;
   padding: 0;
@@ -529,8 +529,8 @@ function showDescription() {
   /* 移动端介绍按钮：绝对定位在右上角，不影响标题行布局 */
   .desc-btn {
     position: absolute;
-    top: 0;
-    right: 0;
+    top: -4px;
+    right: -4px;
   }
   .card-btn {
     height: 36px;
