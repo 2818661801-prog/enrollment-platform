@@ -421,13 +421,13 @@ onMounted(fetchMyRecords)
 .audit-comment-pass   { color: #16a34a; }   /* 已录取-绿色 */
 .audit-comment-reject { color: #ef4444; }   /* 未录取-红色 */
 
-/* 轮次标签醒目样式 */
+/* 轮次标签醒目样式（主题蓝） */
 .round-tag {
   font-weight: 700 !important;
   font-size: 12px !important;
-  border-color: #f59e0b !important;
-  background: #fef3c7 !important;
-  color: #b45309 !important;
+  border-color: #bfdbfe !important;
+  background: #eaf2ff !important;
+  color: #1d4ed8 !important;
 }
 
 /* ===== 移动端适配 ===== */

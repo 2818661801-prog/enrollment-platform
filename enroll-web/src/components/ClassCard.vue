@@ -14,9 +14,18 @@
     <div class="card-accent-bar" />
 
     <div class="card-body">
-      <!-- 标题行：班级名称 + 类别标签（右上角） -->
+      <!-- 标题行：班级名称 + 介绍按钮 + 类别标签（右上角） -->
       <div class="card-head">
         <h3 class="card-name" :title="cardTitle">{{ cardTitle }}</h3>
+        <button
+          v-if="classInfo.description"
+          type="button"
+          class="desc-btn"
+          :title="`查看${cardTitle}的班级介绍`"
+          @click.stop="showDescription"
+        >
+          <img :src="descIcon" alt="班级介绍" class="desc-icon" />
+        </button>
         <div v-if="categoryNames.length" class="card-tags">
           <span v-for="n in categoryNames" :key="n" class="card-tag">{{ n }}</span>
         </div>
@@ -51,12 +60,28 @@
         {{ buttonText }}
       </button>
     </div>
+
+    <!-- 班级介绍弹窗 -->
+    <el-dialog
+      v-model="dialogVisible"
+      :title="`${cardTitle} 介绍`"
+      width="90%"
+      max-width="480px"
+      destroy-on-close
+      :append-to-body="true"
+    >
+      <div class="desc-content">{{ classInfo.description }}</div>
+      <template #footer>
+        <el-button type="primary" @click="dialogVisible = false">关闭</el-button>
+      </template>
+    </el-dialog>
   </article>
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import calendarIcon from '../assets/images/calendar(1).svg'
+import descIcon from '../assets/images/description.svg'
 import { getClassTimeStatus, formatTime } from '../utils/data.js'
 
 const props = defineProps({
@@ -67,6 +92,7 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['select'])
+const dialogVisible = ref(false)
 
 // 是否为多轮班（classRounds 数组里有超过 1 条）
 const isMultiRound = computed(() => {
@@ -141,6 +167,10 @@ const btnClass = computed(() => {
 function onClick() {
   if (!timeStatus.value.canApply || props.isApplied || props.isAdmitted) return
   emit('select', { id: props.classInfo.id, period: props.classInfo._period })
+}
+
+function showDescription() {
+  dialogVisible.value = true
 }
 </script>
 
@@ -227,9 +257,39 @@ function onClick() {
   background: #eaf2ff;         /* 主题蓝的 12% 浅版 */
   padding: 2px 8px;
   border-radius: 3px;          /* 圆角（与卡片整体调性一致） */
-  white-space: nowrap;
-  line-height: 1.4;
-  font-weight: 500;
+}
+
+/* 介绍按钮：在名称右侧，和类别标签分开 */
+.desc-btn {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background 0.15s;
+}
+.desc-btn:hover {
+  background: #eaf2ff;
+}
+.desc-icon {
+  width: 20px;
+  height: 20px;
+  display: block;
+}
+
+/* 介绍弹窗内容 */
+.desc-content {
+  font-size: 14px;
+  line-height: 1.7;
+  color: #334155;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 /* 标题下分割线（签名元素：印刷感） */
@@ -369,6 +429,15 @@ function onClick() {
   .card-tags {
     justify-content: flex-start; /* 标签左对齐，不右对齐 */
     margin-top: 8px;
+  }
+  /* 移动端介绍按钮：绝对定位在右上角，不影响标题行布局 */
+  .card-head {
+    position: relative;           /* 让 desc-btn 相对 card-head 定位 */
+  }
+  .desc-btn {
+    position: absolute;
+    top: 0;
+    right: 0;
   }
   .card-btn {
     height: 36px;
