@@ -125,7 +125,7 @@
           <el-row :gutter="24" class="form-row">
             <el-col :xs="24" :sm="12">
               <el-form-item label="姓名" prop="name">
-                <el-input v-model="form.name" placeholder="请输入中文姓名" maxlength="10" />
+                <el-input v-model="form.name" placeholder="请输入中文姓名" maxlength="10" :suffix-icon="nameValid ? SuccessFilled : undefined" @blur="onNameBlur" />
               </el-form-item>
             </el-col>
             <el-col :xs="24" :sm="12">
@@ -250,6 +250,7 @@ const phoneCode = usePhoneCode()  // 共享的"发码+验证+登录"逻辑
 const formRef = ref(null)
 const submitting = ref(false)
 const idCardValid = ref(false)
+const nameValid = ref(false)
 const loading = ref(false)
 
 // 步骤：1=验证码 / 2=表单详情
@@ -320,6 +321,11 @@ const timeStatus = computed(() => {
   const periodStr = route.query.period || selectedClass.value.period
   return getClassTimeStatus({ period: periodStr })
 })
+
+function onNameBlur() {
+  const name = form.name.trim()
+  nameValid.value = validateName(name)
+}
 
 function onIdCardBlur() {
   const id = form.idCard.trim()
