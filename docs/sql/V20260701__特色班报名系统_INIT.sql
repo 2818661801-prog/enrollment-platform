@@ -70,7 +70,7 @@ CREATE TABLE `ssc_applications` (
   `source`           VARCHAR(20)  NOT NULL DEFAULT 'student' COMMENT '数据来源：student(学生自报)/admin(管理员导入)/sync(低代码同步)',
   `is_deleted`       INT          NOT NULL DEFAULT 0      COMMENT '管理员软删除：0=正常，1=已删除（2026-07-10 新增）',
   `outer_id`         INT          DEFAULT NULL            COMMENT '内网报名记录ID（sync后回填，用于跨系统 id 映射）',
-  `enrollment_year`  INT          DEFAULT NULL            COMMENT '报名年级：26=2026年，27=2027年，后端自动写入（2026-07-19 新增）',
+  `enrollment_year`  INT          DEFAULT NULL            COMMENT '报名年级：2026=2026年，2027=2027年，后端自动写入（2026-07-19 新增）',
   INDEX `idx_id_card`  (`id_card`),
   INDEX `idx_class_id` (`class_id`),
   INDEX `idx_enrollment_year` (`enrollment_year`)
