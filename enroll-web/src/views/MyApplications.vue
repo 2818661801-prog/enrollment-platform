@@ -111,9 +111,6 @@
           <el-form-item label="姓名">
             <el-input v-model="editForm.name" maxlength="10" />
           </el-form-item>
-          <el-form-item label="联系电话">
-            <el-input v-model="editForm.phone" maxlength="11" />
-          </el-form-item>
           <el-form-item label="选考物理">
             <el-radio-group v-model="editForm.hasPhysics">
               <el-radio-button value="是">是</el-radio-button>
@@ -155,7 +152,6 @@ const editingId = ref(null)
 
 const editForm = reactive({
   name: '',
-  phone: '',
   hasPhysics: '',
   hasEnglish: '',
 })
@@ -214,7 +210,6 @@ async function fetchMyRecords() {
 function onEdit(row) {
   editingId.value = row.id
   editForm.name = row.name
-  editForm.phone = row.phone
   editForm.hasPhysics = row.hasPhysics || '否'
   editForm.hasEnglish = row.hasEnglish || '否'
   editDialogVisible.value = true
@@ -229,16 +224,6 @@ async function onEditSubmit() {
   }
   if (name.length < 2) {
     ElMessage.warning('姓名至少2个字符')
-    return
-  }
-  // 手机号校验：1开头11位数字
-  const phone = editForm.phone.trim()
-  if (!phone) {
-    ElMessage.warning('手机号不能为空')
-    return
-  }
-  if (!/^1[0-9]{10}$/.test(phone)) {
-    ElMessage.warning('请输入正确的11位手机号（1开头）')
     return
   }
   editLoading.value = true
