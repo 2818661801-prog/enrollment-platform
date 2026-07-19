@@ -64,16 +64,29 @@
     <!-- 班级介绍弹窗 -->
     <el-dialog
       v-model="dialogVisible"
-      :title="`${cardTitle} 介绍`"
       width="90%"
-      max-width="480px"
+      max-width="460px"
       destroy-on-close
       :append-to-body="true"
+      :show-close="false"
+      class="desc-dialog"
     >
-      <div class="desc-content">{{ classInfo.description }}</div>
-      <template #footer>
-        <el-button type="primary" @click="dialogVisible = false">关闭</el-button>
-      </template>
+      <!-- 顶部蓝色色条 -->
+      <div class="desc-dialog-bar" />
+      <!-- 头部 -->
+      <div class="desc-dialog-head">
+        <img :src="descIcon" alt="" class="desc-dialog-icon" />
+        <span class="desc-dialog-title">{{ cardTitle }}</span>
+      </div>
+      <div class="desc-dialog-subtitle">班级介绍</div>
+      <!-- 内容 -->
+      <div class="desc-dialog-body">
+        <p class="desc-dialog-text">{{ classInfo.description }}</p>
+      </div>
+      <!-- 底部按钮 -->
+      <div class="desc-dialog-footer">
+        <el-button class="desc-dialog-close-btn" @click="dialogVisible = false">我知道了</el-button>
+      </div>
     </el-dialog>
   </article>
 </template>
@@ -245,6 +258,7 @@ function showDescription() {
   align-items: center;
   flex-wrap: wrap;
   justify-content: flex-end;
+  margin-top: 10px;
 }
 .card-tag {
   font-size: 11px;
@@ -280,13 +294,97 @@ function showDescription() {
   display: block;
 }
 
-/* 介绍弹窗内容 */
-.desc-content {
+/* ==================== 班级介绍弹窗 ==================== */
+.desc-dialog :deep(.el-dialog__header) { display: none; }
+.desc-dialog :deep(.el-dialog__body)   { padding: 0; }
+.desc-dialog :deep(.el-dialog__footer) { display: none; }
+.desc-dialog :deep(.el-dialog) { border-radius: 12px; overflow: hidden; }
+
+/* 顶部色条 */
+.desc-dialog-bar {
+  height: 4px;
+  background: linear-gradient(90deg, #337eff, #5b9bff);
+}
+
+/* 头部 */
+.desc-dialog-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 24px 24px 0;
+}
+.desc-dialog-icon {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+}
+.desc-dialog-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+/* 副标题 */
+.desc-dialog-subtitle {
+  padding: 0 24px;
+  margin-top: 4px;
+  font-size: 12px;
+  color: #94a3b8;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+}
+
+/* 内容区 */
+.desc-dialog-body {
+  margin: 16px 24px 24px;
+  padding: 18px 18px 18px 44px;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e8ecf2;
+  position: relative;
+}
+.desc-dialog-quote {
+  position: absolute;
+  left: 16px;
+  top: 18px;
+  opacity: 0.5;
+}
+.desc-dialog-text {
   font-size: 14px;
-  line-height: 1.7;
+  line-height: 1.75;
   color: #334155;
+  margin: 0;
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+/* 底部按钮 */
+.desc-dialog-footer {
+  padding: 0 24px 24px;
+}
+.desc-dialog-close-btn {
+  width: 100%;
+  height: 40px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  background: #337eff;
+  color: #fff;
+  border: none;
+  transition: background 0.2s;
+}
+.desc-dialog-close-btn:hover {
+  background: #2563eb;
+  color: #fff;
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .desc-dialog :deep(.el-dialog) { max-width: 92vw !important; margin: 0 auto !important; }
+  .desc-dialog-head { padding: 20px 16px 0; }
+  .desc-dialog-subtitle { padding: 0 16px; }
+  .desc-dialog-body { margin: 12px 16px 20px; padding: 14px 14px 14px 38px; }
+  .desc-dialog-footer { padding: 0 16px 20px; }
 }
 
 /* 标题下分割线（签名元素：印刷感） */
@@ -426,7 +524,7 @@ function showDescription() {
   }
   .card-tags {
     justify-content: flex-start; /* 标签左对齐，不右对齐 */
-    margin-top: 8px;
+    margin-top: 10px;
   }
   /* 移动端介绍按钮：绝对定位在右上角，不影响标题行布局 */
   .desc-btn {
