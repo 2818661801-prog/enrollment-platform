@@ -326,12 +326,15 @@ function showDescription() {
 
 /* 副标题 */
 .desc-dialog-subtitle {
-  padding: 0 24px;
-  margin-top: 4px;
-  font-size: 12px;
-  color: #94a3b8;
-  font-weight: 500;
-  letter-spacing: 0.03em;
+  display: inline-block;
+  margin: 6px 24px 0;
+  padding: 3px 12px;
+  font-size: 13px;
+  color: #337eff;
+  font-weight: 600;
+  background: #eaf2ff;
+  border-radius: 4px;
+  letter-spacing: 0.04em;
 }
 
 /* 内容区 */
@@ -382,7 +385,7 @@ function showDescription() {
 @media (max-width: 768px) {
   .desc-dialog :deep(.el-dialog) { max-width: 92vw !important; margin: 0 auto !important; }
   .desc-dialog-head { padding: 20px 16px 0; }
-  .desc-dialog-subtitle { padding: 0 16px; }
+  .desc-dialog-subtitle { margin: 6px 16px 0; }
   .desc-dialog-body { margin: 12px 16px 20px; padding: 14px 14px 14px 38px; }
   .desc-dialog-footer { padding: 0 16px 20px; }
 }
