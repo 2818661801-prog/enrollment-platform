@@ -7,14 +7,14 @@
 <template>
   <article
     class="class-card"
-    :class="{ 'is-disabled': !timeStatus.canApply }"
+    :class="{ 'is-disabled': !timeStatus.canApply, 'is-single': !isMultiRound, 'is-multi': isMultiRound }"
     @click="onClick"
   >
     <!-- 顶部色条（签名元素：从招生章程里剪下来的视觉特征） -->
     <div class="card-accent-bar" />
 
     <div class="card-body">
-      <!-- 标题行：班级名称 + 介绍按钮 + 类别标签（右上角） -->
+      <!-- 标题行：班级名称 + 介绍按钮 -->
       <div class="card-head">
         <h3 class="card-name" :title="cardTitle">{{ cardTitle }}</h3>
         <button
@@ -25,10 +25,13 @@
           @click.stop="showDescription"
         >
           <img :src="descIcon" alt="班级介绍" class="desc-icon" />
+          <span class="desc-btn-text">介绍</span>
         </button>
-        <div v-if="categoryNames.length" class="card-tags">
-          <span v-for="n in categoryNames" :key="n" class="card-tag">{{ n }}</span>
-        </div>
+      </div>
+
+      <!-- 类别标签：单独一行，靠右 -->
+      <div v-if="categoryNames.length" class="card-tags">
+        <span v-for="n in categoryNames" :key="n" class="card-tag">{{ n }}</span>
       </div>
 
       <!-- 标题下分割线 -->
@@ -36,9 +39,9 @@
 
       <!-- 报名时间段（支持多轮） -->
       <div class="card-periods">
-        <div v-for="(r, idx) in rounds" :key="r.round" class="card-period-row">
+        <div v-for="(r, idx) in visibleRounds" :key="r.round" class="card-period-row">
           <img :src="calendarIcon" alt="" class="period-icon" aria-hidden="true" />
-          <span class="round-label">第{{ r.round }}轮</span>
+          <span v-if="isMultiRound" class="round-label">第{{ r.round }}轮</span>
           <el-tooltip :content="`报名时间：${r.period}`" placement="top">
             <span class="period-text">{{ r.period }}</span>
           </el-tooltip>
@@ -46,10 +49,16 @@
           <span v-if="isMultiRound" class="round-status" :class="`round-status--${roundStatusList[idx].status}`">
             {{ roundStatusList[idx].label }}
           </span>
+          <!-- 展开其他轮次箭头：在时间行最后（仅最后一行显示） -->
+          <button v-if="isMultiRound && idx === visibleRounds.length - 1" type="button" class="expand-btn" @click.stop="toggleExpand">
+            <svg class="expand-arrow" :class="{ 'is-expanded': isExpanded }" width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <path d="M2 4L6 8L10 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
         </div>
       </div>
 
-      <!-- 三态按钮：已录取 / 灰色已录取 / 未开始 / 已截止 / 立即报名 -->
+      <!-- 报名按钮 -->
       <button
         type="button"
         class="card-btn"
@@ -106,6 +115,7 @@ const props = defineProps({
 
 const emit = defineEmits(['select'])
 const dialogVisible = ref(false)
+const isExpanded = ref(false)
 
 // 是否为多轮班（classRounds 数组里有超过 1 条）
 const isMultiRound = computed(() => {
@@ -140,7 +150,7 @@ const categoryNames = computed(() => {
   return []
 })
 
-// 从 classRounds 数组解析轮次信息（替代旧的 periods JSON 解析）
+// 从 classRounds 数组解析轮次信息
 const rounds = computed(() => {
   const arr = props.classInfo.classRounds
   if (!arr || !Array.isArray(arr) || arr.length === 0) {
@@ -156,6 +166,16 @@ const rounds = computed(() => {
 const roundStatusList = computed(() => {
   return rounds.value.map(r => getClassTimeStatus({ period: r.period }))
 })
+
+// 多轮班默认只展示第1轮，展开后展示全部
+const visibleRounds = computed(() => {
+  if (!isMultiRound.value) return rounds.value
+  return isExpanded.value ? rounds.value : rounds.value.slice(0, 1)
+})
+
+function toggleExpand() {
+  isExpanded.value = !isExpanded.value
+}
 
 // 已录取（status=3）：黄色
 // 已登录 + 有记录（status=1/4）：灰色"已报名"
@@ -193,13 +213,13 @@ function showDescription() {
   position: relative;
   background: var(--paper, #fff);
   border: 1px solid var(--rule, #e2e8f0);
-  border-radius: 4px;         /* 主人要求：圆角 */
+  border-radius: 4px;
   overflow: hidden;
   cursor: pointer;
   transition: border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
 }
 .class-card:hover {
-  border-color: #337eff;       /* hover：边框变主题蓝 */
+  border-color: #337eff;
   box-shadow: 0 4px 12px rgba(51, 126, 255, 0.12);
 }
 .class-card.is-disabled {
@@ -215,9 +235,8 @@ function showDescription() {
 /* ==================== 签名元素：4px 顶部色条 ==================== */
 .card-accent-bar {
   height: 4px;
-  background: #337eff;         /* 沿用 themeCss.json 主色 */
+  background: #337eff;
 }
-/* 顶部色条保持主题蓝不变 */
 
 /* ==================== 卡片正文 ==================== */
 .card-body {
@@ -229,24 +248,55 @@ function showDescription() {
 
 /* ==================== 标题行 ==================== */
 .card-head {
-  position: relative;           /* 让 desc-btn 绝对定位右上角 */
-  min-height: 48px;
+  display: flex;
+  align-items: flex-start;        /* 标题顶部对齐，介绍按钮推右 */
+  gap: 6px;
+  margin-top: 8px;
+  width: 100%;
 }
 .card-name {
-  padding-right: 36px;         /* 给右上角按钮留空位 */
+  flex: 1;
   font-size: 17px;
   font-weight: 700;
   line-height: 1.4;
   color: var(--ink, #0f172a);
   margin: 0;
-  /* 最多两行省略 */
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
 
-/* 类别标签：右上角小标签，浅蓝底，横向排列 */
+/* 介绍按钮：flex 推右，与标题同行 */
+.desc-btn {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 4px 8px;
+  background: rgba(51, 126, 255, 0.08);
+  border: 1px solid rgba(51, 126, 255, 0.2);
+  border-radius: 4px;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: background 0.15s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.desc-btn:hover {
+  background: rgba(51, 126, 255, 0.15);
+}
+.desc-icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+.desc-btn-text {
+  font-size: 12px;
+  color: #337eff;
+  font-weight: 600;
+}
+
+/* 类别标签 */
 .card-tags {
   display: flex;
   flex-direction: row;
@@ -255,134 +305,17 @@ function showDescription() {
   align-items: center;
   flex-wrap: wrap;
   justify-content: flex-end;
-  margin-top: 10px;
+  margin-top: 6px;
 }
 .card-tag {
   font-size: 11px;
-  color: #1d4ed8;              /* 深一档蓝，与色条呼应 */
-  background: #eaf2ff;         /* 主题蓝的 12% 浅版 */
+  color: #1d4ed8;
+  background: #eaf2ff;
   padding: 2px 8px;
-  border-radius: 3px;          /* 圆角（与卡片整体调性一致） */
+  border-radius: 3px;
 }
 
-/* 介绍按钮：绝对定位右上角，和类别标签完全分离 */
-.desc-btn {
-  position: absolute;
-  top: -6px;
-  right: -6px;
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  background: none;
-  border: none;
-  cursor: pointer;
-  pointer-events: auto; /* 穿透 is-disabled 禁用 */
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  transition: background 0.15s;
-}
-.desc-btn:hover {
-  background: #eaf2ff;
-}
-.desc-icon {
-  width: 20px;
-  height: 20px;
-  display: block;
-}
-
-/* ==================== 班级介绍弹窗 ==================== */
-.desc-dialog :deep(.el-dialog__header) { display: none; }
-.desc-dialog :deep(.el-dialog__body)   { padding: 0; }
-.desc-dialog :deep(.el-dialog__footer) { display: none; }
-.desc-dialog :deep(.el-dialog) { border-radius: 12px; overflow: hidden; }
-
-/* 顶部色条 */
-.desc-dialog-bar {
-  height: 4px;
-  background: linear-gradient(90deg, #337eff, #5b9bff);
-}
-
-/* 头部 */
-.desc-dialog-head {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 24px 24px 0;
-}
-.desc-dialog-icon {
-  width: 28px;
-  height: 28px;
-  flex-shrink: 0;
-}
-.desc-dialog-title {
-  font-size: 16px;
-  font-weight: 700;
-  color: #0f172a;
-}
-
-/* 副标题 */
-.desc-dialog-subtitle {
-  display: inline-block;
-  margin: 6px 24px 0;
-  padding: 3px 12px;
-  font-size: 13px;
-  color: #337eff;
-  font-weight: 600;
-  background: #eaf2ff;
-  border-radius: 4px;
-  letter-spacing: 0.04em;
-}
-
-/* 内容区 */
-.desc-dialog-body {
-  margin: 14px 16px 20px;
-  padding: 16px;
-  background: #f8fafc;
-  border-radius: 8px;
-  border: 1px solid #e8ecf2;
-  position: relative;
-}
-.desc-dialog-text {
-  font-size: 14px;
-  line-height: 1.75;
-  color: #334155;
-  margin: 0;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
-/* 底部按钮 */
-.desc-dialog-footer {
-  padding: 0 24px 24px;
-}
-.desc-dialog-close-btn {
-  width: 100%;
-  height: 40px;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  background: #337eff;
-  color: #fff;
-  border: none;
-  transition: background 0.2s;
-}
-.desc-dialog-close-btn:hover {
-  background: #2563eb;
-  color: #fff;
-}
-
-/* 移动端适配 */
-@media (max-width: 768px) {
-  .desc-dialog :deep(.el-dialog) { max-width: 92vw !important; margin: 0 auto !important; }
-  .desc-dialog-head { padding: 20px 16px 0; }
-  .desc-dialog-subtitle { margin: 6px 16px 0; }
-  .desc-dialog-body { margin: 10px 12px 16px; padding: 14px; }
-  .desc-dialog-footer { padding: 0 16px 20px; }
-}
-
-/* 标题下分割线（签名元素：印刷感） */
+/* 标题下分割线（签名元素） */
 .card-rule {
   height: 1px;
   background: var(--rule, #e2e8f0);
@@ -424,10 +357,10 @@ function showDescription() {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  pointer-events: auto; /* 恢复点击，让 disabled 卡片里的 el-tooltip 也能触发 */
+  pointer-events: auto;
 }
 
-/* 轮次状态标签：报名中=绿，已截止/未开始=灰 */
+/* 轮次状态标签 */
 .round-status {
   font-size: 12px;
   font-weight: 600;
@@ -449,34 +382,56 @@ function showDescription() {
   background: #f1f5f9;
 }
 
+/* ==================== 展开其他轮次按钮 ==================== */
+.expand-btn {
+  display: inline-flex;
+  align-items: center;
+  background: none;
+  border: none;
+  color: #337ffe;
+  cursor: pointer;
+  padding: 2px 4px;
+  transition: color 0.15s;
+  pointer-events: auto;          /* 即使卡片禁用也能点击 */
+}
+.expand-btn:hover {
+  color: #2563eb;
+}
+.expand-arrow {
+  transition: transform 0.2s;
+}
+.expand-arrow.is-expanded {
+  transform: rotate(180deg);
+}
+
 /* ==================== 三态按钮 ==================== */
 .card-btn {
   width: 100%;
   height: 38px;
   border: 1px solid transparent;
-  border-radius: 4px;          /* 圆角（与卡片一致） */
+  border-radius: 4px;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
   font-family: inherit;
 }
-/* open：主题蓝实心（强对比，吸引点击，与品牌色一致） */
+/* open */
 .card-btn--open {
-  background: #337eff;         /* themeCss.json --navbar-background */
+  background: #337eff;
   color: #fff;
 }
 .card-btn--open:hover {
-  background: #2563eb;         /* hover：稍深一档 */
+  background: #2563eb;
 }
-/* not_started：浅灰底，提示性文案，加粗醒目 */
+/* not_started */
 .card-btn--not_started {
   background: #e2e8f0;
   color: #64748b;
   font-weight: 700;
   cursor: not-allowed;
 }
-/* closed：浅灰底，加粗醒目 */
+/* closed */
 .card-btn--closed {
   background: #f1f5f9;
   color: #b91c1c;
@@ -485,23 +440,93 @@ function showDescription() {
   border: 1px solid #fecaca;
   opacity: 0.85;
 }
-/* 已报名：绿色（与开放状态接近，但不等于可点击） */
+/* 已报名 */
 .card-btn--applied {
   background: #16a34a;
   color: #fff;
   cursor: not-allowed;
 }
-/* 已登录 + 有记录（未录取）：灰色 */
+/* 已登录+有记录（未录取） */
 .card-btn--gray {
   background: #94a3b8;
   color: #fff;
   cursor: not-allowed;
 }
-/* 已录取：黄色（醒目但不等于可点击） */
+/* 已录取 */
 .card-btn--admitted {
   background: #f59e0b;
   color: #fff;
   cursor: not-allowed;
+}
+
+/* ==================== 班级介绍弹窗 ==================== */
+.desc-dialog :deep(.el-dialog__header) { display: none; }
+.desc-dialog :deep(.el-dialog__body)   { padding: 0; }
+.desc-dialog :deep(.el-dialog__footer) { display: none; }
+.desc-dialog :deep(.el-dialog) { border-radius: 12px; overflow: hidden; }
+.desc-dialog-bar {
+  height: 4px;
+  background: linear-gradient(90deg, #337eff, #5b9bff);
+}
+.desc-dialog-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 24px 24px 0;
+}
+.desc-dialog-icon {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+}
+.desc-dialog-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+}
+.desc-dialog-subtitle {
+  display: inline-block;
+  margin: 6px 24px 0;
+  padding: 3px 12px;
+  font-size: 13px;
+  color: #337eff;
+  font-weight: 600;
+  background: #eaf2ff;
+  border-radius: 4px;
+  letter-spacing: 0.04em;
+}
+.desc-dialog-body {
+  margin: 14px 16px 20px;
+  padding: 16px;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e8ecf2;
+}
+.desc-dialog-text {
+  font-size: 14px;
+  line-height: 1.75;
+  color: #334155;
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.desc-dialog-footer {
+  padding: 0 24px 24px;
+}
+.desc-dialog-close-btn {
+  width: 100%;
+  height: 40px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  background: #337eff;
+  color: #fff;
+  border: none;
+  transition: background 0.2s;
+}
+.desc-dialog-close-btn:hover {
+  background: #2563eb;
+  color: #fff;
 }
 
 /* ==================== 移动端适配 ==================== */
@@ -510,28 +535,35 @@ function showDescription() {
     padding: 16px 16px 14px;
     gap: 12px;
   }
+  .card-head {
+    position: relative;            /* 让 desc-btn absolute 定位 */
+    min-height: unset;
+  }
   .card-name {
     font-size: 16px;
+    padding-right: 52px;          /* 给右侧介绍按钮留空间，避免文字遮挡 */
   }
-  .card-head {
-    display: flex;
-    min-height: 44px;
-    flex-direction: column;      /* 标签放名称下方，不挤一排 */
-    align-items: flex-start;
-  }
-  .card-tags {
-    justify-content: flex-start; /* 标签左对齐，不右对齐 */
-    margin-top: 10px;
-  }
-  /* 移动端介绍按钮：绝对定位在右上角，不影响标题行布局 */
+  /* 介绍按钮：absolute 固定贴右上角 */
   .desc-btn {
     position: absolute;
-    top: -4px;
-    right: -4px;
+    top: 0;
+    right: 0;
+    padding: 4px 6px;
+  }
+  .card-tags {
+    justify-content: flex-start;
+    margin-top: 6px;
   }
   .card-btn {
     height: 36px;
     font-size: 13px;
   }
+}
+@media (max-width: 768px) {
+  .desc-dialog :deep(.el-dialog) { max-width: 92vw !important; margin: 0 auto !important; }
+  .desc-dialog-head { padding: 20px 16px 0; }
+  .desc-dialog-subtitle { margin: 6px 16px 0; }
+  .desc-dialog-body { margin: 10px 12px 16px; padding: 14px; }
+  .desc-dialog-footer { padding: 0 16px 20px; }
 }
 </style>
