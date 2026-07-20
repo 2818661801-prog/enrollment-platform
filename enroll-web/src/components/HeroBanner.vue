@@ -485,19 +485,36 @@ onUnmounted(() => {
 /* ==================== 响应式 ≤768px ==================== */
 @media (max-width: 768px) {
   .hero-banner {
-    aspect-ratio: 16 / 6.75;       /* 移动端：原16:9减去顶部1/4 → 16:6.75 */
+    aspect-ratio: 16 / 7.5;       /* 更扁，给内容留空间 */
     border-radius: 10px;
   }
   .banner-content {
-    width: 88%;
-    padding: 20px 22px;
+    width: 92%;
+    padding: 14px 18px;
+    gap: 0;
   }
-  .banner-title { font-size: 20px; }
-  .banner-subtitle { font-size: 13px; max-width: 100%; }
+  .welcome-tag {
+    padding: 3px 10px;
+    margin-bottom: 6px;
+  }
+  .welcome-text { font-size: 11px; }
+  .banner-title {
+    font-size: 17px;
+    margin-bottom: 4px;
+  }
+  .banner-subtitle {
+    font-size: 12px;
+    max-width: 100%;
+    margin-bottom: 10px;
+  }
+  .banner-cta {
+    padding: 7px 16px;
+    font-size: 12px;
+  }
   .nav-btn {
-    opacity: 1;                   /* 移动端常显 */
-    width: 30px;
-    height: 30px;
+    opacity: 1;
+    width: 28px;
+    height: 28px;
   }
   .slide-counter { display: none; }
   .dot { width: 6px; height: 6px; }

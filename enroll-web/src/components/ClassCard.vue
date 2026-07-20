@@ -14,47 +14,46 @@
     <div class="card-accent-bar" />
 
     <div class="card-body">
-      <!-- 标题行：班级名称 + 介绍按钮 -->
-      <div class="card-head">
-        <h3 class="card-name" :title="cardTitle">{{ cardTitle }}</h3>
-        <button
-          v-if="classInfo.description"
-          type="button"
-          class="desc-btn"
-          :title="`查看${cardTitle}的班级介绍`"
-          @click.stop="showDescription"
-        >
-          <img :src="descIcon" alt="班级介绍" class="desc-icon" />
-          <span class="desc-btn-text">介绍</span>
-        </button>
-      </div>
-
-      <!-- 类别标签：单独一行，靠右 -->
-      <div v-if="categoryNames.length" class="card-tags">
-        <span v-for="n in categoryNames" :key="n" class="card-tag">{{ n }}</span>
-      </div>
-
-      <!-- 标题下分割线 -->
-      <div class="card-rule" />
-
-      <!-- 报名时间段（支持多轮） -->
-      <div class="card-periods">
-        <div v-for="(r, idx) in visibleRounds" :key="r.round" class="card-period-row">
-          <img :src="calendarIcon" alt="" class="period-icon" aria-hidden="true" />
-          <span v-if="isMultiRound" class="round-label">第{{ r.round }}轮</span>
-          <el-tooltip :content="`报名时间：${r.period}`" placement="top">
-            <span class="period-text">{{ r.period }}</span>
-          </el-tooltip>
-          <!-- 多轮时右侧显示状态标签 -->
-          <span v-if="isMultiRound" class="round-status" :class="`round-status--${roundStatusList[idx].status}`">
-            {{ roundStatusList[idx].label }}
-          </span>
-          <!-- 展开其他轮次箭头：在时间行最后（仅最后一行显示） -->
-          <button v-if="isMultiRound && idx === visibleRounds.length - 1" type="button" class="expand-btn" @click.stop="toggleExpand">
-            <svg class="expand-arrow" :class="{ 'is-expanded': isExpanded }" width="12" height="12" viewBox="0 0 12 12" fill="none">
-              <path d="M2 4L6 8L10 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
+      <!-- 内容区：grid 布局，保证所有行 Y 轴固定对齐 -->
+      <div class="card-content">
+        <!-- Row1: 标题行 -->
+        <div class="card-head">
+          <h3 class="card-name" :title="cardTitle">{{ cardTitle }}</h3>
+          <button
+            v-if="classInfo.description"
+            type="button"
+            class="desc-btn"
+            :title="`查看${cardTitle}的班级介绍`"
+            @click.stop="showDescription"
+          >
+            <img :src="descIcon" alt="班级介绍" class="desc-icon" />
+            <span class="desc-btn-text">介绍</span>
           </button>
+        </div>
+
+        <!-- Row2: 类别标签（始终占位，无标签时 empty） -->
+        <div class="card-tags"><span v-for="n in categoryNames" :key="n" class="card-tag">{{ n }}</span></div>
+
+        <!-- Row3: 分割线（永远在同一 Y） -->
+        <div class="card-rule" />
+
+        <!-- Row4: 报名时间段（flex-grow 填满剩余空间） -->
+        <div class="card-periods">
+          <div v-for="(r, idx) in visibleRounds" :key="r.round" class="card-period-row">
+            <img :src="calendarIcon" alt="" class="period-icon" aria-hidden="true" />
+            <span v-if="isMultiRound" class="round-label">第{{ r.round }}轮</span>
+            <el-tooltip :content="`报名时间：${r.period}`" placement="top">
+              <span class="period-text">{{ r.period }}</span>
+            </el-tooltip>
+            <span v-if="isMultiRound" class="round-status" :class="`round-status--${roundStatusList[idx].status}`">
+              {{ roundStatusList[idx].label }}
+            </span>
+            <button v-if="isMultiRound && idx === visibleRounds.length - 1" type="button" class="expand-btn" @click.stop="toggleExpand">
+              <svg class="expand-arrow" :class="{ 'is-expanded': isExpanded }" width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <path d="M2 4L6 8L10 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -240,20 +239,59 @@ function showDescription() {
 
 /* ==================== 卡片正文 ==================== */
 .card-body {
-  padding: 20px 20px 16px;
+  padding: 12px 16px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 20px;                     /* 调大 10px */
 }
 
-/* ==================== 标题行 ==================== */
-.card-head {
+/* 内容区：flex 纵向布局，各行固定高度，保证所有卡片对齐 */
+.card-content {
   display: flex;
-  align-items: flex-start;        /* 标题顶部对齐，介绍按钮推右 */
-  gap: 6px;
-  margin-top: 8px;
-  width: 100%;
+  flex-direction: column;
+  gap: 0;
 }
+
+/* 标题行：固定高度，溢出隐藏 */
+.card-head {
+  flex-shrink: 0;
+  position: relative;              /* 让 desc-btn 绝对定位 */
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  overflow: hidden;
+  height: 48px;                    /* 2行标题约48px，避免被标签遮挡 */
+}
+
+/* 类别标签：固定高度，溢出隐藏 */
+.card-tags {
+  flex-shrink: 0;
+  height: 28px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: row;
+  gap: 4px;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  justify-content: flex-start;    /* PC 端左对齐 */
+  margin-top: 8px;
+}
+
+/* 分割线：固定高度 */
+.card-rule {
+  flex-shrink: 0;
+  height: 1px;
+}
+
+/* 时间区：flex-grow 填满剩余空间 */
+.card-periods {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 8px;                 /* 与分割线保持 7px 间距 */
+}
+
 .card-name {
   flex: 1;
   font-size: 17px;
@@ -261,14 +299,15 @@ function showDescription() {
   line-height: 1.4;
   color: var(--ink, #0f172a);
   margin: 0;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  overflow: visible;
+  padding-right: 56px;           /* 给右上角 absolute 按钮留空间 */
 }
 
-/* 介绍按钮：flex 推右，与标题同行 */
+/* 介绍按钮：绝对定位右上角 */
 .desc-btn {
+  position: absolute;
+  top: -6px;
+  right: -6px;
   display: flex;
   align-items: center;
   gap: 3px;
@@ -280,7 +319,6 @@ function showDescription() {
   pointer-events: auto;
   transition: background 0.15s;
   white-space: nowrap;
-  flex-shrink: 0;
 }
 .desc-btn:hover {
   background: rgba(51, 126, 255, 0.15);
@@ -296,17 +334,6 @@ function showDescription() {
   font-weight: 600;
 }
 
-/* 类别标签 */
-.card-tags {
-  display: flex;
-  flex-direction: row;
-  gap: 4px;
-  flex-shrink: 1;
-  align-items: center;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  margin-top: 6px;
-}
 .card-tag {
   font-size: 11px;
   color: #1d4ed8;
@@ -317,15 +344,17 @@ function showDescription() {
 
 /* 标题下分割线（签名元素） */
 .card-rule {
+  grid-row: 3;
   height: 1px;
   background: var(--rule, #e2e8f0);
 }
 
 /* ==================== 时间段（支持多轮） ==================== */
 .card-periods {
+  grid-row: 4;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 .card-period-row {
   display: flex;
@@ -407,7 +436,8 @@ function showDescription() {
 /* ==================== 三态按钮 ==================== */
 .card-btn {
   width: 100%;
-  height: 38px;
+  height: 34px;
+  margin-top: auto;               /* 永远贴卡片底部 */
   border: 1px solid transparent;
   border-radius: 4px;
   font-size: 14px;
@@ -532,18 +562,29 @@ function showDescription() {
 /* ==================== 移动端适配 ==================== */
 @media (max-width: 768px) {
   .card-body {
-    padding: 16px 16px 14px;
-    gap: 12px;
+    padding: 15px 17px;
+    gap: 8px;
+  }
+  .card-content {
+    display: flex;               /* 移动端恢复 flex，自然流 */
+    flex-direction: column;
+    gap: 0;
   }
   .card-head {
-    position: relative;            /* 让 desc-btn absolute 定位 */
-    min-height: unset;
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    margin-top: 9px;
   }
   .card-name {
-    font-size: 16px;
-    padding-right: 52px;          /* 给右侧介绍按钮留空间，避免文字遮挡 */
+    font-size: 15px;
+    padding-right: 52px;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    display: -webkit-box;
+    overflow: hidden;
   }
-  /* 介绍按钮：absolute 固定贴右上角 */
   .desc-btn {
     position: absolute;
     top: 0;
@@ -552,7 +593,13 @@ function showDescription() {
   }
   .card-tags {
     justify-content: flex-start;
-    margin-top: 6px;
+    margin-bottom: 6px;
+  }
+  .card-rule {
+    display: block;
+  }
+  .card-periods {
+    gap: 4px;
   }
   .card-btn {
     height: 36px;
