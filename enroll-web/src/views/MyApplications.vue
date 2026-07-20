@@ -106,31 +106,56 @@
       <el-empty v-else description="暂无报名记录" />
 
       <!-- 修改弹窗 -->
-      <el-dialog v-model="editDialogVisible" title="修改报名信息" width="90%" destroy-on-close>
-        <el-form :model="editForm" label-width="100px" label-position="right">
-          <el-form-item label="姓名">
-            <el-input v-model="editForm.name" maxlength="10" />
-          </el-form-item>
-          <el-form-item label="身份证号">
-            <el-input v-model="editForm.idCard" maxlength="18" placeholder="请输入18位身份证号" />
-          </el-form-item>
-          <el-form-item label="选考物理">
-            <el-radio-group v-model="editForm.hasPhysics">
+      <el-dialog
+        v-model="editDialogVisible"
+        width="90%"
+        max-width="440px"
+        destroy-on-close
+        :show-close="false"
+        class="edit-dialog"
+      >
+        <div class="edit-dialog-bar" />
+        <div class="edit-dialog-head">
+          <el-icon size="22" color="#337eff"><EditPen /></el-icon>
+          <span class="edit-dialog-title">修改报名信息</span>
+        </div>
+
+        <div class="edit-dialog-body">
+          <div class="edit-field">
+            <label class="edit-label">姓名</label>
+            <el-input v-model="editForm.name" maxlength="10" placeholder="请输入姓名" class="edit-input" />
+          </div>
+          <div class="edit-field">
+            <label class="edit-label">身份证号</label>
+            <el-input v-model="editForm.idCard" maxlength="18" placeholder="请输入18位身份证号" class="edit-input" />
+          </div>
+          <div class="edit-field">
+            <label class="edit-label">性别</label>
+            <el-radio-group v-model="editForm.gender" class="edit-radio-group">
+              <el-radio-button value="男">男</el-radio-button>
+              <el-radio-button value="女">女</el-radio-button>
+            </el-radio-group>
+          </div>
+          <div class="edit-field">
+            <label class="edit-label">选考物理</label>
+            <el-radio-group v-model="editForm.hasPhysics" class="edit-radio-group">
               <el-radio-button value="是">是</el-radio-button>
               <el-radio-button value="否">否</el-radio-button>
             </el-radio-group>
-          </el-form-item>
-          <el-form-item label="选考英语">
-            <el-radio-group v-model="editForm.hasEnglish">
+          </div>
+          <div class="edit-field">
+            <label class="edit-label">选考英语</label>
+            <el-radio-group v-model="editForm.hasEnglish" class="edit-radio-group">
               <el-radio-button value="是">是</el-radio-button>
               <el-radio-button value="否">否</el-radio-button>
             </el-radio-group>
-          </el-form-item>
-        </el-form>
-        <template #footer>
-          <el-button @click="editDialogVisible = false">取消</el-button>
-          <el-button type="primary" :loading="editLoading" @click="onEditSubmit">保存</el-button>
-        </template>
+          </div>
+        </div>
+
+        <div class="edit-dialog-footer">
+          <el-button class="edit-cancel-btn" @click="editDialogVisible = false">取消</el-button>
+          <el-button type="primary" :loading="editLoading" class="edit-save-btn" @click="onEditSubmit">保存修改</el-button>
+        </div>
       </el-dialog>
     </div>
     <AppFooter />
@@ -141,7 +166,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { ArrowLeft, User, Loading, SwitchButton } from '@element-plus/icons-vue'
+import { ArrowLeft, User, Loading, SwitchButton, EditPen } from '@element-plus/icons-vue'
 import { withdrawApplicationAPI, updateApplicationAPI } from '../utils/api.js'
 import { validateIdCard } from '../utils/validate.js'
 import AppFooter from '../components/AppFooter.vue'
@@ -157,6 +182,7 @@ const editingId = ref(null)
 const editForm = reactive({
   name: '',
   idCard: '',
+  gender: '',
   hasPhysics: '',
   hasEnglish: '',
 })
@@ -216,6 +242,7 @@ function onEdit(row) {
   editingId.value = row.id
   editForm.name = row.name
   editForm.idCard = row.idCardRaw || row.idCard
+  editForm.gender = row.gender || ''
   editForm.hasPhysics = row.hasPhysics || '否'
   editForm.hasEnglish = row.hasEnglish || '否'
   editDialogVisible.value = true
@@ -465,6 +492,92 @@ onMounted(fetchMyRecords)
     max-width: 320px !important;
   }
   .el-message-box__message { font-size: 14px !important; line-height: 1.5 !important; }
-  .el-message-box__title { font-size: 16px !important; }
+  
+}
+
+/* ===== 修改弹窗样式 ===== */
+.edit-dialog :deep(.el-dialog__header) { display: none; }
+.edit-dialog :deep(.el-dialog__body)   { padding: 0; }
+.edit-dialog :deep(.el-dialog__footer) { display: none; }
+
+.edit-dialog-bar {
+  height: 4px;
+  background: linear-gradient(90deg, #337eff, #5b9bff);
+}
+
+.edit-dialog-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 24px 24px 0;
+}
+.edit-dialog-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.edit-dialog-body {
+  padding: 20px 24px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.edit-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.edit-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+}
+
+.edit-input :deep(.el-input__wrapper) {
+  border-radius: 8px;
+  box-shadow: 0 0 0 1px #e2e8f0;
+}
+.edit-input :deep(.el-input__wrapper:hover) {
+  box-shadow: 0 0 0 1px #337eff;
+}
+
+.edit-radio-group :deep(.el-radio-button__inner) {
+  border-radius: 6px;
+}
+
+.edit-dialog-footer {
+  display: flex;
+  gap: 12px;
+  padding: 8px 24px 24px;
+}
+.edit-cancel-btn {
+  flex: 1;
+  height: 42px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  background: #fff;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+}
+.edit-cancel-btn:hover {
+  border-color: #337eff;
+  color: #337eff;
+}
+.edit-save-btn {
+  flex: 1;
+  height: 42px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+@media (max-width: 768px) {
+  .edit-dialog :deep(.el-dialog) { max-width: 92vw !important; }
+  .edit-dialog-head { padding: 20px 16px 0; }
+  .edit-dialog-body { padding: 16px 16px 4px; gap: 14px; }
+  .edit-dialog-footer { padding: 4px 16px 20px; }
 }
 </style>
