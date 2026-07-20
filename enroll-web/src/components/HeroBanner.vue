@@ -246,7 +246,7 @@ onUnmounted(() => {
 .hero-banner {
   position: relative;
   width: 100%;
-  aspect-ratio: 32 / 9;           /* 桌面端 32:9 超扁型 */
+  aspect-ratio: 32 / 6.75;          /* 桌面端：原32:9减去顶部1/4 → 32:6.75（≈4.74:1） */
   overflow: hidden;
   border-radius: 14px;
   background: #1e293b;            /* 占位背景：图加载前显示深色 */
@@ -485,7 +485,7 @@ onUnmounted(() => {
 /* ==================== 响应式 ≤768px ==================== */
 @media (max-width: 768px) {
   .hero-banner {
-    aspect-ratio: 16 / 9;         /* 移动端切 16:9 */
+    aspect-ratio: 16 / 6.75;       /* 移动端：原16:9减去顶部1/4 → 16:6.75 */
     border-radius: 10px;
   }
   .banner-content {

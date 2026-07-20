@@ -445,6 +445,7 @@ function parsePeriodsArray(classRounds, fallbackPeriod) {
   grid-template-columns: repeat(3, 1fr);
   gap: 16px;
   margin-top: 16px;
+  align-items: stretch;            /* 同行卡片等高 */
 }
 
 /* ===== Banner 下边距（web 端，移动端不动） ===== */

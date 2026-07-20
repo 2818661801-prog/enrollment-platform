@@ -111,15 +111,48 @@
             style="margin-bottom: 16px;"
           />
 
-          <!-- 当前报名班级 -->
-          <el-alert
-            v-if="selectedClass"
-            :title="`当前报名：${selectedClass.name}`"
-            type="info"
-            show-icon
-            :closable="false"
-            style="margin-bottom: 16px; font-weight: 600;"
-          />
+          <!-- 当前报名班级 + 班级介绍按钮（同一行） -->
+          <div v-if="selectedClass" class="class-desc-row">
+            <el-alert
+              :title="`当前报名：${selectedClass.name}`"
+              type="info"
+              show-icon
+              :closable="false"
+              class="class-desc-alert"
+            />
+            <button
+              v-if="selectedClass.description"
+              type="button"
+              class="class-desc-btn"
+              @click="showClassDesc"
+            >
+              <img :src="descIcon" alt="" class="class-desc-btn-icon" />
+              班级介绍
+            </button>
+          </div>
+
+          <!-- 班级介绍弹窗 -->
+          <el-dialog
+            v-model="descDialogVisible"
+            width="90%"
+            max-width="460px"
+            destroy-on-close
+            :show-close="false"
+            class="class-desc-dialog"
+          >
+            <div class="class-desc-dialog-bar" />
+            <div class="class-desc-dialog-head">
+              <img :src="descIcon" alt="" class="class-desc-dialog-icon" />
+              <span class="class-desc-dialog-title">{{ selectedClass?.name }}</span>
+            </div>
+            <div class="class-desc-dialog-subtitle">班级介绍</div>
+            <div class="class-desc-dialog-body">
+              <p class="class-desc-dialog-text">{{ selectedClass?.description }}</p>
+            </div>
+            <div class="class-desc-dialog-footer">
+              <el-button class="class-desc-dialog-close" @click="descDialogVisible = false">我知道了</el-button>
+            </div>
+          </el-dialog>
 
           <!-- ===== 第一行：姓名 + 身份证号 ===== -->
           <el-row :gutter="24" class="form-row">
@@ -240,6 +273,7 @@ import { fetchClasses } from '../utils/api.js'
 import { validateIdCard, validateName, inferGender } from '../utils/validate.js'
 import { useApplication } from '../composables/useApplication.js'
 import { usePhoneCode } from '../composables/usePhoneCode.js'
+import descIcon from '../assets/images/description.svg'
 import AppFooter from '../components/AppFooter.vue'
 
 const route = useRoute()
@@ -252,6 +286,11 @@ const submitting = ref(false)
 const idCardValid = ref(false)
 const nameValid = ref(false)
 const loading = ref(false)
+const descDialogVisible = ref(false)
+
+function showClassDesc() {
+  descDialogVisible.value = true
+}
 
 // 步骤：1=验证码 / 2=表单详情
 const step = ref(1)
@@ -637,5 +676,134 @@ async function onSubmit() {
 /* 校验通过-绿色勾 */
 :deep(.el-input__suffix .el-icon) {
   color: #22c55e;
+}
+
+/* ==================== 班级介绍按钮（同行右侧） ==================== */
+.class-desc-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.class-desc-alert {
+  flex: 1;
+  min-width: 0;
+}
+
+.class-desc-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 14px;
+  background: rgba(51, 126, 255, 0.1);
+  color: #337ffe;
+  border: 1.5px solid rgba(51, 126, 255, 0.3);
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.class-desc-btn:hover {
+  background: rgba(51, 126, 255, 0.18);
+  border-color: rgba(51, 126, 255, 0.5);
+}
+
+.class-desc-btn-icon {
+  width: 16px;
+  height: 16px;
+}
+
+/* 移动端 */
+@media (max-width: 768px) {
+  .class-desc-row { gap: 8px; }
+  .class-desc-btn { padding: 0 10px; font-size: 12px; }
+}
+
+/* ==================== 班级介绍弹窗 ==================== */
+.class-desc-dialog :deep(.el-dialog__header) { display: none; }
+.class-desc-dialog :deep(.el-dialog__body)   { padding: 0; }
+.class-desc-dialog :deep(.el-dialog__footer) { display: none; }
+.class-desc-dialog :deep(.el-dialog) { border-radius: 12px; overflow: hidden; }
+
+.class-desc-dialog-bar {
+  height: 4px;
+  background: linear-gradient(90deg, #337ffe, #5b9bff);
+}
+
+.class-desc-dialog-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 20px 0;
+}
+
+.class-desc-dialog-icon {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.class-desc-dialog-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.class-desc-dialog-subtitle {
+  display: inline-block;
+  margin: 6px 20px 0;
+  padding: 3px 10px;
+  font-size: 12px;
+  color: #337ffe;
+  background: #eaf2ff;
+  border-radius: 4px;
+  letter-spacing: 0.04em;
+}
+
+.class-desc-dialog-body {
+  margin: 12px 16px 16px;
+  padding: 14px;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e8ecf2;
+}
+
+.class-desc-dialog-text {
+  font-size: 14px;
+  line-height: 1.7;
+  color: #334155;
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.class-desc-dialog-footer {
+  padding: 0 20px 20px;
+}
+
+.class-desc-dialog-close {
+  width: 100%;
+  height: 40px;
+  background: #337ffe;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.class-desc-dialog-close:hover { background: #2563eb; color: #fff; }
+
+@media (max-width: 768px) {
+  .class-desc-dialog :deep(.el-dialog) { max-width: 92vw !important; }
+  .class-desc-dialog-head { padding: 16px 16px 0; }
+  .class-desc-dialog-subtitle { margin: 6px 16px 0; }
+  .class-desc-dialog-body { margin: 10px 12px 14px; padding: 12px; }
 }
 </style>

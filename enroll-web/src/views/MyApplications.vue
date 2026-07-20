@@ -83,7 +83,7 @@
                 <span class="info-label">申报班级</span>
                 <span class="info-value">{{ record.className || '-' }}</span>
               </div>
-              <div class="info-row">
+              <div v-if="isMultiRoundClass(record) || Number(record.round) > 1" class="info-row">
                 <span class="info-label">报名轮次</span>
                 <span class="info-value">
                   <el-tag size="small" type="warning" class="round-tag">第{{ record.round }}轮</el-tag>
@@ -191,6 +191,16 @@ const editForm = reactive({
 function goBack() { router.push('/home') }
 function goLogin() { router.push('/student-login') }
 
+/** 判断报名记录是否为多轮班级（通过 classPeriods JSON 判断） */
+function isMultiRoundClass(record) {
+  try {
+    const periods = JSON.parse(record.classPeriods || '[]')
+    return Array.isArray(periods) && periods.length > 1
+  } catch {
+    return false
+  }
+}
+
 function onLogout() {
   ElMessageBox.confirm('确定退出登录吗？', '提示', {
     confirmButtonText: '确定',
@@ -295,9 +305,9 @@ async function onWithdraw(row) {
 // 状态标签颜色
 function statusTagType(status) {
   switch (status) {
-    case '1': return 'success'   // 审核中 → 绿
+    case '1': return 'warning'   // 审核中 → 黄
     case '2': return 'info'      // 已撤回 → 灰
-    case '3': return 'warning'   // 已录取 → 黄
+    case '3': return 'success'   // 已录取 → 绿
     case '4': return 'danger'    // 未录取 → 红
     default:  return 'info'
   }
@@ -402,9 +412,9 @@ onMounted(fetchMyRecords)
   border-radius: 3px 3px 0 0;
   margin: -16px -16px 0 -16px;
 }
-.status-1::before { background: #22c55e; }  /* 审核中-绿 */
+.status-1::before { background: #f59e0b; }  /* 审核中-黄 */
 .status-2::before { background: #94a3b8; }  /* 已撤回-灰 */
-.status-3::before { background: #f59e0b; }  /* 已录取-黄 */
+.status-3::before { background: #22c55e; }  /* 已录取-绿 */
 .status-4::before { background: #ef4444; }  /* 未录取-红 */
 
 /* 卡片顶部：姓名+操作 */

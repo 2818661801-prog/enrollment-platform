@@ -1,0 +1,1 @@
+function s(e){if(!/^\d{17}[\dXx]$/.test(e))return!1;const r=[7,9,10,5,8,4,2,1,6,3,7,9,10,5,8,4,2],a=["1","0","X","9","8","7","6","5","4","3","2"];let n=0;for(let t=0;t<17;t++)n+=parseInt(e[t])*r[t];return a[n%11]===e[17].toUpperCase()}function o(e){return/^[一-龥]{2,10}$/.test(e)}function u(e){return e.length>=17?parseInt(e[16])%2===1?"男":"女":""}export{s as a,u as i,o as v};

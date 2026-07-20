@@ -4,10 +4,12 @@ import com.enroll.server.dto.ApplicationDTO;
 import com.enroll.server.dto.ResultCode;
 import com.enroll.server.entity.Application;
 import com.enroll.server.entity.ClassInfo;
+import com.enroll.server.entity.ClassRound;
 import com.enroll.server.exception.BusinessException;
 import com.enroll.server.repository.ApplicationRepository;
 import com.enroll.server.repository.ClassInfoRepository;
 import com.enroll.server.repository.ClassRoundRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -16,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
@@ -56,6 +59,9 @@ public class ApplicationService {
     private final ClassInfoRepository classRepo;
     private final ClassRoundRepository roundRepo;
 
+    /** 并发提交锁池：按身份证号加锁，防止同一人在两个 tab 同时提交绕过互斥校验 */
+    private final ConcurrentHashMap<String, Object> submitLocks = new ConcurrentHashMap<>();
+
     public ApplicationService(ApplicationRepository appRepo,
                                ClassInfoRepository classRepo,
                                ClassRoundRepository roundRepo) {
@@ -73,76 +79,85 @@ public class ApplicationService {
         String phone    = (String) form.get("phone");
         Integer classId = (Integer) form.get("classId");
 
-        // 1) 校验班级存在
+        // 1) 校验班级存在（只读，无需加锁）
         ClassInfo cls = classRepo.findById(classId)
                 .orElseThrow(() -> new BusinessException(ResultCode.CLASS_NOT_FOUND));
 
-        // 2) 判断当前轮次，不在报名期内拒绝
+        // 2) 判断当前轮次，不在报名期内拒绝（只读，无需加锁）
         int currentRound = determineCurrentRound(cls);
         if (currentRound == 0) {
             throw new BusinessException(ResultCode.PARAM_INVALID, "该班级当前不在报名时间内");
         }
 
-        // 3) 身份证全局唯一：已报名（审核中）或已录取（永久锁定）不可再报（只查未删除）
-        List<Application> idCardDup = appRepo.findByIdCardAndStatusInAndIsDeleted(
-                idCard, List.of(STATUS_APPLIED, STATUS_ENROLLED), 0);
-        if (!idCardDup.isEmpty()) {
-            Application existing = idCardDup.get(0);
-            String className = classRepo.findById(existing.getClassId())
-                    .map(ClassInfo::getName)
-                    .orElse("未知班级");
-            throw new BusinessException(ResultCode.DUPLICATE_APPLICATION,
-                    "该身份证持有者已报名【" + className + "】");
-        }
+        // 3~7) 互斥校验 + 写入：按身份证号加锁，防止并发绕过（Bug #2 修复）
+        //       同一身份证的并发请求串行执行，杜绝"两次都查到无记录→两条 INSERT"的竞态
+        Object lock = submitLocks.computeIfAbsent(idCard, k -> new Object());
+        synchronized (lock) {
+            try {
+            // 3) 身份证全局唯一：已报名（审核中）或已录取（永久锁定）不可再报（只查未删除）
+            List<Application> idCardDup = appRepo.findByIdCardAndStatusInAndIsDeleted(
+                    idCard, List.of(STATUS_APPLIED, STATUS_ENROLLED), 0);
+            if (!idCardDup.isEmpty()) {
+                Application existing = idCardDup.get(0);
+                String className = classRepo.findById(existing.getClassId())
+                        .map(ClassInfo::getName)
+                        .orElse("未知班级");
+                throw new BusinessException(ResultCode.DUPLICATE_APPLICATION,
+                        "该身份证持有者已报名【" + className + "】");
+            }
 
-        // 3.5) 手机号全局唯一：同一手机号只能报名一个班（核心防重：手机号=JWT subject=用户唯一标识，只查未删除）
-        List<Application> phoneDup = appRepo.findByPhoneAndStatusInAndIsDeleted(
-                phone, List.of(STATUS_APPLIED, STATUS_ENROLLED), 0);
-        if (!phoneDup.isEmpty()) {
-            Application existing = phoneDup.get(0);
-            String className = classRepo.findById(existing.getClassId())
-                    .map(ClassInfo::getName)
-                    .orElse("未知班级");
-            throw new BusinessException(ResultCode.DUPLICATE_APPLICATION,
-                    "该手机号已报名【" + className + "】");
-        }
+            // 3.5) 手机号全局唯一：同一手机号只能报名一个班
+            List<Application> phoneDup = appRepo.findByPhoneAndStatusInAndIsDeleted(
+                    phone, List.of(STATUS_APPLIED, STATUS_ENROLLED), 0);
+            if (!phoneDup.isEmpty()) {
+                Application existing = phoneDup.get(0);
+                String className = classRepo.findById(existing.getClassId())
+                        .map(ClassInfo::getName)
+                        .orElse("未知班级");
+                throw new BusinessException(ResultCode.DUPLICATE_APPLICATION,
+                        "该手机号已报名【" + className + "】");
+            }
 
-        // 4) 本轮防重复（同一身份证+同一班级，防止同一人报两次同一班，只查未删除）
-        List<Application> roundDup = appRepo.findByIdCardAndClassIdAndStatusInAndIsDeleted(
-                idCard, classId, List.of(STATUS_APPLIED, STATUS_ENROLLED, STATUS_REJECTED), 0);
-        if (!roundDup.isEmpty()) {
-            throw new BusinessException(ResultCode.DUPLICATE_APPLICATION);
-        }
+            // 4) 本轮防重复（同一身份证+同一班级，防止同一人报两次同一班，只查未删除）
+            List<Application> roundDup = appRepo.findByIdCardAndClassIdAndStatusInAndIsDeleted(
+                    idCard, classId, List.of(STATUS_APPLIED, STATUS_ENROLLED, STATUS_REJECTED), 0);
+            if (!roundDup.isEmpty()) {
+                throw new BusinessException(ResultCode.DUPLICATE_APPLICATION);
+            }
 
-        // 6) 名额校验（⚠️ S16 修复：名额校验 + enrolled+1 合并为原子 UPDATE）
-        int affected = classRepo.incrementEnrolledIfQuotaAvailable(classId);
-        if (affected == 0) {
-            throw new BusinessException(ResultCode.CLASS_FULL);
-        }
+            // 6) 名额校验（⚠️ S16 修复：名额校验 + enrolled+1 合并为原子 UPDATE）
+            int affected = classRepo.incrementEnrolledIfQuotaAvailable(classId);
+            if (affected == 0) {
+                throw new BusinessException(ResultCode.CLASS_FULL);
+            }
 
-        // 7) 构造报名记录
-        Application app = new Application();
-        app.setName((String) form.get("name"));
-        app.setIdCard(idCard);
-        app.setIdCardMasked(idCard == null || idCard.length() != 18 ? idCard : idCard.replaceAll("(?<=^.{6}).{8}(?=.{4}$)", "********"));
-        app.setGender((String) form.get("gender"));
-        app.setPhone((String) form.get("phone"));
-        app.setHasPhysics((String) form.get("hasPhysics"));
-        app.setHasEnglish((String) form.getOrDefault("hasEnglish", "否"));
-        app.setAppliedCategory((String) form.get("appliedCategory"));
-        app.setClassId(classId);
-        app.setStatus(STATUS_APPLIED);
-        Object agreed = form.get("noticeAgreed");
-        app.setNoticeAgreed(parseFlag(agreed));
-        app.setApplyTime(LocalDateTime.now());
-        app.setRound(currentRound);
-        // enrollmentYear：后端自动取当前年份（2026/2027）
-        app.setEnrollmentYear(java.time.LocalDate.now().getYear());
-        Application saved = appRepo.save(app);
+            // 7) 构造报名记录
+            Application app = new Application();
+            app.setName((String) form.get("name"));
+            app.setIdCard(idCard);
+            app.setIdCardMasked(idCard == null || idCard.length() != 18 ? idCard : idCard.replaceAll("(?<=^.{6}).{8}(?=.{4}$)", "********"));
+            app.setGender((String) form.get("gender"));
+            app.setPhone((String) form.get("phone"));
+            app.setHasPhysics((String) form.get("hasPhysics"));
+            app.setHasEnglish((String) form.getOrDefault("hasEnglish", "否"));
+            app.setAppliedCategory((String) form.get("appliedCategory"));
+            app.setClassId(classId);
+            app.setStatus(STATUS_APPLIED);
+            Object agreed = form.get("noticeAgreed");
+            app.setNoticeAgreed(parseFlag(agreed));
+            app.setApplyTime(LocalDateTime.now());
+            app.setRound(currentRound);
+            // enrollmentYear：后端自动取当前年份（2026/2027）
+            app.setEnrollmentYear(java.time.LocalDate.now().getYear());
+            Application saved = appRepo.save(app);
 
-        // S16 修复：enrolled+1 已由上面的原子 UPDATE 完成，无需再 save classRepo
-        // log.info("报名成功: id={}, name={}, classId={}, round={}", saved.getId(), saved.getName(), classId, currentRound);
-        return toDTO(saved, cls.getName());
+            // S16 修复：enrolled+1 已由上面的原子 UPDATE 完成，无需再 save classRepo
+            return toDTO(saved, cls.getName());
+            } finally {
+                // 锁用完后从池中移除，防止内存泄漏
+                submitLocks.remove(idCard);
+            }
+            }
         } catch (Exception e) {
             // log.error("submit 异常: form={}", form, e);
             throw e;
@@ -204,12 +219,32 @@ public class ApplicationService {
     }
 
     public List<ApplicationDTO> findMyByPhone(String phone) {
+        ObjectMapper om = new ObjectMapper();
         return appRepo.findByPhoneAndStatusInAndIsDeleted(phone, List.of(STATUS_APPLIED, STATUS_ENROLLED, STATUS_REJECTED), 0).stream()
                 .map(app -> {
-                    String className = classRepo.findById(app.getClassId())
-                            .map(ClassInfo::getName)
-                            .orElse("未知班级");
-                    return toDTO(app, className);
+                    ClassInfo cls = classRepo.findById(app.getClassId()).orElse(null);
+                    String className = cls != null ? cls.getName() : "未知班级";
+                    // 查轮次列表，构建 classPeriods JSON
+                    List<ClassRound> rounds = roundRepo.findByClassIdOrderByRoundNum(app.getClassId());
+                    String classPeriods;
+                    if (rounds == null || rounds.isEmpty()) {
+                        classPeriods = "[]";
+                    } else {
+                        try {
+                            List<Map<String, Object>> list = rounds.stream()
+                                    .map(r -> {
+                                        Map<String, Object> m = new java.util.HashMap<>();
+                                        m.put("round", r.getRoundNum());
+                                        m.put("period", r.getPeriodStart() + " - " + r.getPeriodEnd());
+                                        return m;
+                                    })
+                                    .collect(Collectors.toList());
+                            classPeriods = om.writeValueAsString(list);
+                        } catch (Exception e) {
+                            classPeriods = "[]";
+                        }
+                    }
+                    return toDTO(app, className, null, classPeriods);
                 })
                 .collect(Collectors.toList());
     }
@@ -226,7 +261,16 @@ public class ApplicationService {
         if (body.containsKey("name"))        app.setName((String) body.get("name"));
         if (body.containsKey("phone"))       app.setPhone((String) body.get("phone"));
         if (body.containsKey("hasPhysics"))  app.setHasPhysics((String) body.get("hasPhysics"));
-        if (body.containsKey("hasEnglish")) app.setHasEnglish((String) body.get("hasEnglish"));
+        if (body.containsKey("hasEnglish"))  app.setHasEnglish((String) body.get("hasEnglish"));
+        // Bug #1 修复：补充 idCard 和 gender 的更新处理
+        if (body.containsKey("gender"))      app.setGender((String) body.get("gender"));
+        if (body.containsKey("idCard")) {
+            String newIdCard = (String) body.get("idCard");
+            app.setIdCard(newIdCard);
+            // Bug #6 修复：修改身份证号时同步更新脱敏字段
+            app.setIdCardMasked(newIdCard == null || newIdCard.length() != 18 ? newIdCard
+                    : newIdCard.replaceAll("(?<=^.{6}).{8}(?=.{4}$)", "********"));
+        }
         appRepo.save(app);
         // log.info("修改报名: id={}, name={}", id, app.getName());
     }
@@ -253,6 +297,10 @@ public class ApplicationService {
     @Transactional
     public void clearClass(Integer classId) {
         appRepo.findByClassIdAndIsDeleted(classId, 0).forEach(app -> {
+            // Bug #3 修复：清空时释放已报名状态占用的名额（status=1 才占用配额）
+            if (app.getStatus() == STATUS_APPLIED) {
+                classRepo.decrementEnrolled(app.getClassId());
+            }
             app.setStatus(STATUS_WITHDRAWN);
             appRepo.save(app);
         });
@@ -260,21 +308,39 @@ public class ApplicationService {
 
     @Transactional
     public void batchAdmit(List<Integer> ids) {
-        appRepo.batchUpdateStatus(ids, STATUS_ENROLLED);
+        batchAdmit(ids, "");
     }
 
     @Transactional
     public void batchAdmit(List<Integer> ids, String auditComment) {
+        // Bug #5 修复：只允许录取"审核中(status=1)"的记录，防止覆盖已撤回/已录取/已驳回
+        List<Application> apps = appRepo.findAllById(ids);
+        for (Application app : apps) {
+            if (app.getStatus() != STATUS_APPLIED) {
+                throw new BusinessException(ResultCode.PARAM_INVALID,
+                        "只能录取审核中的记录（id=" + app.getId() + " 当前状态为" + statusLabel(app.getStatus()) + "）");
+            }
+        }
         appRepo.batchUpdateStatusAndComment(ids, STATUS_ENROLLED, auditComment);
     }
 
     @Transactional
     public void batchReject(List<Integer> ids) {
-        appRepo.batchUpdateStatus(ids, STATUS_REJECTED);
+        batchReject(ids, "");
     }
 
     @Transactional
     public void batchReject(List<Integer> ids, String auditComment) {
+        // Bug #4 修复：驳回时释放名额 + Bug #5 修复：只允许驳回"审核中"的记录
+        List<Application> apps = appRepo.findAllById(ids);
+        for (Application app : apps) {
+            if (app.getStatus() != STATUS_APPLIED) {
+                throw new BusinessException(ResultCode.PARAM_INVALID,
+                        "只能驳回审核中的记录（id=" + app.getId() + " 当前状态为" + statusLabel(app.getStatus()) + "）");
+            }
+            // 释放每个被驳回记录占用的名额
+            classRepo.decrementEnrolled(app.getClassId());
+        }
         appRepo.batchUpdateStatusAndComment(ids, STATUS_REJECTED, auditComment);
     }
 
@@ -391,11 +457,26 @@ public class ApplicationService {
         return "true".equalsIgnoreCase(s) || "1".equals(s) ? 1 : 0;
     }
 
+    /** 状态值的可读文字（供 batchAdmit / batchReject 错误提示用） */
+    private String statusLabel(int status) {
+        return switch (status) {
+            case STATUS_APPLIED   -> "审核中";
+            case STATUS_WITHDRAWN -> "已撤回";
+            case STATUS_ENROLLED  -> "已录取";
+            case STATUS_REJECTED  -> "未录取";
+            default               -> "未知(" + status + ")";
+        };
+    }
+
     public ApplicationDTO toDTO(Application e, String className) {
         return toDTO(e, className, null);
     }
 
     public ApplicationDTO toDTO(Application e, String className, Integer innerId) {
+        return toDTO(e, className, innerId, null);
+    }
+
+    public ApplicationDTO toDTO(Application e, String className, Integer innerId, String classPeriods) {
         return ApplicationDTO.builder()
                 .id(e.getId())
                 .name(e.getName())
@@ -411,7 +492,7 @@ public class ApplicationService {
                 .status(String.valueOf(e.getStatus()))
                 .applyTime(e.getApplyTime())
                 .auditComment(e.getAuditComment())
-                .classPeriods(null) // 兼容旧字段，报名记录接口不再返回班级轮次 JSON
+                .classPeriods(classPeriods)
                 .round(e.getRound())
                 .isDeleted(e.getIsDeleted())
                 .innerId(innerId)
