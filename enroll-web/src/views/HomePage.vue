@@ -35,8 +35,8 @@
             v-for="c in flatCards"
             :key="c._uid"
             :class-info="c"
-            :is-applied="appliedClassIds[c._uid]"
-            :is-admitted="admittedClassIds[c._uid]"
+            :is-applied="appliedClassIds[c.id]"
+            :is-admitted="admittedClassIds[c.id]"
             :is-logged-in="isLoggedIn"
             @select="goFormDirect"
           />
@@ -209,7 +209,7 @@ async function loadData() {
       Object.keys(appliedClassIds).forEach(k => delete appliedClassIds[k])
       Object.keys(admittedClassIds).forEach(k => delete admittedClassIds[k])
       myApps.forEach(a => {
-        const key = `${a.classId}-${a.round || 1}`
+        const key = String(a.classId)
         if (a.status === '1' || a.status === '3') appliedClassIds[key] = true
         if (a.status === '3') admittedClassIds[key] = true
       })
