@@ -116,7 +116,7 @@
       >
         <div class="edit-dialog-bar" />
         <div class="edit-dialog-head">
-          <el-icon size="22" color="#337eff"><EditPen /></el-icon>
+          <img :src="editToolsIcon" alt="" class="edit-dialog-icon" />
           <span class="edit-dialog-title">修改报名信息</span>
         </div>
 
@@ -166,9 +166,10 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { ArrowLeft, User, Loading, SwitchButton, EditPen } from '@element-plus/icons-vue'
+import { ArrowLeft, User, Loading, SwitchButton } from '@element-plus/icons-vue'
 import { withdrawApplicationAPI, updateApplicationAPI } from '../utils/api.js'
 import { validateIdCard } from '../utils/validate.js'
+import editToolsIcon from '../assets/images/edit-tools.svg'
 import AppFooter from '../components/AppFooter.vue'
 
 const router = useRouter()
@@ -503,6 +504,12 @@ onMounted(fetchMyRecords)
 .edit-dialog-bar {
   height: 4px;
   background: linear-gradient(90deg, #337eff, #5b9bff);
+}
+
+.edit-dialog-icon {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
 }
 
 .edit-dialog-head {
