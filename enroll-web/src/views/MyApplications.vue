@@ -111,6 +111,9 @@
           <el-form-item label="姓名">
             <el-input v-model="editForm.name" maxlength="10" />
           </el-form-item>
+          <el-form-item label="身份证号">
+            <el-input v-model="editForm.idCard" maxlength="18" placeholder="请输入18位身份证号" />
+          </el-form-item>
           <el-form-item label="选考物理">
             <el-radio-group v-model="editForm.hasPhysics">
               <el-radio-button value="是">是</el-radio-button>
@@ -140,6 +143,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { ArrowLeft, User, Loading, SwitchButton } from '@element-plus/icons-vue'
 import { withdrawApplicationAPI, updateApplicationAPI } from '../utils/api.js'
+import { validateIdCard } from '../utils/validate.js'
 import AppFooter from '../components/AppFooter.vue'
 
 const router = useRouter()
@@ -152,6 +156,7 @@ const editingId = ref(null)
 
 const editForm = reactive({
   name: '',
+  idCard: '',
   hasPhysics: '',
   hasEnglish: '',
 })
@@ -210,6 +215,7 @@ async function fetchMyRecords() {
 function onEdit(row) {
   editingId.value = row.id
   editForm.name = row.name
+  editForm.idCard = row.idCardRaw || row.idCard
   editForm.hasPhysics = row.hasPhysics || '否'
   editForm.hasEnglish = row.hasEnglish || '否'
   editDialogVisible.value = true
@@ -224,6 +230,16 @@ async function onEditSubmit() {
   }
   if (name.length < 2) {
     ElMessage.warning('姓名至少2个字符')
+    return
+  }
+  // 身份证校验
+  const idCard = editForm.idCard.trim()
+  if (!idCard) {
+    ElMessage.warning('身份证号不能为空')
+    return
+  }
+  if (!validateIdCard(idCard)) {
+    ElMessage.warning('身份证号格式不正确（18位，末位可为X）')
     return
   }
   editLoading.value = true
