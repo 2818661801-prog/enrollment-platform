@@ -204,7 +204,6 @@ function showDescription() {
 }
 .class-card.is-disabled {
   cursor: not-allowed;
-  opacity: 0.55;
   pointer-events: none;
 }
 .class-card.is-disabled:hover {
@@ -218,9 +217,7 @@ function showDescription() {
   height: 4px;
   background: #337eff;         /* 沿用 themeCss.json 主色 */
 }
-.class-card.is-disabled .card-accent-bar {
-  background: #cbd5e1;         /* 不可报名：色条变灰 */
-}
+/* 顶部色条保持主题蓝不变 */
 
 /* ==================== 卡片正文 ==================== */
 .card-body {
@@ -481,10 +478,12 @@ function showDescription() {
 }
 /* closed：浅灰底，加粗醒目 */
 .card-btn--closed {
-  background: #e2e8f0;
-  color: #64748b;
+  background: #f1f5f9;
+  color: #b91c1c;
   font-weight: 700;
   cursor: not-allowed;
+  border: 1px solid #fecaca;
+  opacity: 0.85;
 }
 /* 已报名：绿色（与开放状态接近，但不等于可点击） */
 .card-btn--applied {
