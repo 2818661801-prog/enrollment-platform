@@ -52,6 +52,10 @@ public class AuthService {
     @Value("${sms.sign}")
     private String smsSign;
 
+    /** 测试模式：true=任何手机号+验证码666666均可登录（不发短信，不走Redis校验） */
+    @Value("${sms.test-mode:false}")
+    private boolean testMode;
+
     public AuthService(StringRedisTemplate redis, JwtUtil jwtUtil) {
         this.redis = redis;
         this.jwtUtil = jwtUtil;
@@ -138,6 +142,14 @@ public class AuthService {
      */
     public String verifyCodeAndLogin(String phone, String code) {
         validatePhone(phone);
+
+        // ===== 测试模式：验证码 666666 直接通过，不走 Redis 校验，不发短信 =====
+        if (testMode) {
+            if ("666666".equals(code.trim())) {
+                return jwtUtil.generateStudent(phone);
+            }
+            throw new BusinessException(ResultCode.PARAM_INVALID, "测试模式下验证码必须为 666666");
+        }
 
         String key = SMS_KEY_PREFIX + phone;
         String storedCode = redis.opsForValue().get(key);

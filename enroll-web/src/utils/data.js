@@ -77,28 +77,62 @@ export const initialForm = () => ({
  * @returns {{ start: Date, end: Date }}
  */
 export function parsePeriod(period) {
+  // 防御：空值/非法类型 → 返回 epoch 时间，canApply 永远 false，避免页面崩溃
+  if (!period || typeof period !== 'string') {
+    return { start: new Date(0), end: new Date(0) }
+  }
   const [startStr, endStr] = period.split(' - ')
-  // 开始日期：去掉时间后缀，再按 / 分割（格式 YYYY/MM/DD 或 YYYY/MM/DD HH:MM）
-  const startDateStr = startStr.split(' ')[0]  // "2026/09/15 08:00" → "2026/09/15"
-  const [sYear, sMonth, sDay] = startDateStr.split('/').map(Number)
 
-  // 结束日期：去掉时间后缀（如 "16 23:59" → "16"），再按 / 分割
-  const endDateStr = endStr.split(' ')[0]  // "2026/09/16 23:59" → "2026/09/16"
-  const endParts = endDateStr.split('/').map(Number)
+  // ===== 开始日期：解析 YYYY/MM/DD [HH:MM] =====
+  // startStr 可能是 "2026/09/15" 或 "2026/09/15 08:00"
+  const startParts = startStr.trim().split(/\s+/)
+  const startDateParts = startParts[0].split('/').map(Number)
+  const [sYear, sMonth, sDay] = startDateParts
+  // 解析开始时间（时分），默认 00:00:00
+  let sHour = 0, sMin = 0, sSec = 0
+  if (startParts.length >= 2) {
+    const timeParts = startParts[1].split(':').map(Number)
+    sHour = timeParts[0] || 0
+    sMin = timeParts[1] || 0
+    sSec = timeParts[2] || 0
+  }
+
+  // ===== 结束日期：解析 YYYY/MM/DD [HH:MM] 或 YYYY-MM-DDTHH:MM（ISO格式）=====
+  // endStr 可能是 "2026/09/16"、"09/16"、"2026/09/16 23:59"、"09/16 08:00"、"2027-12-31T23:59"
+  const endParts = endStr.trim().split(/\s+/)
+  // 先尝试用 '/' 分隔，再用 '-' 分隔（支持 ISO 格式如 "2027-12-31T23:59"）
+  let endDateParts = endParts[0].split('/').map(Number)
+  if (endDateParts.length === 1 && endParts[0].includes('-')) {
+    // ISO 格式 "2027-12-31T23:59" → 用 '-' 分割
+    endDateParts = endParts[0].split('-').map(Number)
+  }
+  // 解析结束时间（时分），默认 23:59:59
+  let eHour = 23, eMin = 59, eSec = 59
+  if (endParts.length >= 2) {
+    const timeParts = endParts[1].split(':').map(Number)
+    eHour = timeParts[0] || 23
+    eMin = timeParts[1] || 59
+    eSec = timeParts[2] || 59
+  }
+  // 判断结束日期是否有年份（3段=有年份，2段=无年份需推断）
   let eYear, eMonth, eDay
-  if (endParts.length === 3) {
-    ;[eYear, eMonth, eDay] = endParts
+  if (endDateParts.length === 3) {
+    ;[eYear, eMonth, eDay] = endDateParts
   } else {
     // 只有月/日，年份从开始日期推断
-    ;[eMonth, eDay] = endParts
+    ;[eMonth, eDay] = endDateParts
     eYear = sYear
     // 跨年判断：如 12月→1月，说明结束在下一年
     if (eMonth < sMonth) eYear++
   }
-  return {
-    start: new Date(sYear, sMonth - 1, sDay), // Date 月份从 0 开始
-    end: new Date(eYear, eMonth - 1, eDay, 23, 59, 59), // 截止日当天 23:59:59
+
+  const start = new Date(sYear, sMonth - 1, sDay, sHour, sMin, sSec)
+  const end   = new Date(eYear, eMonth - 1, eDay, eHour, eMin, eSec)
+  // 防御：解析出 Invalid Date（NaN）→ 返回 epoch，由 getClassTimeStatus 统一兜底
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+    return { start: new Date(0), end: new Date(0) }
   }
+  return { start, end }
 }
 
 /**
@@ -123,6 +157,10 @@ export function getClassTimeStatus(classInfo, periodStr = null, now = null) {
   const current = now || trustedNow() // 用经服务器校正的可信时间
   const period = periodStr || classInfo.period
   const { start, end } = parsePeriod(period)
+  // 防御：parsePeriod 返回 epoch 说明数据异常，拒绝报名
+  if (start.getTime() === 0 && end.getTime() === 0) {
+    return { status: 'closed', label: '报名时间未知', canApply: false }
+  }
 
   if (current < start) {
     const month = start.getMonth() + 1

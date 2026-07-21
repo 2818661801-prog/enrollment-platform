@@ -58,13 +58,7 @@
         </el-button>
 
         <!-- 底部操作栏 -->
-        <!-- 已登录：退出居左，去报名居右 -->
-        <div v-if="isLoggedIn" class="bottom-bar">
-          <el-button text class="logout-btn" @click="onLogout">退出登录</el-button>
-          <el-button text @click="goHome">去报名首页</el-button>
-        </div>
-        <!-- 未登录：去报名居中 -->
-        <div v-else class="bottom-bar bottom-bar--center">
+        <div class="bottom-bar">
           <el-button text @click="goHome">去报名首页</el-button>
         </div>
       </div>
@@ -75,34 +69,31 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
 import { usePhoneCode } from '../composables/usePhoneCode.js'
 import AppFooter from '../components/AppFooter.vue'
 
 const router = useRouter()
 const phoneCode = usePhoneCode()
-const isLoggedIn = ref(!!localStorage.getItem('student_token'))
+
+// 已登录 → 自动跳转到我的报名，不让访问登录页
+onMounted(() => {
+  if (localStorage.getItem('student_token')) {
+    router.replace('/my-applications')
+  }
+})
 
 async function onLogin() {
   const ok = await phoneCode.onLogin()
   if (ok) {
-    isLoggedIn.value = true
+    window.dispatchEvent(new Event('login_changed'))
     router.push('/my-applications')
   }
 }
 
 function goHome() {
   router.push('/home')
-}
-
-function onLogout() {
-  localStorage.removeItem('student_token')
-  localStorage.removeItem('student_phone')
-  isLoggedIn.value = false
-  phoneCode.phone.value = ''
-  phoneCode.code.value = ''
 }
 </script>
 
@@ -113,6 +104,7 @@ function onLogout() {
   flex-direction: column;
   align-items: center;             /* 水平居中 .login-card */
   background: #f5f6fa;
+  padding-top: 56px;               /* fixed header 高度，防止内容被遮挡 */
 }
 .login-card {
   display: flex;
@@ -183,18 +175,12 @@ function onLogout() {
 }
 .bottom-bar {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
   margin-top: 16px;
 }
 .bottom-bar .el-button {
   color: #9ba0b0;
-}
-.logout-btn {
-  color: #e6a23c !important;
-}
-.bottom-bar--center {
-  justify-content: center;
 }
 
 /* AppFooter 贴底 */
@@ -202,6 +188,10 @@ function onLogout() {
   width: 100%;
   margin-top: auto;
   padding-top: 50px;  /* 与上方 card 保持 50px 间距（移动端适配）*/
+}
+
+@media (max-width: 768px) {
+  .login-page { padding-top: 52px; }
 }
 
 @media (max-width: 440px) {

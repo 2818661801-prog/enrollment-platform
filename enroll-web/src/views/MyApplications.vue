@@ -10,10 +10,12 @@
 <template>
   <div class="myapps-page">
     <div class="myapps-body">
-      <!-- 返回按钮 -->
-      <el-button text class="back-btn" @click="goBack">
-        <el-icon><ArrowLeft /></el-icon> 返回
-      </el-button>
+      <!-- 顶部一行：返回 -->
+      <div class="top-bar">
+        <el-button text class="back-btn" @click="goBack">
+          <el-icon><ArrowLeft /></el-icon> 返回
+        </el-button>
+      </div>
 
       <!-- 未登录提示卡 -->
       <el-card v-if="!isLoggedIn" class="login-card">
@@ -35,12 +37,9 @@
 
       <!-- 已登录：报名记录卡片列表 -->
       <div v-else-if="records.length > 0" class="records-section">
-        <!-- 顶部：标题 + 退出登录 -->
+        <!-- 顶部：标题 -->
         <div class="records-header">
           <span class="records-count">我的报名（共 {{ records.length }} 条）</span>
-          <el-button text type="danger" size="small" @click="onLogout">
-            <el-icon><SwitchButton /></el-icon> 退出登录
-          </el-button>
         </div>
 
         <!-- 卡片网格 -->
@@ -65,12 +64,7 @@
               </div>
               <div class="card-actions">
                 <el-button
-                  v-if="record.status === '1'"
-                  text type="primary" size="small"
-                  @click="onEdit(record)"
-                >修改</el-button>
-                <el-button
-                  v-if="record.status === '1'"
+                  v-if="record.status === '1' && canWithdraw(record)"
                   text type="danger" size="small"
                   @click="onWithdraw(record)"
                 >撤回</el-button>
@@ -166,9 +160,10 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { ArrowLeft, User, Loading, SwitchButton } from '@element-plus/icons-vue'
+import { ArrowLeft, User, Loading } from '@element-plus/icons-vue'
 import { withdrawApplicationAPI, updateApplicationAPI } from '../utils/api.js'
 import { validateIdCard } from '../utils/validate.js'
+import { syncServerTime, trustedNow } from '../utils/data.js'
 import editToolsIcon from '../assets/images/edit-tools.svg'
 import AppFooter from '../components/AppFooter.vue'
 
@@ -227,6 +222,7 @@ async function fetchMyRecords() {
   isLoggedIn.value = true
   loading.value = true
   try {
+    await syncServerTime()
     const res = await fetch('/api/applications/me', {
       headers: { Authorization: `Bearer ${token}` },
     })
@@ -293,6 +289,26 @@ async function onEditSubmit() {
   }
 }
 
+/**
+ * 判断能否撤回：status=1 且 当前服务器时间 ≤ 该轮截止时间
+ * 精确到秒：超过截止时间则不能撤
+ */
+function canWithdraw(record) {
+  if (record.status !== '1') return false
+  try {
+    const periods = JSON.parse(record.classPeriods || '[]')
+    const target = periods.find(p => p.round === Number(record.round))
+    if (!target || !target.period) return false
+    // period 格式："2025-07-01T00:00 - 2027-12-31T23:59"，取" - "后面的结束时间
+    const endStr = target.period.split(' - ')[1]?.trim()
+    if (!endStr) return false
+    const endTime = new Date(endStr).getTime()
+    return trustedNow().getTime() <= endTime
+  } catch {
+    return false
+  }
+}
+
 async function onWithdraw(row) {
   try {
     await ElMessageBox.confirm('确定撤回该报名吗？撤回后不可恢复。', '提示', { type: 'warning' })
@@ -334,7 +350,7 @@ onMounted(fetchMyRecords)
 </script>
 
 <style scoped>
-.myapps-page { min-height: 100vh; display: flex; flex-direction: column; }
+.myapps-page { min-height: 100vh; display: flex; flex-direction: column; padding-top: 56px; }
 .myapps-body {
   max-width: 900px;
   margin: 24px auto;
@@ -343,7 +359,13 @@ onMounted(fetchMyRecords)
   width: 100%;
   box-sizing: border-box;
 }
-.back-btn { margin-bottom: 12px; font-size: 14px; color: var(--text-secondary); }
+.top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.back-btn { font-size: 14px; color: var(--text-secondary); }
 
 /* 登录卡片 */
 .login-card { margin-bottom: 20px; }
@@ -487,6 +509,7 @@ onMounted(fetchMyRecords)
 
 /* ===== 移动端适配 ===== */
 @media (max-width: 768px) {
+  .myapps-page { padding-top: 52px; }
   .myapps-body { margin: 12px auto; padding: 0 12px; }
   .record-cards { grid-template-columns: 1fr; gap: 12px; }
   .record-card { padding: 14px; }

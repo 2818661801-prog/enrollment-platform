@@ -84,44 +84,6 @@
       <el-option label="已截止" value="closed" />
     </el-select>
 
-    <!-- 右侧：登录 + 我的报名按钮组 -->
-    <div class="user-actions">
-      <!-- 登录（未登录时显示） -->
-      <button
-        v-if="!isLoggedIn"
-        type="button"
-        class="user-btn login-btn"
-        aria-label="学生登录"
-        @click="goLogin"
-      >
-        <img :src="lockIcon" alt="" class="user-icon" />
-        <span>登录</span>
-      </button>
-
-      <!-- 退出登录（已登录时显示） -->
-      <button
-        v-if="isLoggedIn"
-        type="button"
-        class="user-btn logout-btn"
-        aria-label="退出登录"
-        @click="onLogout"
-      >
-        <img :src="lockIcon" alt="" class="user-icon" />
-        <span>退出登录</span>
-      </button>
-
-      <!-- 我的报名 -->
-      <button
-        type="button"
-        class="user-btn apps-btn"
-        aria-label="我的报名"
-        @click="goMyApps"
-      >
-        <img :src="folderIcon" alt="" class="user-icon" />
-        <span>我的报名</span>
-      </button>
-    </div>
-
     <!-- 移动端第二行：轮次 + 时间状态 + 登录 + 我的报名 四列均分 -->
     <div class="mobile-actions-row">
       <!-- 第1列：轮次筛选 -->
@@ -150,20 +112,6 @@
         <el-option label="未开始" value="not_started" />
         <el-option label="已截止" value="closed" />
       </el-select>
-      <!-- 第3列：登录/退出 -->
-      <button v-if="!isLoggedIn" type="button" class="user-btn" style="flex: 1; justify-content: center" @click="goLogin">
-        <img :src="lockIcon" alt="" class="user-icon" />
-        <span>登录</span>
-      </button>
-      <button v-if="isLoggedIn" type="button" class="user-btn logout-btn" style="flex: 1; justify-content: center" @click="onLogout">
-        <img :src="lockIcon" alt="" class="user-icon" />
-        <span>退出</span>
-      </button>
-      <!-- 第4列：我的报名 -->
-      <button type="button" class="user-btn" style="flex: 1; justify-content: center" @click="goMyApps">
-        <img :src="folderIcon" alt="" class="user-icon" />
-        <span>我的</span>
-      </button>
     </div>
   </div>
 </template>
@@ -171,9 +119,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import lockIcon from '../assets/images/lock.svg'
-import folderIcon from '../assets/images/folder.svg'
+import { ElMessage } from 'element-plus'
 import { getClassTimeStatus, formatTime } from '../utils/data.js'
 
 /**
@@ -192,12 +138,11 @@ function parsePeriodsArray(classRounds, fallbackPeriod) {
 const props = defineProps({
   modelValue:    { type: [Number, String, null], default: null },
   classes:       { type: Array, default: () => [] },
-  isLoggedIn:    { type: Boolean, default: false },
   selectedRound: { type: [Number, null], default: null }, // null=全部轮次，数字=只看第N轮
   selectedTimeStatus: { type: [String, null], default: null }, // null=全部状态，open/not_started/closed
 })
 
-const emit = defineEmits(['update:modelValue', 'reset', 'logout', 'update:selectedRound', 'update:selectedTimeStatus'])
+const emit = defineEmits(['update:modelValue', 'reset', 'update:selectedRound', 'update:selectedTimeStatus'])
 
 const router = useRouter()
 const selectRef = ref(null)
@@ -272,30 +217,6 @@ function getClassLabel(cls) {
     return `${cls.name}（第1轮报名） / 第2轮报名`
   }
   return cls.name
-}
-
-function goLogin() {
-  router.push('/student-login')
-}
-
-function goMyApps() {
-  router.push('/my-applications')
-}
-
-function onLogout() {
-  ElMessageBox.confirm('确定退出登录吗？', '提示', {
-    confirmButtonText: '确定',
-    cancelButtonText: '取消',
-    type: 'warning',
-    alignCenter: true,
-    roundButton: true,
-  }).then(() => {
-    localStorage.removeItem('student_token')
-    localStorage.removeItem('student_phone')
-    emit('logout')
-  }).catch(() => {
-    // 取消，什么都不做
-  })
 }
 
 // 点击外部不关闭（mousedown 拦截，不拦截 click）
@@ -466,52 +387,6 @@ onUnmounted(() => {
 }
 
 
-/* ==================== 右侧按钮组 ==================== */
-.user-actions {
-  margin-left: auto;
-  display: flex;
-  gap: 8px;
-}
-
-/* 通用按钮 */
-.user-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 36px;
-  padding: 0 14px;
-  background: #ffffff;
-  border: 1px solid #e8ecf2;
-  border-radius: 8px;
-  color: #555b70;
-  font-size: 14px;
-  font-weight: 500;
-  font-family: inherit;
-  cursor: pointer;
-  transition: border-color 0.2s, color 0.2s;
-}
-.user-btn:hover {
-  border-color: #3b7bf8;
-  color: #3b7bf8;
-}
-.user-icon {
-  width: 16px;
-  height: 16px;
-  display: block;
-}
-/* 登录按钮：蓝字 */
-.login-btn {
-  color: #3b7bf8;
-}
-/* 退出登录按钮：红字 */
-.logout-btn {
-  color: #f56c6c;
-}
-.logout-btn:hover {
-  border-color: #f56c6c;
-  color: #f56c6c;
-}
-
 /* ==================== 轮次下拉框高度对齐 ==================== */
 /* el-select 内部 input 高度 + line-height 与 .user-btn(36px) 对齐 */
 ::v-deep(.pc-round-select .el-select__wrapper),
@@ -543,16 +418,12 @@ onUnmounted(() => {
   .filter-bar {
     gap: 8px;
   }
-  /* user-actions（PC端按钮组）移动端隐藏 */
-  .user-actions {
-    display: none;
-  }
   /* PC端轮次+时间状态下拉框移动端隐藏 */
   .pc-round-select,
   .pc-time-select {
     display: none;
   }
-  /* 移动端第二行：四列均分 */
+  /* 移动端第二行：两个 el-select 均分 */
   .mobile-actions-row {
     display: flex;
     gap: 4px;
@@ -561,16 +432,6 @@ onUnmounted(() => {
   .mobile-actions-row > * {
     flex: 1;
     min-width: 0;
-  }
-  .mobile-actions-row .user-btn {
-    justify-content: center;
-    font-size: 12px;
-    padding: 0 4px;
-    height: 34px;
-  }
-  /* 移动端退出按钮：红色醒目 */
-  .mobile-actions-row .logout-btn {
-    color: #f56c6c !important;
   }
 }
 /* ===== 退出登录弹窗移动端适配 ===== */

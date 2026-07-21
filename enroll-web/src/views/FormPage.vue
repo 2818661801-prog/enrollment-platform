@@ -101,16 +101,6 @@
           validateOnMount="false"
           @submit.prevent
         >
-          <!-- 已登录身份提示 -->
-          <el-alert
-            v-if="verifiedPhone"
-            :title="`已用手机号 ${verifiedPhone} 登录`"
-            type="success"
-            show-icon
-            :closable="false"
-            style="margin-bottom: 16px;"
-          />
-
           <!-- 当前报名班级 + 班级介绍按钮（同一行） -->
           <div v-if="selectedClass" class="class-desc-row">
             <el-alert
@@ -251,7 +241,7 @@
 
           <!-- ===== 按钮组 ===== -->
           <div class="submit-btn-wrap">
-            <el-button type="primary" size="large" class="submit-btn" @click="onSubmit" :loading="submitting" :disabled="submitting">
+            <el-button type="primary" size="large" class="submit-btn" @click="onSubmit" :loading="submitting" :disabled="submitting || !timeStatus?.canApply">
               提交报名
             </el-button>
           </div>
@@ -264,7 +254,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, watch, onMounted, nextTick } from 'vue'
+import { ref, reactive, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { SuccessFilled, ArrowLeft, Iphone } from '@element-plus/icons-vue'
@@ -294,8 +284,6 @@ function showClassDesc() {
 
 // 步骤：1=验证码 / 2=表单详情
 const step = ref(1)
-// 验证通过的手机号（提交时写回 form.phone）
-const verifiedPhone = ref('')
 
 // 班级列表：从后端 API 拿
 const classes = ref([])
@@ -318,7 +306,6 @@ onMounted(async () => {
   const existingPhone = localStorage.getItem('student_phone')
   if (existingToken && existingPhone) {
     // 已登录：直接进 Step 2，且预填手机号
-    verifiedPhone.value = existingPhone
     step.value = 2
     form.phone = existingPhone
   }
@@ -354,7 +341,14 @@ const selectedClass = computed(() =>
   classes.value.find(c => c.id === form.classId) || null
 )
 
+// 每秒刷新的"可信当前时间"，驱动 timeStatus 实时重新计算
+const now = ref(Date.now())
+let _timer = null
+onMounted(() => { _timer = setInterval(() => { now.value = Date.now() }, 1000) })
+onUnmounted(() => clearInterval(_timer))
+
 const timeStatus = computed(() => {
+  now.value  // 强制依赖：每秒触发重新计算
   if (!selectedClass.value) return null
   // 优先用 URL 传入的 period，保持多轮班时间判断一致
   const periodStr = route.query.period || selectedClass.value.period
@@ -410,7 +404,6 @@ function goBack() {
 async function onVerifyAndNext() {
   const ok = await phoneCode.onLogin()
   if (!ok) return
-  verifiedPhone.value = phoneCode.phone.value
   // 把验证过的手机号回填到表单（用户可改）
   form.phone = phoneCode.phone.value
   // 跳到 Step 2
@@ -471,6 +464,7 @@ async function onSubmit() {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  padding-top: 56px;   /* fixed header 高度，防止内容被遮挡 */
 }
 .form-body {
   max-width: 860px;
@@ -627,8 +621,7 @@ async function onSubmit() {
 @media (max-width: 768px) {
   .form-page { padding-top: 52px; }  /* 移动端头部高度 */
   .form-body {
-    margin-top: -40px;
-    /* margin: 4px auto; */
+    margin-top: 0;
     padding: 0 8px;
   }
   .form-card,

@@ -31,10 +31,7 @@
           </button>
         </div>
 
-        <!-- Row2: 类别标签（始终占位，无标签时 empty） -->
-        <div class="card-tags"><span v-for="n in categoryNames" :key="n" class="card-tag">{{ n }}</span></div>
-
-        <!-- Row3: 分割线（永远在同一 Y） -->
+        <!-- Row2: 分割线（永远在同一 Y） -->
         <div class="card-rule" />
 
         <!-- Row4: 报名时间段（flex-grow 填满剩余空间） -->
@@ -69,38 +66,49 @@
       </button>
     </div>
 
-    <!-- 班级介绍弹窗 -->
+    <!-- 班级介绍弹窗：响应式 width，PC=500px，移动端=calc(100vw-40px) -->
     <el-dialog
       v-model="dialogVisible"
-      width="90%"
-      max-width="460px"
-      destroy-on-close
-      :append-to-body="true"
-      :show-close="false"
       class="desc-dialog"
+      :width="dialogWidth"
+      :show-close="false"
+      append-to-body
+      destroy-on-close
     >
-      <!-- 顶部蓝色色条 -->
-      <div class="desc-dialog-bar" />
-      <!-- 头部 -->
-      <div class="desc-dialog-head">
-        <img :src="descIcon" alt="" class="desc-dialog-icon" />
-        <span class="desc-dialog-title">{{ cardTitle }}</span>
+      <!-- 自定义头部区域 -->
+      <div class="custom-header">
+        <div class="header-content">
+          <img :src="descIcon" alt="" class="custom-icon" />
+          <div class="header-text">
+            <div class="header-title" :title="cardTitle">{{ cardTitle }}</div>
+          </div>
+        </div>
+        <button class="custom-close-btn" @click="dialogVisible = false">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
       </div>
-      <div class="desc-dialog-subtitle">班级介绍</div>
-      <!-- 内容 -->
-      <div class="desc-dialog-body">
-        <p class="desc-dialog-text">{{ classInfo.description }}</p>
-      </div>
-      <!-- 底部按钮 -->
-      <div class="desc-dialog-footer">
-        <el-button class="desc-dialog-close-btn" @click="dialogVisible = false">我知道了</el-button>
+
+      <!-- 统一内容容器 -->
+      <div class="dialog-inner">
+        <span class="desc-tag">班级介绍</span>
+
+        <div class="desc-dialog-body">
+          <p class="desc-dialog-text">{{ classInfo.description }}</p>
+        </div>
+
+        <div class="desc-dialog-footer">
+          <button class="desc-dialog-confirm-btn" @click="dialogVisible = false">我知道了</button>
+        </div>
       </div>
     </el-dialog>
   </article>
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import calendarIcon from '../assets/images/calendar(1).svg'
 import descIcon from '../assets/images/description.svg'
 import { getClassTimeStatus, formatTime } from '../utils/data.js'
@@ -116,6 +124,18 @@ const emit = defineEmits(['select'])
 const dialogVisible = ref(false)
 const isExpanded = ref(false)
 
+// ===== 响应式弹窗宽度：PC 500px，移动端 calc(100vw-40px) =====
+// 为什么用 JS 而不用 CSS @media？Element Plus 把 width 写成 inline style，
+// CSS 选择器在 Teleport + scoped 组合下容易失效，直接控 prop 最可靠
+const windowWidth = ref(window.innerWidth)
+function onResize() { windowWidth.value = window.innerWidth }
+onMounted(() => window.addEventListener('resize', onResize))
+onUnmounted(() => window.removeEventListener('resize', onResize))
+const dialogWidth = computed(() => {
+  return windowWidth.value <= 768 ? 'calc(100vw - 40px)' : '500px'
+})
+// top 用 Element Plus 默认 15vh，不做自定义
+
 // 是否为多轮班（classRounds 数组里有超过 1 条）
 const isMultiRound = computed(() => {
   const rounds = props.classInfo.classRounds
@@ -123,30 +143,17 @@ const isMultiRound = computed(() => {
 })
 
 // 卡片标题：多轮班显示"班级名（第X轮报名）"，单轮班显示班级名
+// _round 可能是 undefined（异常数据）→ 降级为 rounds 的第一条
 const cardTitle = computed(() => {
-  const round = props.classInfo._round
-  if (round && isMultiRound.value) {
-    return `${props.classInfo.name}（第${round}轮报名）`
-  }
-  return props.classInfo.name
+  if (!isMultiRound.value) return props.classInfo.name
+  const round = props.classInfo._round || (rounds.value[0] && rounds.value[0].round) || 1
+  return `${props.classInfo.name}（第${round}轮报名）`
 })
 
 // 时间状态：按单轮的 _period 算，不看 classInfo.period
 const timeStatus = computed(() => {
   const periodStr = props.classInfo._period || props.classInfo.period
   return getClassTimeStatus({ period: periodStr })
-})
-
-// 类别标签：优先读 categories 数组（中间表来源），兼容 categoryNames
-const categoryNames = computed(() => {
-  if (Array.isArray(props.classInfo.categories) && props.classInfo.categories.length) {
-    return props.classInfo.categories
-  }
-  if (Array.isArray(props.classInfo.categoryNames) && props.classInfo.categoryNames.length) {
-    return props.classInfo.categoryNames
-  }
-  if (props.classInfo.category) return [props.classInfo.category]
-  return []
 })
 
 // 从 classRounds 数组解析轮次信息
@@ -166,10 +173,15 @@ const roundStatusList = computed(() => {
   return rounds.value.map(r => getClassTimeStatus({ period: r.period }))
 })
 
-// 多轮班默认只展示第1轮，展开后展示全部
+// 多轮班默认只展示卡片对应的那一轮，展开后展示全部
 const visibleRounds = computed(() => {
   if (!isMultiRound.value) return rounds.value
-  return isExpanded.value ? rounds.value : rounds.value.slice(0, 1)
+  if (isExpanded.value) return rounds.value  // 展开：显示全部轮次
+
+  // 未展开：显示卡片自己对应的那一轮（用 _round 定位，不受 active 影响）
+  const cardRound = props.classInfo._round
+  const target = rounds.value.find(r => r.round === cardRound)
+  return target ? [target] : rounds.value.slice(0, 1)
 })
 
 function toggleExpand() {
@@ -206,6 +218,35 @@ function showDescription() {
 }
 </script>
 
+<!-- 非 scoped：覆盖 el-dialog Teleport 到 body 后的尺寸 -->
+<style>
+/* 隐藏原生头部/底部（.el-dialog__header 是 .desc-dialog 的子元素，后代选择器正确） */
+.desc-dialog .el-dialog__header,
+.desc-dialog .el-dialog__footer {
+  display: none !important;
+}
+.desc-dialog .el-dialog__body {
+  padding: 0 !important;
+}
+
+/* PC 端弹窗：width 由 JS 响应式 prop 控制，CSS 只管外观 */
+.el-dialog.desc-dialog {
+  border-radius: 16px;
+  overflow: hidden;
+  padding: 36px !important;
+  box-sizing: border-box !important;
+}
+
+/* 移动端弹窗 */
+@media (max-width: 768px) {
+  .el-dialog.desc-dialog {
+    border-radius: 14px !important;
+    padding: 28px 20px !important;
+    box-sizing: border-box !important;
+  }
+}
+</style>
+
 <style scoped>
 /* ==================== 卡片容器 ==================== */
 .class-card {
@@ -223,12 +264,16 @@ function showDescription() {
 }
 .class-card.is-disabled {
   cursor: not-allowed;
-  pointer-events: none;
+  /* 不设 pointer-events: none，子元素（介绍按钮、展开按钮）仍可点击 */
 }
 .class-card.is-disabled:hover {
   border-color: var(--rule, #e2e8f0);
   box-shadow: none;
   transform: none;
+}
+/* 只禁用报名按钮，而非整个卡片 */
+.class-card.is-disabled .card-btn {
+  pointer-events: none;
 }
 
 /* ==================== 签名元素：4px 顶部色条 ==================== */
@@ -242,7 +287,7 @@ function showDescription() {
   padding: 12px 16px;
   display: flex;
   flex-direction: column;
-  gap: 20px;                     /* 调大 10px */
+  gap: 12px;                     /* 紧凑间距，删类别后收紧 */
 }
 
 /* 内容区：flex 纵向布局，各行固定高度，保证所有卡片对齐 */
@@ -252,29 +297,16 @@ function showDescription() {
   gap: 0;
 }
 
-/* 标题行：固定高度，溢出隐藏 */
+/* 标题行：高度自适应，溢出隐藏 */
 .card-head {
   flex-shrink: 0;
   position: relative;              /* 让 desc-btn 绝对定位 */
   display: flex;
   align-items: flex-start;
-  gap: 6px;
-  overflow: hidden;
-  height: 48px;                    /* 2行标题约48px，避免被标签遮挡 */
-}
-
-/* 类别标签：固定高度，溢出隐藏 */
-.card-tags {
-  flex-shrink: 0;
-  height: 28px;
-  overflow: hidden;
-  display: flex;
-  flex-direction: row;
   gap: 4px;
-  flex-wrap: wrap;
-  align-content: flex-start;
-  justify-content: flex-start;    /* PC 端左对齐 */
-  margin-top: 8px;
+  overflow: hidden;
+  min-height: 40px;                /* 至少一行标题高度 */
+  padding-bottom: 2px;             /* 紧凑 */
 }
 
 /* 分割线：固定高度 */
@@ -289,7 +321,7 @@ function showDescription() {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  padding-top: 8px;                 /* 与分割线保持 7px 间距 */
+  padding-top: 6px;                 /* 紧凑间距 */
 }
 
 .card-name {
@@ -332,14 +364,6 @@ function showDescription() {
   font-size: 12px;
   color: #337eff;
   font-weight: 600;
-}
-
-.card-tag {
-  font-size: 11px;
-  color: #1d4ed8;
-  background: #eaf2ff;
-  padding: 2px 8px;
-  border-radius: 3px;
 }
 
 /* 标题下分割线（签名元素） */
@@ -489,74 +513,127 @@ function showDescription() {
   cursor: not-allowed;
 }
 
-/* ==================== 班级介绍弹窗 ==================== */
-.desc-dialog :deep(.el-dialog__header) { display: none; }
-.desc-dialog :deep(.el-dialog__body)   { padding: 0; }
-.desc-dialog :deep(.el-dialog__footer) { display: none; }
-.desc-dialog :deep(.el-dialog) { border-radius: 12px; overflow: hidden; }
-.desc-dialog-bar {
-  height: 4px;
-  background: linear-gradient(90deg, #337eff, #5b9bff);
-}
-.desc-dialog-head {
+/* ==================== 班级介绍弹窗 · 内部内容组件 ==================== */
+.custom-header {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 24px 24px 0;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
 }
-.desc-dialog-icon {
+
+.header-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+.custom-icon {
   width: 28px;
   height: 28px;
   flex-shrink: 0;
 }
-.desc-dialog-title {
-  font-size: 16px;
-  font-weight: 700;
-  color: #0f172a;
+
+.header-text {
+  flex: 1;
+  min-width: 0;
 }
-.desc-dialog-subtitle {
-  display: inline-block;
-  margin: 6px 24px 0;
-  padding: 3px 12px;
+
+.header-title {
+  margin: 0 0 4px;
+  font-size: clamp(15px, 4.2vw, 18px);
+  font-weight: 700;
+  color: #1e293b;
+  line-height: 1.4;
+  word-break: keep-all;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.custom-close-btn {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: #ef4444;
+  color: #fff;
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
+}
+
+.custom-close-btn:hover {
+  background: #dc2626;
+  transform: scale(1.08);
+}
+
+.dialog-inner {
+  width: 100%;
+}
+
+.desc-tag {
+  display: block;
+  width: fit-content;
+  margin-bottom: 12px;
+  padding: 4px 12px;
   font-size: 13px;
   color: #337eff;
   font-weight: 600;
   background: #eaf2ff;
-  border-radius: 4px;
+  border-radius: 6px;
   letter-spacing: 0.04em;
 }
+
 .desc-dialog-body {
-  margin: 14px 16px 20px;
+  margin: 0 0 20px;
   padding: 16px;
-  background: #f8fafc;
+  background: #f1f5f9;
   border-radius: 8px;
-  border: 1px solid #e8ecf2;
+  border: 1px solid #cbd5e1;
+  max-height: 35vh;
+  overflow-y: auto;
+  width: 100%;
+  box-sizing: border-box;
 }
+
 .desc-dialog-text {
-  font-size: 14px;
-  line-height: 1.75;
-  color: #334155;
+  font-size: 15px;
+  line-height: 1.9;
+  color: #1e293b;
   margin: 0;
   white-space: pre-wrap;
   word-break: break-word;
+  text-align: justify;
+  letter-spacing: 0.02em;
 }
+
 .desc-dialog-footer {
-  padding: 0 24px 24px;
-}
-.desc-dialog-close-btn {
   width: 100%;
-  height: 40px;
+}
+
+.desc-dialog-confirm-btn {
+  width: 100%;
+  height: 42px;
   border-radius: 8px;
   font-size: 14px;
   font-weight: 600;
   background: #337eff;
   color: #fff;
   border: none;
+  cursor: pointer;
   transition: background 0.2s;
 }
-.desc-dialog-close-btn:hover {
+
+.desc-dialog-confirm-btn:hover {
   background: #2563eb;
-  color: #fff;
 }
 
 /* ==================== 移动端适配 ==================== */
@@ -591,10 +668,6 @@ function showDescription() {
     right: 0;
     padding: 4px 6px;
   }
-  .card-tags {
-    justify-content: flex-start;
-    margin-bottom: 6px;
-  }
   .card-rule {
     display: block;
   }
@@ -606,11 +679,64 @@ function showDescription() {
     font-size: 13px;
   }
 }
+/* ==================== 移动端弹窗内容适配 ==================== */
 @media (max-width: 768px) {
-  .desc-dialog :deep(.el-dialog) { max-width: 92vw !important; margin: 0 auto !important; }
-  .desc-dialog-head { padding: 20px 16px 0; }
-  .desc-dialog-subtitle { margin: 6px 16px 0; }
-  .desc-dialog-body { margin: 10px 12px 16px; padding: 14px; }
-  .desc-dialog-footer { padding: 0 16px 20px; }
+  .custom-header {
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .header-content {
+    gap: 8px;
+  }
+
+  .custom-icon {
+    width: 24px;
+    height: 24px;
+  }
+
+  .header-title {
+    font-size: clamp(14px, 4vw, 15px) !important;
+    line-height: 1.4 !important;
+  }
+
+  .custom-close-btn {
+    width: 36px !important;
+    height: 36px !important;
+    border-width: 2px !important;
+    box-shadow: 0 3px 10px rgba(239, 68, 68, 0.45) !important;
+  }
+
+  .custom-close-btn svg {
+    width: 18px !important;
+    height: 18px !important;
+  }
+
+  .desc-dialog-body {
+    margin: 0 0 14px;
+    padding: 12px !important;
+    background: #f1f5f9 !important;
+    border: 1px solid #cbd5e1 !important;
+    max-height: 35vh;
+    border-radius: 8px;
+  }
+
+  .desc-dialog-text {
+    font-size: 14px !important;
+    line-height: 1.85 !important;
+    text-align: justify !important;
+  }
+
+  .desc-tag {
+    font-size: 12px;
+    padding: 3px 10px;
+    margin-bottom: 10px;
+  }
+
+  .desc-dialog-confirm-btn {
+    height: 46px !important;
+    font-size: 15px;
+    border-radius: 10px !important;
+  }
 }
 </style>
