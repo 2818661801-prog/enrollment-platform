@@ -306,8 +306,8 @@ function showDescription() {
 /* 介绍按钮：绝对定位右上角 */
 .desc-btn {
   position: absolute;
-  top: -6px;
-  right: -6px;
+  top: 0;
+  right: 0;
   display: flex;
   align-items: center;
   gap: 3px;
