@@ -320,9 +320,17 @@ const flatCards = computed(() => {
       return s === selectedTimeStatus.value
     })
   }
-  // 按报名开始时间升序（最早在前）
+  // 排序：可报名/已报名/已录取 > 未开始 > 已截止，同组内按报名开始时间升序
   return result.sort((a, b) => {
     try {
+      const aStatus = getClassTimeStatus({ period: a._period })
+      const bStatus = getClassTimeStatus({ period: b._period })
+      const aOpen = aStatus.canApply || appliedClassIds[a.id] || admittedClassIds[a.id]
+      const bOpen = bStatus.canApply || appliedClassIds[b.id] || admittedClassIds[b.id]
+      // 优先级：可报名(0) > 未开始(1) > 已截止(2)
+      const priorityA = aOpen ? 0 : aStatus.status === 'not_started' ? 1 : 2
+      const priorityB = bOpen ? 0 : bStatus.status === 'not_started' ? 1 : 2
+      if (priorityA !== priorityB) return priorityA - priorityB
       const aStart = parsePeriod(a._period).start.getTime()
       const bStart = parsePeriod(b._period).start.getTime()
       return aStart - bStart
