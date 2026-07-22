@@ -1,6 +1,7 @@
 package com.enroll.server.controller;
 
 import com.enroll.server.dto.R;
+import com.enroll.server.dto.ResultCode;
 import com.enroll.server.entity.Category;
 import com.enroll.server.entity.ClassCategory;
 import com.enroll.server.entity.ClassInfo;
@@ -185,11 +186,11 @@ public class SyncController {
             inserted++;
         }
 
-        Map<String, Object> result = new LinkedHashMap<>();
-        result.put("total", dataList.size());
-        result.put("inserted", inserted);
-        result.put("data", "OK"); // CW 平台期望 String，迁就其错误配置
-        return R.ok("同步成功", result);
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("code", ResultCode.SUCCESS.getCode());
+        response.put("message", "同步成功");
+        response.put("data", "OK"); // CW 平台期望 String，迁就其错误配置
+        return response;
     }
 
     /**
@@ -236,10 +237,11 @@ public class SyncController {
             inserted++;
         }
 
-        Map<String, Object> result = new LinkedHashMap<>();
-        result.put("total", dataList.size());
-        result.put("inserted", inserted);
-        return R.ok("同步成功", result);
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("code", ResultCode.SUCCESS.getCode());
+        response.put("message", "同步成功");
+        response.put("data", "OK"); // CW 平台期望 String，迁就其错误配置
+        return response;
     }
 
     // ==================== 报名记录同步 ====================
@@ -271,11 +273,11 @@ public class SyncController {
             inserted++;
         }
 
-        Map<String, Object> result = new LinkedHashMap<>();
-        result.put("total", dataList.size());
-        result.put("inserted", inserted);
-        result.put("updated", updated);
-        return R.ok("同步成功", result);
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("code", ResultCode.SUCCESS.getCode());
+        response.put("message", "同步成功");
+        response.put("data", "OK"); // CW 平台期望 String，迁就其错误配置
+        return response;
     }
 
     // ==================== 内部工具 ====================
