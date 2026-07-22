@@ -4,6 +4,9 @@
    ================================================================ */
 
 :root {
+  /* === Element Plus 覆盖：ElMessage zIndex 高于 AppHeader(9999) === */
+  --el-message-z-index: 10000;
+
   /* === 品牌色系 === */
   --brand-primary: #337eff;
   --brand-hover: #1f6fe5;
