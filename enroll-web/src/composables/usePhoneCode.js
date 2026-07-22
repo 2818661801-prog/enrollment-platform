@@ -146,6 +146,8 @@ export function usePhoneCode() {
       localStorage.setItem('student_phone', respPhone)
       ElMessage.success('登录成功')
       clearCountdown()
+      // 通知 AppHeader 等监听器更新登录状态（右上角登录/退出按钮切换）
+      window.dispatchEvent(new Event('login_changed'))
       return true
     } catch {
       ElMessage.error('网络错误，请稍后重试')
