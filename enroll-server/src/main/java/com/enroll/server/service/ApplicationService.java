@@ -189,11 +189,25 @@ public class ApplicationService {
         Application app = appRepo.findById(id)
                 .orElseThrow(() -> new BusinessException(ResultCode.APPLICATION_NOT_FOUND));
 
-        if (app.getStatus() == STATUS_WITHDRAWN) {
-            throw new BusinessException(ResultCode.PARAM_INVALID, "该报名已撤回，请勿重复操作");
+        // 只有"已报名"(status=1)才允许撤回，其他状态一律拒绝
+        if (app.getStatus() != STATUS_APPLIED) {
+            String msg = switch (app.getStatus()) {
+                case STATUS_WITHDRAWN -> "该报名已撤回，请勿重复操作";
+                case STATUS_ENROLLED  -> "已录取的报名无法撤回";
+                case STATUS_REJECTED  -> "未录取的报名无需撤回";
+                default               -> "当前状态不允许撤回";
+            };
+            throw new BusinessException(ResultCode.PARAM_INVALID, msg);
         }
-        if (app.getStatus() == STATUS_ENROLLED) {
-            throw new BusinessException(ResultCode.PARAM_INVALID, "已录取的报名无法撤回");
+
+        // 校验截止时间：超过该班级该轮次的报名截止时间不允许撤回
+        List<ClassRound> rounds = roundRepo.findByClassIdOrderByRoundNum(app.getClassId());
+        ClassRound currentRound = rounds.stream()
+                .filter(r -> r.getRoundNum().equals(app.getRound()))
+                .findFirst()
+                .orElse(null);
+        if (currentRound != null && LocalDateTime.now().isAfter(currentRound.getPeriodEnd())) {
+            throw new BusinessException(ResultCode.PARAM_INVALID, "报名已截止，无法撤回");
         }
 
         app.setStatus(STATUS_WITHDRAWN);

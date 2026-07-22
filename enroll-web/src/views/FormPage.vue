@@ -258,7 +258,7 @@ import { ref, reactive, computed, watch, onMounted, onUnmounted, nextTick } from
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { SuccessFilled, ArrowLeft, Iphone } from '@element-plus/icons-vue'
-import { initialForm, getClassTimeStatus } from '../utils/data.js'
+import { initialForm, getClassTimeStatus, syncServerTime } from '../utils/data.js'
 import { fetchClasses } from '../utils/api.js'
 import { validateIdCard, validateName, inferGender } from '../utils/validate.js'
 import { useApplication } from '../composables/useApplication.js'
@@ -291,6 +291,9 @@ const classes = ref([])
 const form = reactive(initialForm())
 
 onMounted(async () => {
+  // 同步服务器时间（防止直接 URL 进入时本地时间被篡改）
+  await syncServerTime()
+
   // 拉取班级列表
   loading.value = true
   try {
