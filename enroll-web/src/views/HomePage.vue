@@ -211,11 +211,12 @@ async function loadData() {
       conditions: (noticeRes.conditions || '').split('\n').filter(l => l.trim()),
       notices:    (noticeRes.notices    || '').split('\n').filter(l => l.trim()),
     }
+    // 无论登录/退出，先清空旧数据（退出登录后 token 没了，if 被跳过导致残留）
+    Object.keys(appliedClassIds).forEach(k => delete appliedClassIds[k])
+    Object.keys(admittedClassIds).forEach(k => delete admittedClassIds[k])
     // 已登录时加载我的报名记录，标记已报名的班级（只要有记录就不让再报）
     if (localStorage.getItem('student_token')) {
       const myApps = await fetchMyApplicationsMe()
-      Object.keys(appliedClassIds).forEach(k => delete appliedClassIds[k])
-      Object.keys(admittedClassIds).forEach(k => delete admittedClassIds[k])
       myApps.forEach(a => {
         const key = String(a.classId)
         if (a.status === '1' || a.status === '3') appliedClassIds[key] = true
