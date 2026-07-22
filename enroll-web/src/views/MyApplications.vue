@@ -340,10 +340,11 @@ function statusLabel(status) {
   }
 }
 
-// 格式化时间
+// 格式化时间：去掉 T 和纳秒小数部分 → "yyyy-MM-dd HH:mm:ss"
 function formatTime(applyTime) {
   if (!applyTime) return '-'
-  return applyTime.replace('T', ' ')
+  // 去掉 ISO 的 'T'，去掉小数点后的纳秒（如 .9991521）
+  return applyTime.replace('T', ' ').replace(/\.\d+$/, '')
 }
 
 onMounted(fetchMyRecords)

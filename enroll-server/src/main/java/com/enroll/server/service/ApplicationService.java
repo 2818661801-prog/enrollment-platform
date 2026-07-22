@@ -145,7 +145,7 @@ public class ApplicationService {
             app.setStatus(STATUS_APPLIED);
             Object agreed = form.get("noticeAgreed");
             app.setNoticeAgreed(parseFlag(agreed));
-            app.setApplyTime(LocalDateTime.now());
+            app.setApplyTime(LocalDateTime.now().withNano(0));  // 截断到秒，避免纳秒→MySQL DATETIME 四舍五入导致时间不一致
             app.setRound(currentRound);
             // enrollmentYear：后端自动取当前年份（2026/2027）
             app.setEnrollmentYear(java.time.LocalDate.now().getYear());
@@ -422,7 +422,7 @@ public class ApplicationService {
                 app.setClassId(classId);
                 app.setStatus((Integer) item.getOrDefault("status", 1));
                 app.setNoticeAgreed(parseFlag(item.get("noticeAgreed")));
-                app.setApplyTime(LocalDateTime.now());
+                app.setApplyTime(LocalDateTime.now().withNano(0));  // 截断到秒
                 app.setRound((Integer) item.getOrDefault("round", 1));
                 app.setEnrollmentYear((Integer) item.getOrDefault("enrollmentYear", java.time.LocalDate.now().getYear()));
                 app.setIsDeleted(0);  // 默认未删除

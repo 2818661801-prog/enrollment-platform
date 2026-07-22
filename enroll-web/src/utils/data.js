@@ -219,14 +219,20 @@ function parseDate(val) {
  */
 export function formatTime(val) {
   if (!val) return ''
-  const d = new Date(val)
-  if (isNaN(d.getTime())) return val  // 不识别的格式直接返回原值
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  const h = String(d.getHours()).padStart(2, '0')
-  const min = String(d.getMinutes()).padStart(2, '0')
-  return `${y}/${m}/${day} ${h}:${min}`
+  // 不用 new Date()：JS 把 ISO "2026-09-01T08:00" 当 UTC 解析，会偏移 8 小时
+  // 直接字符串切割：去掉 'T' 和纳秒小数，保留到分钟
+  let s = val
+  if (s.includes('T')) {
+    s = s.replace('T', ' ')
+  }
+  // 去小数点后纳秒（如 "2026-09-01 08:00:00.999" → "2026-09-01 08:00"）
+  s = s.replace(/\.\d+$/, '')
+  // 截掉秒（保留 yyyy-MM-dd HH:mm）
+  const parts = s.split(':')
+  if (parts.length >= 2) {
+    return parts[0] + ':' + parts[1]
+  }
+  return s
 }
 
 /**
