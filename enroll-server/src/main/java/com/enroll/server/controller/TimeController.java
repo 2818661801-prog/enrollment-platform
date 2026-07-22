@@ -1,26 +1,31 @@
 package com.enroll.server.controller;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 服务器时间接口（无需鉴权，学生端前端用来校正本地时间）
  *
- * GET /api/time — 返回服务器当前时间戳（毫秒）
+ * GET /api/time — 返回服务器当前时间戳（毫秒），用 MySQL NOW() 保证与报名截止判断同一时钟源
  *
- * 为什么后端直接提供时间：
- * ① 服务器在大陆，时区即北京时间，不需要第三方 API
- * ② 前端浏览器时间可被用户篡改，用服务器时间做基准更可靠
- * ③ 前端计算"本地时间-服务器时间"偏差，后续判断都用 trustedNow()
+ * ⚠️ 为什么用 MySQL NOW() 而不是 System.currentTimeMillis()：
+ * 后端 findCurrentRound 用 MySQL NOW() 判断报名截止，如果 /api/time 用应用服务器时钟，
+ * 两台机器差 1 分钟就会导致前端显示的截止时间和后端实际判断差 1 分钟。
  *
  * ⚠️ S15 修复：同一 IP 每秒最多 1 次（内存 ConcurrentHashMap，不依赖 Redis）
  */
 @RestController
 @RequestMapping("/api")
 public class TimeController {
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     // S15 修复：内存 Map 限流，key=IP，value=上次请求时间戳
     private static final ConcurrentHashMap<String, Long> RATE_LIMIT = new ConcurrentHashMap<>();
@@ -34,7 +39,6 @@ public class TimeController {
 
         Long last = RATE_LIMIT.get(ip);
         if (last != null && now - last < WINDOW_MS) {
-            // 返回限流响应（注意 Map.of 不允许 null value，改用 HashMap）
             Map<String, Object> resp = new java.util.HashMap<>();
             resp.put("code", 429);
             resp.put("message", "请求过于频繁");
@@ -43,7 +47,11 @@ public class TimeController {
         }
         RATE_LIMIT.put(ip, now);
 
-        return Map.of("serverTime", now);
+        // 用 MySQL NOW() 获取时间戳，保证与报名截止判断（findCurrentRound）同一时钟源
+        BigDecimal mysqlNowMs = (BigDecimal) entityManager
+                .createNativeQuery("SELECT UNIX_TIMESTAMP(NOW(3)) * 1000")
+                .getSingleResult();
+        return Map.of("serverTime", mysqlNowMs.longValue());
     }
 
     @GetMapping("/year")
