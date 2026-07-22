@@ -62,12 +62,12 @@
   --el-message-border-radius: 6px;
 }
 
-/* === 移动端：AppHeader z-index 降到最低，消息提示不受遮挡 === */
+/* === 移动端：ElMessage 距顶 1/3，避开 fixed header === */
 @media (max-width: 768px) {
-  :root {
-    /* 移动端 AppHeader z-index: 999，ElMessage z-index: 10000，
-       但消息提示本身内容可能被 header 遮住，加 top 偏移推开 */
-    --el-message-offset-top: 56px;
+  .el-message {
+    top: 12.5vh !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
   }
 }
 

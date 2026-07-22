@@ -74,15 +74,20 @@ export function usePhoneCode() {
 
   /** 启动倒计时（写入 localStorage 截止时间戳） */
   function startCountdown() {
-    // 已有时限则不复写（如刷新后恢复场景）
+    // 检查缓存的时间戳是否仍然有效
     const existingEnd = localStorage.getItem(CDOWN_KEY)
-    if (!existingEnd) {
+    const remaining = existingEnd
+      ? Math.max(0, Math.ceil((Number(existingEnd) - Date.now()) / 1000))
+      : 0
+    // key 不存在或已过期 → 重新写入
+    if (remaining <= 0) {
       const end = Date.now() + CDOWN_SEC * 1000
       localStorage.setItem(CDOWN_KEY, String(end))
+      countdown.value = CDOWN_SEC
+    } else {
+      // 仍在有效期内（如刷新后恢复场景）
+      countdown.value = remaining
     }
-    countdown.value = existingEnd
-      ? Math.max(0, Math.ceil((Number(existingEnd) - Date.now()) / 1000))
-      : CDOWN_SEC
     if (timer) clearInterval(timer)
     timer = setInterval(() => {
       const end = localStorage.getItem(CDOWN_KEY)
