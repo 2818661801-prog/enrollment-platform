@@ -189,7 +189,7 @@ public class SyncController {
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("code", ResultCode.SUCCESS.getCode());
         response.put("message", "同步成功");
-        response.put("data", "OK"); // CW 平台期望 String，迁就其错误配置
+        response.put("data", null); // CW 平台各接口 data 类型不同，null 兼容所有类型
         return response;
     }
 
@@ -240,7 +240,7 @@ public class SyncController {
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("code", ResultCode.SUCCESS.getCode());
         response.put("message", "同步成功");
-        response.put("data", "OK"); // CW 平台期望 String，迁就其错误配置
+        response.put("data", null); // CW 平台各接口 data 类型不同，null 兼容所有类型
         return response;
     }
 
@@ -276,7 +276,7 @@ public class SyncController {
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("code", ResultCode.SUCCESS.getCode());
         response.put("message", "同步成功");
-        response.put("data", "OK"); // CW 平台期望 String，迁就其错误配置
+        response.put("data", null); // CW 平台各接口 data 类型不同，null 兼容所有类型
         return response;
     }
 
