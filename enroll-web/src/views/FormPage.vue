@@ -103,13 +103,10 @@
         >
           <!-- 当前报名班级 + 班级介绍按钮（同一行） -->
           <div v-if="selectedClass" class="class-desc-row">
-            <el-alert
-              :title="`当前报名：${selectedClass.name}`"
-              type="info"
-              show-icon
-              :closable="false"
-              class="class-desc-alert"
-            />
+            <div class="class-desc-alert">
+              <el-icon size="18"><InfoFilled /></el-icon>
+              <span>当前报名：{{ selectedClass.name }}</span>
+            </div>
             <button
               v-if="selectedClass.description"
               type="button"
@@ -257,7 +254,7 @@
 import { ref, reactive, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { SuccessFilled, ArrowLeft, Iphone } from '@element-plus/icons-vue'
+import { SuccessFilled, ArrowLeft, Iphone, InfoFilled } from '@element-plus/icons-vue'
 import { initialForm, getClassTimeStatus, syncServerTime } from '../utils/data.js'
 import { fetchClasses } from '../utils/api.js'
 import { validateIdCard, validateName, inferGender } from '../utils/validate.js'
@@ -685,6 +682,16 @@ async function onSubmit() {
 .class-desc-alert {
   flex: 1;
   min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: rgba(51, 126, 255, 0.07);
+  border: 1px solid rgba(51, 126, 255, 0.2);
+  color: #337eff;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
 }
 
 .class-desc-btn {
