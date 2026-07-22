@@ -188,6 +188,7 @@ public class SyncController {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("total", dataList.size());
         result.put("inserted", inserted);
+        result.put("data", "OK"); // CW 平台期望 String，迁就其错误配置
         return R.ok("同步成功", result);
     }
 

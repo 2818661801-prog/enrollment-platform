@@ -171,9 +171,8 @@ public class ApplicationService {
      * @return 当前在报名时间内的那一轮，0 表示当前不在任何报名时间内
      */
     private int determineCurrentRound(ClassInfo cls) {
-        LocalDateTime now = LocalDateTime.now();
-        // 用 Repository 自定义 SQL 查询当前有效轮次
-        var current = roundRepo.findCurrentRound(cls.getId(), now);
+        // 用 Repository 自定义 SQL（内部用 MySQL NOW()）查询当前有效轮次
+        var current = roundRepo.findCurrentRound(cls.getId());
         if (current != null) {
             return current.getRoundNum();
         }
@@ -200,13 +199,9 @@ public class ApplicationService {
             throw new BusinessException(ResultCode.PARAM_INVALID, msg);
         }
 
-        // 校验截止时间：超过该班级该轮次的报名截止时间不允许撤回
-        List<ClassRound> rounds = roundRepo.findByClassIdOrderByRoundNum(app.getClassId());
-        ClassRound currentRound = rounds.stream()
-                .filter(r -> r.getRoundNum().equals(app.getRound()))
-                .findFirst()
-                .orElse(null);
-        if (currentRound != null && LocalDateTime.now().isAfter(currentRound.getPeriodEnd())) {
+        // 校验截止时间：超过该班级该轮次的报名截止时间不允许撤回（用 MySQL NOW() 消除时钟差）
+        int expired = roundRepo.countExpired(app.getClassId(), app.getRound());
+        if (expired > 0) {
             throw new BusinessException(ResultCode.PARAM_INVALID, "报名已截止，无法撤回");
         }
 
