@@ -23,6 +23,13 @@ const routes = [
 const router = createRouter({
   history: createWebHashHistory(),
   routes,
+  // 每次导航都重置滚动位置，防止从其他页返回时继承旧滚动高度
+  scrollBehavior(to, from, savedPosition) {
+    if (savedPosition) {
+      return savedPosition
+    }
+    return { top: 0 }
+  },
 })
 
 export default router
