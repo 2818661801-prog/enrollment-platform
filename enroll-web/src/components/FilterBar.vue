@@ -95,7 +95,7 @@
         clearable
         @update:model-value="v => emit('update:selectedRound', v)"
       >
-        <el-option label="全部" :value="null" />
+        <el-option label="全部" value="" />
         <el-option v-for="r in availableRounds" :key="r" :label="`第${r}轮`" :value="r" />
       </el-select>
       <!-- 第2列：时间状态筛选 -->
@@ -107,7 +107,7 @@
         clearable
         @update:model-value="v => emit('update:selectedTimeStatus', v)"
       >
-        <el-option label="全部" :value="null" />
+        <el-option label="全部" value="" />
         <el-option label="报名中" value="open" />
         <el-option label="未开始" value="not_started" />
         <el-option label="已截止" value="closed" />

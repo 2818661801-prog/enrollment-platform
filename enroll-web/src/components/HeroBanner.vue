@@ -173,22 +173,14 @@ const translatePct = computed(() => current.value * (100 / slideCount.value))
 
 function next() {
   current.value = (current.value + 1) % slideCount.value
-  resetProgress()
 }
 
 function prev() {
   current.value = (current.value - 1 + slideCount.value) % slideCount.value
-  resetProgress()
 }
 
 function goTo(i) {
   current.value = i
-  resetProgress()
-}
-
-/** 重置进度条到 0 */
-function resetProgress() {
-  progress.value = 0
 }
 
 /** 启动自动播放 */

@@ -33,12 +33,17 @@ const CDOWN_SEC = 60                  // 倒计时秒数
 
 /**
  * 从 localStorage 恢复剩余秒数（页面刷新后调用）
+ * @param {function} startTimerFn - 启动定时器的函数引用（用于刷新后恢复）
  * @returns {number} 剩余秒数，<=0 表示已过期或无记录
  */
-function restoreCountdown() {
+function restoreCountdown(startTimerFn) {
   const end = localStorage.getItem(CDOWN_KEY)
   if (!end) return 0
   const remaining = Math.max(0, Math.ceil((Number(end) - Date.now()) / 1000))
+  // 有剩余时间 → 立即启动定时器，让动态显示继续跑
+  if (remaining > 0 && startTimerFn) {
+    startTimerFn()
+  }
   return remaining
 }
 
@@ -53,11 +58,9 @@ export function usePhoneCode() {
   const logging = ref(false)    // 登录中（防抖 guard）
   const codeSent = ref(false)   // 验证码已发送
 
-  // countdown 不再直接存储秒数，每次访问时从时间戳计算
-  const countdown = ref(restoreCountdown())
-
   let timer = null              // 倒计时定时器（不响应式）
   let isLogging = false         // 登录中防抖标志（内存，不响应式）
+  const countdown = ref(0)       // 先声明，定时器启动时再赋值
 
   /** 手机号格式校验（11位 + 1[3-9] 开头） */
   function isValidPhone(v) {
@@ -71,20 +74,32 @@ export function usePhoneCode() {
 
   /** 启动倒计时（写入 localStorage 截止时间戳） */
   function startCountdown() {
-    const end = Date.now() + CDOWN_SEC * 1000
-    localStorage.setItem(CDOWN_KEY, String(end))
-    countdown.value = CDOWN_SEC
+    // 已有时限则不复写（如刷新后恢复场景）
+    const existingEnd = localStorage.getItem(CDOWN_KEY)
+    if (!existingEnd) {
+      const end = Date.now() + CDOWN_SEC * 1000
+      localStorage.setItem(CDOWN_KEY, String(end))
+    }
+    countdown.value = existingEnd
+      ? Math.max(0, Math.ceil((Number(existingEnd) - Date.now()) / 1000))
+      : CDOWN_SEC
     if (timer) clearInterval(timer)
     timer = setInterval(() => {
-      const remaining = Math.max(0, Math.ceil((Number(localStorage.getItem(CDOWN_KEY)) - Date.now()) / 1000))
+      const end = localStorage.getItem(CDOWN_KEY)
+      if (!end) { timer = null; return }
+      const remaining = Math.max(0, Math.ceil((Number(end) - Date.now()) / 1000))
       countdown.value = remaining
-      if (remaining <= 0 && timer) {
+      if (remaining <= 0) {
         clearInterval(timer)
         timer = null
         localStorage.removeItem(CDOWN_KEY)
       }
     }, 500)  // 每 500ms 刷新一次，更跟手
   }
+
+  // 刷新页面后：若有未过期的倒计时，立即恢复定时器
+  const initialRemaining = restoreCountdown(startCountdown)
+  countdown.value = initialRemaining
 
   /** 发送验证码 */
   async function onSendCode() {

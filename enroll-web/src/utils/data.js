@@ -83,10 +83,14 @@ export function parsePeriod(period) {
   }
   const [startStr, endStr] = period.split(' - ')
 
-  // ===== 开始日期：解析 YYYY/MM/DD [HH:MM] =====
-  // startStr 可能是 "2026/09/15" 或 "2026/09/15 08:00"
+  // ===== 开始日期：解析 YYYY-MM-DD 或 YYYY/MM/DD [HH:MM] =====
+  // startStr 可能是 "2026/09/15"、"2026-09-15"、"2026/09/15 08:00"、"2026-09-15 08:00"
   const startParts = startStr.trim().split(/\s+/)
-  const startDateParts = startParts[0].split('/').map(Number)
+  const startDate = startParts[0]
+  // 兼容横线(ISO) "2026-09-15" 和斜线 "2026/09/15" 两种格式
+  const startDateParts = startDate.includes('-')
+    ? startDate.split('-').map(Number)
+    : startDate.split('/').map(Number)
   const [sYear, sMonth, sDay] = startDateParts
   // 解析开始时间（时分），默认 00:00:00
   let sHour = 0, sMin = 0, sSec = 0

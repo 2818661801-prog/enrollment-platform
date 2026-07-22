@@ -1,0 +1,14 @@
+{
+  "name": "Test Class 2026",
+  "classRounds": [
+    {
+      "roundNum": 1,
+      "periodStart": "2026/07/22",
+      "periodEnd": "2026/08/31"
+    }
+  ],
+  "category": "Test",
+  "quota": -1,
+  "description": "for enrollment test",
+  "source": "admin"
+}

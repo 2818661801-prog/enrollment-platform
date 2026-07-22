@@ -15,10 +15,10 @@ export default defineConfig({
     port: 5173,    // 开发服务器端口
     open: true,    // 自动打开浏览器
     proxy: {
-      // 所有 /api 请求转发到后端 Spring Boot (localhost:8081)
       '/api': {
         target: 'http://localhost:8081',
         changeOrigin: true,
+        // timeout: 10000,  // 超时断开，避免请求挂起
       },
     },
   },

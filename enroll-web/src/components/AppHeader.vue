@@ -117,7 +117,7 @@ function onLogout() {
   right: 0;
   width: 100%;
   height: 56px;
-  z-index: 9999;
+  z-index: 999;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
   transform: translateZ(0);
   -webkit-transform: translateZ(0);

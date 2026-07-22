@@ -4,8 +4,8 @@
    ================================================================ */
 
 :root {
-  /* === Element Plus 覆盖：ElMessage zIndex 高于 AppHeader(9999) === */
-  --el-message-z-index: 10000;
+  /* === Element Plus 全局 z-index 覆盖 === */
+  --el-message-z-index: 10000 !important;
 
   /* === 品牌色系 === */
   --brand-primary: #337eff;
@@ -60,6 +60,15 @@
   --el-card-border-radius: 6px;
   --el-dialog-border-radius: 8px;
   --el-message-border-radius: 6px;
+}
+
+/* === 移动端：AppHeader z-index 降到最低，消息提示不受遮挡 === */
+@media (max-width: 768px) {
+  :root {
+    /* 移动端 AppHeader z-index: 999，ElMessage z-index: 10000，
+       但消息提示本身内容可能被 header 遮住，加 top 偏移推开 */
+    --el-message-offset-top: 56px;
+  }
 }
 
 /* === 全局页面背景 === */

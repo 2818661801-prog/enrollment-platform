@@ -169,8 +169,10 @@ const rounds = computed(() => {
 })
 
 // 每轮的时间状态（用于多轮卡片右侧标签显示）
+// 注意：必须基于 visibleRounds 而非 rounds.value，
+// 否则 collapsed 状态下 idx=0 取到的是全量数组第 0 个（round1 的状态），而非当前轮次
 const roundStatusList = computed(() => {
-  return rounds.value.map(r => getClassTimeStatus({ period: r.period }))
+  return visibleRounds.value.map(r => getClassTimeStatus({ period: r.period }))
 })
 
 // 多轮班默认只展示卡片对应的那一轮，展开后展示全部
