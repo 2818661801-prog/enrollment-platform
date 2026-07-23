@@ -409,7 +409,7 @@ onUnmounted(() => {
     margin-bottom: 8px;
   }
   .footer-logo-img {
-    max-width: 140px;        /* 主人确认 logo 自带文字，140px 保证清晰 */
+    max-width: 180px;        /* logo 调大 140→180 */
     height: auto;
     border-radius: 6px;
     margin-bottom: 0;
@@ -422,8 +422,8 @@ onUnmounted(() => {
     flex-wrap: wrap;
     align-items: center;
     justify-content: center;
-    gap: 8px 12px;
-    font-size: 12px;
+    gap: 6px 10px;
+    font-size: 11px;          /* 地址字号缩小 12→11 */
     color: #cbd5e1;
     margin-top: 4px;
   }
@@ -464,7 +464,7 @@ onUnmounted(() => {
     display: block;
     position: relative;
     height: 1px;
-    margin: 14px 8px 4px;
+    margin: 10px 8px 2px;
     background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.12) 12%, rgba(255, 255, 255, 0.12) 88%, transparent);
   }
   .footer-rule::after {
@@ -572,12 +572,12 @@ onUnmounted(() => {
 
   /* 底部版权 */
   .footer-bottom {
-    padding: 10px 0;
-    margin-top: 14px;
+    padding: 8px 0 6px;       /* 上下 padding 缩小 */
+    margin-top: 8px;          /* margin-top 缩小 14→8 */
     font-size: 10px;
   }
   .footer-bottom p {
-    line-height: 1.5;
+    line-height: 1.4;
   }
 
   /* 自定义 Toast（移动端启用） */
