@@ -401,31 +401,38 @@ onUnmounted(() => {
     text-align: left;          /* 两列内左对齐 */
   }
 
-  /* 学校信息列：移动端居顶 logo + 地址条 */
+  /* 学校信息列：移动端 logo + 地址条 同行排列 */
   .footer-col--school {
+    display: flex;
+    flex-direction: row;       /* logo 和地址条排一行 */
     align-items: center;
+    justify-content: center;
+    gap: 12px;                  /* logo 和地址之间间距 */
   }
   .footer-logo {
-    margin-bottom: 8px;
+    margin-bottom: 0;
+    flex: 0 0 auto;
   }
   .footer-logo-img {
-    max-width: 180px;        /* logo 调大 140→180 */
+    max-width: 90px;           /* logo 缩小（同行排列后需要小一点）*/
     height: auto;
-    border-radius: 6px;
+    border-radius: 4px;
     margin-bottom: 0;
   }
   .footer-addr-text {
-    display: none;            /* 桌面端文字地址在移动端隐藏 */
+    display: none;
   }
   .footer-addr-row {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    justify-content: center;
-    gap: 6px 10px;
-    font-size: 11px;          /* 地址字号缩小 12→11 */
+    justify-content: flex-start;  /* 地址块靠左对齐 */
+    gap: 4px 8px;
+    font-size: 10px;              /* 地址字号再缩小 11→10 */
     color: #cbd5e1;
-    margin-top: 4px;
+    margin-top: 0;
+    flex: 1 1 auto;
+    min-width: 0;
   }
   .footer-loc {
     display: inline-flex;
@@ -433,8 +440,8 @@ onUnmounted(() => {
     gap: 6px;
   }
   .footer-loc-icon {
-    width: 13px;
-    height: 13px;
+    width: 11px;
+    height: 11px;
     stroke: #337eff;
     fill: none;
     stroke-width: 1.8;
@@ -442,11 +449,11 @@ onUnmounted(() => {
   }
   .footer-zip-chip {
     font-family: 'SF Mono', monospace;
-    font-size: 11px;
+    font-size: 10px;          /* 邮编 chip 字号缩小到 10px 跟地址一致 */
     color: #93c5fd;
     border: 1px solid rgba(51, 126, 255, 0.35);
     border-radius: 999px;
-    padding: 3px 10px;
+    padding: 2px 8px;
     background: rgba(51, 126, 255, 0.08);
     letter-spacing: 1px;
   }
