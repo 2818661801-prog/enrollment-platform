@@ -419,7 +419,7 @@ onUnmounted(() => {
     flex: 0 0 auto;
   }
   .footer-logo-img {
-    max-width: 160px;              /* logo 调大（独占一行后可放大） */
+    max-width: 200px;              /* logo 放大 160→200 */
     height: auto;
     border-radius: 4px;
     margin-bottom: 0;
