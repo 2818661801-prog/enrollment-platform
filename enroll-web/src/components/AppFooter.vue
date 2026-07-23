@@ -402,20 +402,19 @@ onUnmounted(() => {
     text-align: left;          /* 两列内左对齐 */
   }
 
-  /* 学校信息列：移动端 logo + 地址条 同行排列 */
+  /* 学校信息列：移动端 logo 独占一行 + 地址单独一行 */
   .footer-col--school {
     display: flex;
-    flex-direction: row;
+    flex-direction: column;       /* logo 和地址纵向堆叠 */
     align-items: center;
     justify-content: center;
-    gap: 16px;                  /* logo 和地址之间间距加大 */
   }
   .footer-logo {
-    margin-bottom: 0;
+    margin-bottom: 8px;            /* logo 和地址之间的间距 */
     flex: 0 0 auto;
   }
   .footer-logo-img {
-    max-width: 130px;           /* logo 调大 90→130 */
+    max-width: 160px;              /* logo 调大（独占一行后可放大） */
     height: auto;
     border-radius: 4px;
     margin-bottom: 0;
@@ -427,13 +426,11 @@ onUnmounted(() => {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    justify-content: flex-start;
+    justify-content: center;       /* 地址块居中对齐 */
     gap: 4px 8px;
     font-size: 10px;
     color: #cbd5e1;
     margin-top: 0;
-    flex: 1 1 auto;
-    min-width: 0;
   }
   .footer-loc {
     display: inline-flex;
