@@ -382,7 +382,7 @@ onUnmounted(() => {
 /* ==================== 移动端适配 ==================== */
 @media (max-width: 768px) {
   .app-footer {
-    padding: 16px 12px 0;
+    padding: 8px 12px 0;          /* 上 padding 缩小 16→8（让 logo 离上方更近） */
     margin-top: 16px;
   }
 
@@ -474,7 +474,7 @@ onUnmounted(() => {
     display: block;
     position: relative;
     height: 1px;
-    margin: 10px 8px 2px;
+    margin: 6px 8px 0;            /* 上下 margin 缩小 */
     background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.12) 12%, rgba(255, 255, 255, 0.12) 88%, transparent);
   }
   .footer-rule::after {
