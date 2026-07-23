@@ -14,13 +14,12 @@
         <p class="footer-addr-text">浙江省杭州市临安区青山湖街道杭电路1号</p>
         <p class="footer-addr-text">邮编：311305</p>
 
-        <!-- 移动端独有：地址条 + 邮编 chip -->
+        <!-- 移动端独有：地址条（邮编移到底部） -->
         <div class="footer-addr-row">
           <span class="footer-loc">
             <svg viewBox="0 0 24 24" class="footer-loc-icon"><path d="M12 21s-7-5.6-7-11a7 7 0 0 1 14 0c0 5.4-7 11-7 11Z"/><circle cx="12" cy="10" r="2.6"/></svg>
             <span>浙江省杭州市临安区青山湖街道杭电路1号</span>
           </span>
-          <span class="footer-zip-chip"><b>邮编</b>311305</span>
         </div>
 
         <!-- 移动端独有：装饰分割线 -->
@@ -123,6 +122,8 @@
     <div class="footer-bottom">
       <p>© 2026 杭州电子科技大学信息工程学院 · 招生办公室 · 保留所有权利</p>
       <p style="margin-top: 4px;">教育部代码：13279（浙江省代码：0095）</p>
+      <!-- 移动端独有：邮编 chip 移到分割线下方 -->
+      <p class="footer-zip-line"><span class="footer-zip-chip"><b>邮编</b>311305</span></p>
     </div>
 
     <!-- 自定义 Toast（移动端） -->
@@ -404,17 +405,17 @@ onUnmounted(() => {
   /* 学校信息列：移动端 logo + 地址条 同行排列 */
   .footer-col--school {
     display: flex;
-    flex-direction: row;       /* logo 和地址条排一行 */
+    flex-direction: row;
     align-items: center;
     justify-content: center;
-    gap: 12px;                  /* logo 和地址之间间距 */
+    gap: 16px;                  /* logo 和地址之间间距加大 */
   }
   .footer-logo {
     margin-bottom: 0;
     flex: 0 0 auto;
   }
   .footer-logo-img {
-    max-width: 90px;           /* logo 缩小（同行排列后需要小一点）*/
+    max-width: 130px;           /* logo 调大 90→130 */
     height: auto;
     border-radius: 4px;
     margin-bottom: 0;
@@ -426,9 +427,9 @@ onUnmounted(() => {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    justify-content: flex-start;  /* 地址块靠左对齐 */
+    justify-content: flex-start;
     gap: 4px 8px;
-    font-size: 10px;              /* 地址字号再缩小 11→10 */
+    font-size: 10px;
     color: #cbd5e1;
     margin-top: 0;
     flex: 1 1 auto;
@@ -586,13 +587,31 @@ onUnmounted(() => {
   /* 底部版权 */
   .footer-bottom {
     padding: 8px 0 6px;
-    margin-top: 4px;          /* 再压缩 8→4 */
+    margin-top: 4px;
     font-size: 10px;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);   /* 顶部加细分隔线，视觉上紧贴上方内容 */
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
   }
   .footer-bottom p {
     line-height: 1.4;
     margin: 0;
+  }
+  /* 邮编行（移动端独有，桌面端隐藏） */
+  .footer-zip-line {
+    display: none;            /* 桌面端隐藏 */
+    margin-top: 6px !important;
+  }
+  .footer-zip-line .footer-zip-chip {
+    display: inline-block;    /* 移动端显示 */
+  }
+
+  /* 移动端：邮编行显示 */
+  .footer-zip-line {
+    display: block;
+    text-align: center;
+  }
+  .footer-zip-line .footer-zip-chip {
+    font-size: 10px;
+    padding: 2px 10px;
   }
 
   /* 自定义 Toast（移动端启用） */
