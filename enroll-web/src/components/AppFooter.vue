@@ -382,7 +382,7 @@ onUnmounted(() => {
 /* ==================== 移动端适配 ==================== */
 @media (max-width: 768px) {
   .app-footer {
-    padding: 8px 12px 0;          /* 上 padding 缩小 16→8（让 logo 离上方更近） */
+    padding: 4px 12px 0;          /* 上 padding 再缩小 8→4 */
     margin-top: 16px;
   }
 
@@ -404,7 +404,7 @@ onUnmounted(() => {
   .footer-row .footer-col {
     flex: 1 1 0;
     min-width: 0;
-    text-align: left;          /* 两列内左对齐 */
+    text-align: center;        /* 两列内居中（标题 + 内容都居中） */
   }
 
   /* 学校信息列：移动端 logo 独占一行 + 地址单独一行 */
