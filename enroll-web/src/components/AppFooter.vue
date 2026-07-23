@@ -416,64 +416,193 @@ onUnmounted(() => {
 /* ==================== 移动端适配 ==================== */
 @media (max-width: 768px) {
   .app-footer {
-    padding: 10px 12px 0;          /* 进一步压缩 */
+    padding: 16px 12px 0;
     margin-top: 16px;
   }
 
-  /* 桌面端 footer-inner 是横向 3 列（flex row）；移动端改纵向 */
   .footer-inner {
     flex-direction: column;
-    gap: 8px;                       /* 列间距再缩 */
+    gap: 12px;
     text-align: center;
+  }
+
+  /* 学校信息列：移动端居顶 logo + 地址条 */
+  .footer-col--school {
+    align-items: center;
+  }
+  .footer-logo {
+    margin-bottom: 8px;
+  }
+  .footer-logo-img {
+    max-width: 140px;        /* 主人确认 logo 自带文字，140px 保证清晰 */
+    height: auto;
+    border-radius: 6px;
+    margin-bottom: 0;
+  }
+  .footer-addr-text {
+    display: none;            /* 桌面端文字地址在移动端隐藏 */
+  }
+  .footer-addr-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
     justify-content: center;
+    gap: 8px 12px;
+    font-size: 12px;
+    color: #cbd5e1;
+    margin-top: 4px;
   }
-
-  /* 桌面端：直接子 .footer-col 是 3 个；移动端：第 1 个是学校信息，第 2/3 在 .footer-row 里 */
-  /* 这里 .footer-row 是移动端独有的，桌面端没有这个容器 */
-  .footer-row {
-    display: flex;                   /* 移动端：横排左右分布 */
-    justify-content: space-between;
-    align-items: flex-start;
-    padding: 0 16px;                /* 左右各 16px 留白 */
-    box-sizing: border-box;
-    gap: 8px;
+  .footer-loc {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
   }
-  .footer-row .footer-col {
+  .footer-loc-icon {
+    width: 13px;
+    height: 13px;
+    stroke: #337eff;
+    fill: none;
+    stroke-width: 1.8;
     flex: 0 0 auto;
-    min-width: unset;
-    text-align: center;             /* 内容居中 */
+  }
+  .footer-zip-chip {
+    font-family: 'SF Mono', monospace;
+    font-size: 11px;
+    color: #93c5fd;
+    border: 1px solid rgba(51, 126, 255, 0.35);
+    border-radius: 999px;
+    padding: 3px 10px;
+    background: rgba(51, 126, 255, 0.08);
+    letter-spacing: 1px;
+  }
+  .footer-zip-chip b {
+    font-weight: 500;
+    color: #94a3b8;
+    font-family: 'Noto Sans SC', system-ui, sans-serif;
+    font-size: 10px;
+    letter-spacing: 0.5px;
+    margin-right: 4px;
   }
 
+  /* 装饰分割线 */
+  .footer-rule {
+    display: block;
+    position: relative;
+    height: 1px;
+    margin: 18px 8px 4px;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.12) 12%, rgba(255, 255, 255, 0.12) 88%, transparent);
+  }
+  .footer-rule::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 7px;
+    height: 7px;
+    transform: translate(-50%, -50%) rotate(45deg);
+    background: #337eff;
+    box-shadow: 0 0 0 3px #1e293b, 0 0 8px rgba(51, 126, 255, 0.6);
+  }
+
+  /* 联系方式 + 快速链接 列 */
+  .footer-col--contact,
+  .footer-col--links {
+    min-width: unset;
+    text-align: left;
+  }
   .footer-col {
     min-width: unset;
   }
-
   .footer-col h4 {
     font-size: 12px;
-    margin: 0 auto 3px;
-    padding-bottom: 2px;
+    margin: 0 0 10px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid rgba(51, 126, 255, 0.25);
+    display: inline-block;
+    color: #fff;
   }
-
   .footer-col p {
     font-size: 10px;
-    line-height: 1.35;              /* 紧凑行高 */
-    margin: 0;                       /* 重置浏览器默认 p margin，避免行距过大 */
+    line-height: 1.35;
+    margin: 0;
   }
 
-  .footer-logo {
-    margin-bottom: 0;
+  /* 联系方式卡片行（移动端紧凑） */
+  .footer-contact-list {
+    gap: 6px;
+  }
+  .footer-crow {
+    padding: 8px 10px;
+  }
+  .footer-crow-ic {
+    flex: 0 0 28px;
+    width: 28px;
+    height: 28px;
+  }
+  .footer-crow-ic svg {
+    width: 13px;
+    height: 13px;
+  }
+  .footer-crow-lab {
+    font-size: 10px;
+  }
+  .footer-crow-val {
+    font-size: 12px;
   }
 
-  .footer-logo-img {
-    max-width: 250px;
-    margin-bottom: 2px;
+  /* 编号目录（移动端） */
+  .footer-lrow {
+    padding: 9px 4px;
+    gap: 10px;
+  }
+  .footer-lrow-no {
+    font-size: 13px;
+  }
+  .footer-lrow-nm {
+    font-size: 12px;
   }
 
+  /* 底部版权 */
   .footer-bottom {
-    padding: 8px 0;
-    margin-top: 10px;
-    font-size: 9px;
+    padding: 10px 0;
+    margin-top: 14px;
+    font-size: 10px;
   }
-  .footer-bottom p { line-height: 1.4; margin: 0; }
+  .footer-bottom p {
+    line-height: 1.5;
+  }
+
+  /* 自定义 Toast（移动端启用） */
+  .footer-toast {
+    display: flex;
+    position: fixed;
+    left: 50%;
+    bottom: 24px;
+    transform: translate(-50%, 16px);
+    background: #1c2c47;
+    border: 1px solid rgba(51, 126, 255, 0.4);
+    color: #eaf0fa;
+    padding: 9px 16px;
+    border-radius: 8px;
+    font-size: 12px;
+    box-shadow: 0 12px 32px -8px rgba(0, 0, 0, 0.6);
+    align-items: center;
+    gap: 8px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s, transform 0.3s;
+    z-index: 1000;
+  }
+  .footer-toast.show {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+  .footer-toast svg {
+    width: 14px;
+    height: 14px;
+    stroke: #4ade80;
+    fill: none;
+    stroke-width: 2;
+  }
 }
 </style>
