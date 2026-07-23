@@ -415,7 +415,7 @@ onUnmounted(() => {
     justify-content: center;
   }
   .footer-logo {
-    margin-bottom: 8px;            /* logo 和地址之间的间距 */
+    margin-bottom: 4px;            /* logo 和地址之间的间距缩小 8→4 */
     flex: 0 0 auto;
   }
   .footer-logo-img {
