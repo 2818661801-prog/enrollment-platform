@@ -5,37 +5,114 @@
 <template>
   <footer class="app-footer">
     <div class="footer-inner">
-      <!-- 第 1 列：学校信息 -->
-      <div class="footer-col">
+      <!-- 第 1 列：学校信息（桌面端保留；移动端居顶 logo + 地址） -->
+      <div class="footer-col footer-col--school">
         <div class="footer-logo">
-          <!-- 杭电信工学院校徽 -->
-          <img :src="logoImg" alt="校徽" width="468" height="80" class="footer-logo-img" />
+          <img :src="logoImg" alt="杭州电子科技大学信息工程学院" class="footer-logo-img" />
         </div>
-        <p>浙江省杭州市临安区青山湖街道杭电路1号</p>
-        <p>邮编：311305</p>
+        <!-- 桌面端：保留原文字地址；移动端：隐藏（CSS 处理） -->
+        <p class="footer-addr-text">浙江省杭州市临安区青山湖街道杭电路1号</p>
+        <p class="footer-addr-text">邮编：311305</p>
+
+        <!-- 移动端独有：地址条 + 邮编 chip -->
+        <div class="footer-addr-row">
+          <span class="footer-loc">
+            <svg viewBox="0 0 24 24" class="footer-loc-icon"><path d="M12 21s-7-5.6-7-11a7 7 0 0 1 14 0c0 5.4-7 11-7 11Z"/><circle cx="12" cy="10" r="2.6"/></svg>
+            <span>浙江省杭州市临安区青山湖街道杭电路1号</span>
+          </span>
+          <span class="footer-zip-chip"><b>邮编</b>311305</span>
+        </div>
+
+        <!-- 移动端独有：装饰分割线 -->
+        <div class="footer-rule" aria-hidden="true"></div>
       </div>
 
-      <!-- 移动端：联系方式 + 快速链接 左右分布在同一行 -->
-      <div class="footer-row">
-        <!-- 第 2 列：联系方式 -->
-        <div class="footer-col">
-          <h4>联系方式</h4>
-          <p>招生办电话：0571-58619116</p>
-          <p>学院办公室：0571-58619115</p>
-          <p>招生办邮箱：***REMOVED***</p>
-          <p>学院邮箱：***REMOVED***</p>
-          <p>咨询时间：每天 8:00 — 20:00</p>
-        </div>
+      <!-- 第 2 列：联系方式（卡片行，点击复制） -->
+      <div class="footer-col footer-col--contact">
+        <h4>联系方式</h4>
+        <div class="footer-contact-list">
+          <div class="footer-crow" data-copy="0571-58619116">
+            <span class="footer-crow-ic">
+              <svg viewBox="0 0 24 24"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2Z"/></svg>
+            </span>
+            <span class="footer-crow-text">
+              <span class="footer-crow-lab">招生办电话</span>
+              <span class="footer-crow-val footer-mono">0571-58619116</span>
+            </span>
+          </div>
 
-        <!-- 第 3 列：快速链接 -->
-        <div class="footer-col footer-col--center">
-          <h4>快速链接</h4>
-          <p><a href="https://www.hziee.edu.cn" target="_blank" class="footer-link">学院官网</a></p>
-          <p><a href="https://www.hziee.edu.cn/zs" target="_blank" class="footer-link">招生网</a></p>
-          <p><a href="https://www.hziee.edu.cn/xxgka/" target="_blank" class="footer-link">信息公开</a></p>
-          <p><a href="https://www.hziee.edu.cn/46/list.htm" target="_blank" class="footer-link">学院介绍</a></p>
-          <p><a href="https://www.hziee.edu.cn/tusg/" target="_blank" class="footer-link">图书馆</a></p>
+          <div class="footer-crow" data-copy="0571-58619115">
+            <span class="footer-crow-ic">
+              <svg viewBox="0 0 24 24"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2Z"/></svg>
+            </span>
+            <span class="footer-crow-text">
+              <span class="footer-crow-lab">学院办公室</span>
+              <span class="footer-crow-val footer-mono">0571-58619115</span>
+            </span>
+          </div>
+
+          <div class="footer-crow" data-copy="***REMOVED***">
+            <span class="footer-crow-ic">
+              <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
+            </span>
+            <span class="footer-crow-text">
+              <span class="footer-crow-lab">招生办邮箱</span>
+              <span class="footer-crow-val">***REMOVED***</span>
+            </span>
+          </div>
+
+          <div class="footer-crow" data-copy="***REMOVED***">
+            <span class="footer-crow-ic">
+              <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
+            </span>
+            <span class="footer-crow-text">
+              <span class="footer-crow-lab">学院邮箱</span>
+              <span class="footer-crow-val">***REMOVED***</span>
+            </span>
+          </div>
+
+          <div class="footer-crow footer-crow--static">
+            <span class="footer-crow-ic">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+            </span>
+            <span class="footer-crow-text">
+              <span class="footer-crow-lab">咨询时间</span>
+              <span class="footer-crow-val">每天 8:00 — 20:00</span>
+            </span>
+          </div>
         </div>
+      </div>
+
+      <!-- 第 3 列：快速链接（编号目录） -->
+      <div class="footer-col footer-col--links">
+        <h4>快速链接</h4>
+        <nav class="footer-link-list">
+          <a class="footer-lrow" href="https://www.hziee.edu.cn" target="_blank">
+            <span class="footer-lrow-no">01</span>
+            <span class="footer-lrow-nm">学院官网</span>
+            <svg class="footer-lrow-ar" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </a>
+          <a class="footer-lrow" href="https://www.hziee.edu.cn/zs" target="_blank">
+            <span class="footer-lrow-no">02</span>
+            <span class="footer-lrow-nm">招生网</span>
+            <svg class="footer-lrow-ar" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </a>
+          <a class="footer-lrow" href="https://www.hziee.edu.cn/xxgka/" target="_blank">
+            <span class="footer-lrow-no">03</span>
+            <span class="footer-lrow-nm">信息公开</span>
+            <svg class="footer-lrow-ar" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </a>
+          <a class="footer-lrow" href="https://www.hziee.edu.cn/46/list.htm" target="_blank">
+            <span class="footer-lrow-no">04</span>
+            <span class="footer-lrow-nm">学院介绍</span>
+            <svg class="footer-lrow-ar" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </a>
+          <a class="footer-lrow" href="https://www.hziee.edu.cn/tusg/" target="_blank">
+            <span class="footer-lrow-no">05</span>
+            <span class="footer-lrow-nm">图书馆</span>
+            <svg class="footer-lrow-ar" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </a>
+        </nav>
       </div>
     </div>
 
@@ -43,6 +120,12 @@
     <div class="footer-bottom">
       <p>© 2026 杭州电子科技大学信息工程学院 · 招生办公室 · 保留所有权利</p>
       <p style="margin-top: 4px;">教育部代码：13279（浙江省代码：0095）</p>
+    </div>
+
+    <!-- 自定义 Toast（移动端） -->
+    <div class="footer-toast" id="footer-toast" aria-live="polite">
+      <svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>
+      <span class="footer-toast-txt">已复制</span>
     </div>
   </footer>
 </template>
