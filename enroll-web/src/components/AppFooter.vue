@@ -132,7 +132,69 @@
 
 <script setup>
 // 信息来源于杭州电子科技大学信息工程学院官网 https://www.hziee.edu.cn
+import { onMounted, onUnmounted, ref } from 'vue'
 import logoImg from '../assets/images/logo.png' // Vite 自动处理图片路径
+
+// 点击复制 + Toast 提示
+const toastTimer = ref(null)
+
+function showToast(msg) {
+  const toast = document.getElementById('footer-toast')
+  if (!toast) return
+  const txt = toast.querySelector('.footer-toast-txt')
+  if (txt) txt.textContent = msg
+  toast.classList.add('show')
+  if (toastTimer.value) clearTimeout(toastTimer.value)
+  toastTimer.value = setTimeout(() => {
+    toast.classList.remove('show')
+  }, 1600)
+}
+
+function fallbackCopy(text) {
+  const ta = document.createElement('textarea')
+  ta.value = text
+  ta.style.position = 'fixed'
+  ta.style.opacity = '0'
+  document.body.appendChild(ta)
+  ta.select()
+  try {
+    document.execCommand('copy')
+    return true
+  } catch (e) {
+    return false
+  } finally {
+    document.body.removeChild(ta)
+  }
+}
+
+async function onCopyClick(e) {
+  const target = e.target.closest('[data-copy]')
+  if (!target) return
+  const text = target.getAttribute('data-copy')
+  if (!text) return
+
+  let ok = false
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    try {
+      await navigator.clipboard.writeText(text)
+      ok = true
+    } catch (err) {
+      ok = fallbackCopy(text)
+    }
+  } else {
+    ok = fallbackCopy(text)
+  }
+  showToast(ok ? `已复制：${text}` : '复制失败，请手动选择')
+}
+
+onMounted(() => {
+  document.addEventListener('click', onCopyClick)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('click', onCopyClick)
+  if (toastTimer.value) clearTimeout(toastTimer.value)
+})
 </script>
 
 <style scoped>
