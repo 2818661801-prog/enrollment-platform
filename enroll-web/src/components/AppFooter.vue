@@ -27,6 +27,8 @@
         <div class="footer-rule" aria-hidden="true"></div>
       </div>
 
+      <!-- 移动端：联系方式 + 快速链接 放在同一行左右分布 -->
+      <div class="footer-row">
       <!-- 第 2 列：联系方式（卡片行，点击复制） -->
       <div class="footer-col footer-col--contact">
         <h4>联系方式</h4>
@@ -113,6 +115,7 @@
             <svg class="footer-lrow-ar" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
           </a>
         </nav>
+      </div>
       </div>
     </div>
 
@@ -361,6 +364,15 @@ onUnmounted(() => {
   color: #64748b;
 }
 
+/* 桌面端：.footer-row 让子元素穿透到 .footer-inner，参与 3 列布局 */
+.footer-row {
+  display: contents;
+}
+.footer-row .footer-col {
+  flex: 1 1 0;
+  min-width: 260px;
+}
+
 /* ==================== 移动端适配 ==================== */
 @media (max-width: 768px) {
   .app-footer {
@@ -372,6 +384,21 @@ onUnmounted(() => {
     flex-direction: column;
     gap: 12px;
     text-align: center;
+  }
+
+  /* 移动端：联系方式 + 快速链接 同一行左右分布 */
+  .footer-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 0 12px;
+    box-sizing: border-box;
+  }
+  .footer-row .footer-col {
+    flex: 1 1 0;
+    min-width: 0;
+    text-align: left;          /* 两列内左对齐 */
   }
 
   /* 学校信息列：移动端居顶 logo + 地址条 */
@@ -432,24 +459,16 @@ onUnmounted(() => {
     margin-right: 4px;
   }
 
-  /* 装饰分割线 */
+  /* 装饰分割线（不带菱形） */
   .footer-rule {
     display: block;
     position: relative;
     height: 1px;
-    margin: 18px 8px 4px;
+    margin: 14px 8px 4px;
     background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.12) 12%, rgba(255, 255, 255, 0.12) 88%, transparent);
   }
   .footer-rule::after {
-    content: "";
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 7px;
-    height: 7px;
-    transform: translate(-50%, -50%) rotate(45deg);
-    background: #337eff;
-    box-shadow: 0 0 0 3px #1e293b, 0 0 8px rgba(51, 126, 255, 0.6);
+    display: none;          /* 不显示菱形点 */
   }
 
   /* 联系方式 + 快速链接 列 */
@@ -480,18 +499,41 @@ onUnmounted(() => {
     gap: 6px;
   }
   .footer-crow {
+    display: flex;             /* 覆盖桌面端的 display: block */
+    align-items: center;
+    gap: 10px;
     padding: 8px 10px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.02);
+    transition: transform 0.25s, border-color 0.25s, background 0.25s;
+    cursor: pointer;
   }
   .footer-crow-ic {
+    display: grid;             /* 覆盖桌面端的 display: none */
     flex: 0 0 28px;
     width: 28px;
     height: 28px;
+    border-radius: 6px;
+    place-items: center;
+    border: 1px solid rgba(51, 126, 255, 0.4);
+    background: rgba(51, 126, 255, 0.08);
   }
   .footer-crow-ic svg {
     width: 13px;
     height: 13px;
+    stroke: #337eff;
+    fill: none;
+    stroke-width: 1.6;
+  }
+  .footer-crow-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    flex: 1;
   }
   .footer-crow-lab {
+    display: block;            /* 覆盖桌面端的 display: none，显示"招生办电话"标签 */
     font-size: 10px;
   }
   .footer-crow-val {
@@ -500,14 +542,38 @@ onUnmounted(() => {
 
   /* 编号目录（移动端） */
   .footer-lrow {
-    padding: 9px 4px;
+    display: flex;               /* 覆盖桌面端的 display: block */
+    align-items: center;
     gap: 10px;
+    padding: 6px 4px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    text-decoration: none;
+    color: #94a3b8;
+    transition: color 0.25s, padding-left 0.25s;
+  }
+  .footer-lrow:last-child {
+    border-bottom: none;
   }
   .footer-lrow-no {
+    display: block;              /* 覆盖桌面端的 display: none */
     font-size: 13px;
+    font-style: italic;
+    color: rgba(51, 126, 255, 0.6);
+    font-family: 'SF Mono', monospace;
+    flex: 0 0 auto;
   }
   .footer-lrow-nm {
     font-size: 12px;
+    flex: 1;
+  }
+  .footer-lrow-ar {
+    display: block;              /* 覆盖桌面端的 display: none */
+    width: 12px;
+    height: 12px;
+    stroke: #94a3b8;
+    fill: none;
+    stroke-width: 1.8;
+    flex: 0 0 auto;
   }
 
   /* 底部版权 */
