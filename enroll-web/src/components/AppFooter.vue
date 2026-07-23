@@ -214,7 +214,7 @@ onUnmounted(() => {
   justify-content: space-between;  /* 三列均分间距 */
 }
 
-/* ============ 桌面端：联系方式卡片行 + 编号目录 ============ */
+/* ============ 桌面端：回归纯文本样式 ============ */
 .footer-col--school {
   display: flex;
   flex-direction: column;
@@ -229,117 +229,66 @@ onUnmounted(() => {
   display: none; /* 桌面端隐藏 */
 }
 
-/* 联系方式卡片行（桌面端压缩显示） */
+/* 联系方式（桌面端：纯文本列表，不带卡片框 + 不带蓝色高亮） */
 .footer-contact-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 0;                  /* 紧凑行间距 */
 }
 .footer-crow {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.02);
-  transition: transform 0.25s, border-color 0.25s, background 0.25s;
-  cursor: pointer;
-}
-.footer-crow:hover {
-  transform: translateX(4px);
-  border-color: rgba(51, 126, 255, 0.5);
-  background: rgba(51, 126, 255, 0.06);
-}
-.footer-crow--static {
-  cursor: default;
+  align-items: baseline;
+  gap: 0;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  transition: none;
+  cursor: default;         /* 桌面端不带 hover 反馈 */
 }
 .footer-crow-ic {
-  flex: 0 0 32px;
-  width: 32px;
-  height: 32px;
-  border-radius: 6px;
-  display: grid;
-  place-items: center;
-  border: 1px solid rgba(51, 126, 255, 0.4);
-  background: rgba(51, 126, 255, 0.08);
-}
-.footer-crow-ic svg {
-  width: 15px;
-  height: 15px;
-  stroke: #337eff;
-  fill: none;
-  stroke-width: 1.6;
+  display: none;           /* 桌面端隐藏图标 */
 }
 .footer-crow-text {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  flex: 1;
+  display: contents;       /* 让子元素直接参与布局 */
 }
 .footer-crow-lab {
-  font-size: 11px;
-  color: #94a3b8;
-  margin-bottom: 2px;
+  display: none;           /* 桌面端隐藏"招生办电话"标签 */
 }
 .footer-crow-val {
   font-size: 13px;
-  color: #e2e8f0;
+  color: #cbd5e1;
   word-break: break-all;
 }
 .footer-mono {
-  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
-  letter-spacing: 0.5px;
+  font-family: inherit;    /* 桌面端不用 mono 字体 */
+  letter-spacing: normal;
 }
 
-/* 编号目录（桌面端压缩显示） */
+/* 快速链接（桌面端：纯文本列表，不带编号 + 不带 hover 高亮） */
 .footer-link-list {
   display: flex;
   flex-direction: column;
+  gap: 0;
 }
 .footer-lrow {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 8px 6px;
+  display: block;
+  padding: 0;
   text-decoration: none;
   color: #94a3b8;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  transition: color 0.25s, padding-left 0.25s;
-}
-.footer-lrow:last-child {
   border-bottom: none;
+  transition: none;
 }
 .footer-lrow:hover {
   color: #fff;
-  padding-left: 12px;
+  padding-left: 0;
 }
-.footer-lrow-no {
-  font-size: 14px;
-  font-style: italic;
-  color: rgba(51, 126, 255, 0.5);
-  font-family: 'SF Mono', monospace;
-  flex: 0 0 auto;
-  transition: color 0.25s;
-}
-.footer-lrow:hover .footer-lrow-no {
-  color: #337eff;
+.footer-lrow-no,
+.footer-lrow-ar {
+  display: none;           /* 桌面端隐藏编号和箭头 */
 }
 .footer-lrow-nm {
-  flex: 1;
   font-size: 13px;
-}
-.footer-lrow-ar {
-  width: 14px;
-  height: 14px;
-  stroke: #94a3b8;
-  fill: none;
-  stroke-width: 1.6;
-  transition: stroke 0.25s, transform 0.25s;
-}
-.footer-lrow:hover .footer-lrow-ar {
-  stroke: #337eff;
-  transform: translateX(3px);
 }
 
 /* 自定义 Toast（桌面端隐藏） */
