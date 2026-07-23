@@ -55,7 +55,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessageBox } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import logoImg from '../assets/images/logo.png'
 import lockIcon from '../assets/images/lock.svg'
 import folderIcon from '../assets/images/folder.svg'
@@ -82,6 +82,15 @@ onUnmounted(() => {
 })
 
 function goLogin() {
+  // 当前已在登录页 → 提示用户（避免重复点击感觉没反应）
+  if (router.currentRoute.value.path === '/student-login') {
+    ElMessage({
+      message: '您已进入登录页面',
+      type: 'warning',
+      customClass: 'app-header-message--yellow',  // 自定义黄底样式
+    })
+    return
+  }
   router.push('/student-login')
 }
 
@@ -221,8 +230,8 @@ function onLogout() {
   .action-btn {
     height: 32px;
     padding: 0 8px;               /* 按钮更紧凑 */
-    background: rgba(255, 255, 255, 0.18);
-    border-color: rgba(255, 255, 255, 0.35);
+    background: transparent;
+    border: none;                 /* 去掉边框 */
   }
   .action-icon {
     width: 14px;
@@ -246,5 +255,16 @@ function onLogout() {
     width: 16px;
     height: 16px;
   }
+}
+
+/* ==================== ElMessage 自定义黄底 ==================== */
+/* 全局覆盖 ElMessage.warning 的背景色为黄色 */
+.app-header-message--yellow.el-message.el-message--warning {
+  background-color: #facc15;       /* Tailwind yellow-400 */
+  border-color: #facc15;
+  color: #1f2937;                  /* 深灰字，跟黄色对比清晰 */
+}
+.app-header-message--yellow.el-message.el-message--warning .el-message__content {
+  color: #1f2937;
 }
 </style>

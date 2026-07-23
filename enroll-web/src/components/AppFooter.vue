@@ -15,24 +15,27 @@
         <p>邮编：311305</p>
       </div>
 
-      <!-- 第 2 列：联系方式 -->
-      <div class="footer-col">
-        <h4>联系方式</h4>
-        <p>招生办电话：0571-58619116</p>
-        <p>学院办公室：0571-58619115</p>
-        <p>招生办邮箱：***REMOVED***</p>
-        <p>学院邮箱：***REMOVED***</p>
-        <p>咨询时间：每天 8:00 — 20:00</p>
-      </div>
+      <!-- 移动端：联系方式 + 快速链接 左右分布在同一行 -->
+      <div class="footer-row">
+        <!-- 第 2 列：联系方式 -->
+        <div class="footer-col">
+          <h4>联系方式</h4>
+          <p>招生办电话：0571-58619116</p>
+          <p>学院办公室：0571-58619115</p>
+          <p>招生办邮箱：***REMOVED***</p>
+          <p>学院邮箱：***REMOVED***</p>
+          <p>咨询时间：每天 8:00 — 20:00</p>
+        </div>
 
-      <!-- 第 3 列：快速链接 -->
-      <div class="footer-col footer-col--center">
-        <h4>快速链接</h4>
-        <p><a href="https://www.hziee.edu.cn" target="_blank" class="footer-link">学院官网</a></p>
-        <p><a href="https://www.hziee.edu.cn/zs" target="_blank" class="footer-link">招生网</a></p>
-        <p><a href="https://www.hziee.edu.cn/xxgka/" target="_blank" class="footer-link">信息公开</a></p>
-        <p><a href="https://www.hziee.edu.cn/46/list.htm" target="_blank" class="footer-link">学院介绍</a></p>
-        <p><a href="https://www.hziee.edu.cn/tusg/" target="_blank" class="footer-link">图书馆</a></p>
+        <!-- 第 3 列：快速链接 -->
+        <div class="footer-col footer-col--center">
+          <h4>快速链接</h4>
+          <p><a href="https://www.hziee.edu.cn" target="_blank" class="footer-link">学院官网</a></p>
+          <p><a href="https://www.hziee.edu.cn/zs" target="_blank" class="footer-link">招生网</a></p>
+          <p><a href="https://www.hziee.edu.cn/xxgka/" target="_blank" class="footer-link">信息公开</a></p>
+          <p><a href="https://www.hziee.edu.cn/46/list.htm" target="_blank" class="footer-link">学院介绍</a></p>
+          <p><a href="https://www.hziee.edu.cn/tusg/" target="_blank" class="footer-link">图书馆</a></p>
+        </div>
       </div>
     </div>
 
@@ -134,6 +137,20 @@ import logoImg from '../assets/images/logo.png' // Vite 自动处理图片路径
     gap: 8px;                       /* 列间距再缩 */
     text-align: center;
     justify-content: center;
+  }
+
+  /* 联系方式 + 快速链接 放同一行，内容居中，左右留出边距 */
+  .footer-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 0 16px;                /* 左右各 16px 留白 */
+    box-sizing: border-box;
+  }
+  .footer-row .footer-col {
+    flex: 0 0 auto;
+    min-width: unset;
+    text-align: center;             /* 内容居中 */
   }
 
   .footer-col {

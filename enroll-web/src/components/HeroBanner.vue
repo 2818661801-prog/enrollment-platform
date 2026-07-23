@@ -504,7 +504,6 @@ onUnmounted(() => {
     font-size: 12px;
   }
   .nav-btn {
-    opacity: 1;
     width: 28px;
     height: 28px;
   }
