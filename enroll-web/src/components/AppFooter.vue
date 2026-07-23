@@ -14,14 +14,8 @@
         <p class="footer-addr-text">浙江省杭州市临安区青山湖街道杭电路1号</p>
         <p class="footer-addr-text">邮编：311305</p>
 
-        <!-- 移动端独有：地址条（邮编移到底部） -->
-        <div class="footer-addr-row">
-          <span class="footer-loc">
-            <svg viewBox="0 0 24 24" class="footer-loc-icon"><path d="M12 21s-7-5.6-7-11a7 7 0 0 1 14 0c0 5.4-7 11-7 11Z"/><circle cx="12" cy="10" r="2.6"/></svg>
-            <span>浙江省杭州市临安区青山湖街道杭电路1号</span>
-          </span>
-        </div>
-
+        <!-- 移动端独有：地址条（移到 footer-bottom 跟邮编并列） -->
+        <!-- 此处桌面端地址保留在 footer-addr-text，移动端新地址在 footer-bottom -->
         <!-- 移动端独有：装饰分割线 -->
         <div class="footer-rule" aria-hidden="true"></div>
       </div>
@@ -122,8 +116,14 @@
     <div class="footer-bottom">
       <p>© 2026 杭州电子科技大学信息工程学院 · 招生办公室 · 保留所有权利</p>
       <p style="margin-top: 4px;">教育部代码：13279（浙江省代码：0095）</p>
-      <!-- 移动端独有：邮编 chip 移到分割线下方 -->
-      <p class="footer-zip-line"><span class="footer-zip-chip"><b>邮编</b>311305</span></p>
+      <!-- 移动端独有：地址 + 邮编 一行排列（左地址，右邮编 chip） -->
+      <div class="footer-addr-zip-row">
+        <span class="footer-loc">
+          <svg viewBox="0 0 24 24" class="footer-loc-icon"><path d="M12 21s-7-5.6-7-11a7 7 0 0 1 14 0c0 5.4-7 11-7 11Z"/><circle cx="12" cy="10" r="2.6"/></svg>
+          <span class="footer-loc-text">浙江省杭州市临安区青山湖街道杭电路1号</span>
+        </span>
+        <span class="footer-zip-chip"><b>邮编</b>311305</span>
+      </div>
     </div>
 
     <!-- 自定义 Toast（移动端） -->
@@ -374,6 +374,11 @@ onUnmounted(() => {
   min-width: 260px;
 }
 
+/* 桌面端：移动端独有的地址+邮编组合行隐藏 */
+.footer-addr-zip-row {
+  display: none;
+}
+
 /* ==================== 移动端适配 ==================== */
 @media (max-width: 768px) {
   .app-footer {
@@ -592,21 +597,41 @@ onUnmounted(() => {
     line-height: 1.4;
     margin: 0;
   }
-  /* 邮编行（移动端独有，桌面端隐藏） */
-  .footer-zip-line {
-    display: none;            /* 桌面端隐藏 */
-    margin-top: 6px !important;
+  /* 移动端独有：地址 + 邮编 一行排列 */
+  .footer-addr-zip-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 6px;
+    font-size: 10px;
+    color: #cbd5e1;
   }
-  .footer-zip-line .footer-zip-chip {
-    display: inline-block;    /* 移动端显示 */
+  .footer-addr-zip-row .footer-loc {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    flex: 1 1 auto;
+    min-width: 0;
+    text-align: left;
   }
-
-  /* 移动端：邮编行显示 */
-  .footer-zip-line {
-    display: block;
-    text-align: center;
+  .footer-addr-zip-row .footer-loc-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1 1 auto;
+    min-width: 0;
   }
-  .footer-zip-line .footer-zip-chip {
+  .footer-addr-zip-row .footer-loc-icon {
+    width: 11px;
+    height: 11px;
+    stroke: #337eff;
+    fill: none;
+    stroke-width: 1.8;
+    flex: 0 0 auto;
+  }
+  .footer-addr-zip-row .footer-zip-chip {
+    flex: 0 0 auto;
     font-size: 10px;
     padding: 2px 10px;
   }
