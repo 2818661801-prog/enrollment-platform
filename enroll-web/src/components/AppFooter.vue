@@ -233,35 +233,34 @@ onUnmounted(() => {
 .footer-contact-list {
   display: flex;
   flex-direction: column;
-  gap: 0;                  /* 紧凑行间距 */
+  gap: 0;
 }
 .footer-crow {
-  display: flex;
-  align-items: baseline;
-  gap: 0;
+  display: block;          /* 桌面端：每个联系方式独立成行，文本左对齐到列宽内 */
   padding: 0;
   background: transparent;
   border: none;
   border-radius: 0;
   transition: none;
-  cursor: default;         /* 桌面端不带 hover 反馈 */
+  cursor: default;
 }
 .footer-crow-ic {
   display: none;           /* 桌面端隐藏图标 */
 }
 .footer-crow-text {
-  display: contents;       /* 让子元素直接参与布局 */
+  display: block;          /* 桌面端：标签 + 值上下排列 */
 }
 .footer-crow-lab {
-  display: none;           /* 桌面端隐藏"招生办电话"标签 */
+  display: none;           /* 桌面端隐藏"招生办电话"标签（保持简洁列表风格） */
 }
 .footer-crow-val {
   font-size: 13px;
   color: #cbd5e1;
   word-break: break-all;
+  display: block;
 }
 .footer-mono {
-  font-family: inherit;    /* 桌面端不用 mono 字体 */
+  font-family: inherit;
   letter-spacing: normal;
 }
 
