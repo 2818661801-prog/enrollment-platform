@@ -494,53 +494,39 @@ onUnmounted(() => {
     margin: 0;
   }
 
-  /* 联系方式卡片行（移动端紧凑版） */
+  /* 联系方式（移动端极简版：纯文本行，无卡片框，跟快速链接对齐） */
   .footer-contact-list {
-    gap: 3px;                   /* 行间距缩到 3px */
+    gap: 2px;                   /* 行间距 2px */
   }
   .footer-crow {
     display: flex;             /* 覆盖桌面端的 display: block */
-    align-items: center;
-    gap: 6px;                   /* 间距缩小 */
-    padding: 4px 8px;          /* 上下 padding 减半（8→4）*/
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 6px;        /* 圆角缩小 */
-    background: rgba(255, 255, 255, 0.02);
-    transition: transform 0.25s, border-color 0.25s, background 0.25s;
+    align-items: baseline;
+    gap: 4px;
+    padding: 2px 0;            /* 几乎无 padding，跟快速链接 row 等高 */
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    transition: none;
     cursor: pointer;
   }
   .footer-crow-ic {
-    display: grid;             /* 覆盖桌面端的 display: none */
-    flex: 0 0 22px;            /* 图标缩小 28→22 */
-    width: 22px;
-    height: 22px;
-    border-radius: 4px;
-    place-items: center;
-    border: 1px solid rgba(51, 126, 255, 0.4);
-    background: rgba(51, 126, 255, 0.08);
-  }
-  .footer-crow-ic svg {
-    width: 11px;               /* 图标内 svg 缩小 */
-    height: 11px;
-    stroke: #337eff;
-    fill: none;
-    stroke-width: 1.6;
+    display: none;             /* 移动端隐藏图标（节省高度） */
   }
   .footer-crow-text {
     display: flex;
-    flex-direction: row;       /* 改横排：标签 + 值在一行 */
+    flex-direction: row;       /* 标签 + 值横排（一行一项） */
     align-items: baseline;
     gap: 6px;
     min-width: 0;
     flex: 1;
-    flex-wrap: wrap;            /* 超长自动换行 */
+    flex-wrap: wrap;
   }
   .footer-crow-lab {
-    display: block;            /* 覆盖桌面端的 display: none */
-    font-size: 10px;
+    display: inline;
+    font-size: 11px;
     color: #94a3b8;
-    margin-bottom: 0;          /* 去掉下方间距 */
     flex: 0 0 auto;
+    margin-bottom: 0;
   }
   .footer-crow-val {
     font-size: 11px;
