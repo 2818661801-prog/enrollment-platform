@@ -572,12 +572,14 @@ onUnmounted(() => {
 
   /* 底部版权 */
   .footer-bottom {
-    padding: 8px 0 6px;       /* 上下 padding 缩小 */
-    margin-top: 8px;          /* margin-top 缩小 14→8 */
+    padding: 8px 0 6px;
+    margin-top: 4px;          /* 再压缩 8→4 */
     font-size: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);   /* 顶部加细分隔线，视觉上紧贴上方内容 */
   }
   .footer-bottom p {
     line-height: 1.4;
+    margin: 0;
   }
 
   /* 自定义 Toast（移动端启用） */
