@@ -519,7 +519,8 @@ onUnmounted(() => {
     gap: 6px;
     min-width: 0;
     flex: 1;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;         /* 强制单行，不让邮箱换行成两行 */
+    overflow: hidden;          /* 超长截断 */
   }
   .footer-crow-lab {
     display: inline;
@@ -527,11 +528,16 @@ onUnmounted(() => {
     color: #94a3b8;
     flex: 0 0 auto;
     margin-bottom: 0;
+    white-space: nowrap;       /* 标签强制不换行 */
   }
   .footer-crow-val {
-    font-size: 11px;
+    font-size: 10px;           /* 邮箱字号再缩小，让单行能容纳 */
     color: #cbd5e1;
-    word-break: break-all;
+    white-space: nowrap;       /* 值强制单行 */
+    overflow: hidden;
+    text-overflow: ellipsis;   /* 超长省略号 */
+    flex: 1;
+    min-width: 0;
   }
 
   /* 编号目录（移动端紧凑版） */
