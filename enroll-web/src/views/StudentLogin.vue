@@ -105,12 +105,15 @@ function goHome() {
   align-items: center;             /* 水平居中 .login-card */
   background: #f5f6fa;
   padding-top: 56px;               /* fixed header 高度，防止内容被遮挡 */
+  /* 不加 padding-bottom，让 footer 真正贴底（背景撑满屏幕） */
+  box-sizing: border-box;
 }
 .login-card {
   display: flex;
   flex-direction: column;
   width: 400px;
-  margin-top: 15vh;               /* 距顶部约 15% */
+  margin-top: 10vh;                /* 距顶部 10vh，小屏(iPhone SE)不顶 header */
+  margin-bottom: 10vh;             /* 距底部 10vh，大屏(Redmi K50)不贴 footer */
   background: #fff;
   border-radius: 12px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.07);
@@ -186,8 +189,12 @@ function goHome() {
 /* AppFooter 贴底 */
 :deep(.app-footer) {
   width: 100%;
-  margin-top: auto;
-  padding-top: 50px;  /* 与上方 card 保持 50px 间距（移动端适配）*/
+  margin-top: auto;                  /* 把 footer 推到 flex column 底部 */
+  flex-shrink: 0;                    /* 不让 flex 父级压缩 footer 高度，背景撑到底 */
+  min-height: 100%;                  /* 让 footer 在 flex column 里撑满剩余高度 */
+  display: flex;                     /* 内部也用 flex，让 footer-inner 撑满 footer */
+  flex-direction: column;
+  /* 不再 padding-top: 50px，避免移动端 footer 太高挤压布局；间距由 card margin-bottom: 10vh 自然产生 */
 }
 
 @media (max-width: 768px) {

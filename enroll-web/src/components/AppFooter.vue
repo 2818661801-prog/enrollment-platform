@@ -62,11 +62,21 @@ import logoImg from '../assets/images/logo.png' // Vite 自动处理图片路径
 
 .footer-inner {
   display: flex;
-  gap: 0;
+  gap: 60px;                         /* 三列之间间距加大，分散 */
   max-width: 1400px;               /* 放宽，给 logo 列更多空间 */
   margin: 0 auto;
   flex-wrap: wrap;
   justify-content: space-between;  /* 三列均分间距 */
+}
+
+/* 桌面端：.footer-row 让子元素穿透，直接参与 .footer-inner 的 flex 3 列布局 */
+.footer-row {
+  display: contents;
+}
+.footer-row .footer-col {
+  /* 桌面端：每列占 1/3 等宽 */
+  flex: 1 1 0;
+  min-width: 260px;
 }
 
 .footer-col {
@@ -132,6 +142,7 @@ import logoImg from '../assets/images/logo.png' // Vite 自动处理图片路径
     margin-top: 16px;
   }
 
+  /* 桌面端 footer-inner 是横向 3 列（flex row）；移动端改纵向 */
   .footer-inner {
     flex-direction: column;
     gap: 8px;                       /* 列间距再缩 */
@@ -139,13 +150,15 @@ import logoImg from '../assets/images/logo.png' // Vite 自动处理图片路径
     justify-content: center;
   }
 
-  /* 联系方式 + 快速链接 放同一行，内容居中，左右留出边距 */
+  /* 桌面端：直接子 .footer-col 是 3 个；移动端：第 1 个是学校信息，第 2/3 在 .footer-row 里 */
+  /* 这里 .footer-row 是移动端独有的，桌面端没有这个容器 */
   .footer-row {
-    display: flex;
+    display: flex;                   /* 移动端：横排左右分布 */
     justify-content: space-between;
     align-items: flex-start;
     padding: 0 16px;                /* 左右各 16px 留白 */
     box-sizing: border-box;
+    gap: 8px;
   }
   .footer-row .footer-col {
     flex: 0 0 auto;
@@ -166,6 +179,7 @@ import logoImg from '../assets/images/logo.png' // Vite 自动处理图片路径
   .footer-col p {
     font-size: 10px;
     line-height: 1.35;              /* 紧凑行高 */
+    margin: 0;                       /* 重置浏览器默认 p margin，避免行距过大 */
   }
 
   .footer-logo {
@@ -182,6 +196,6 @@ import logoImg from '../assets/images/logo.png' // Vite 自动处理图片路径
     margin-top: 10px;
     font-size: 9px;
   }
-  .footer-bottom p { line-height: 1.4; }
+  .footer-bottom p { line-height: 1.4; margin: 0; }
 }
 </style>
