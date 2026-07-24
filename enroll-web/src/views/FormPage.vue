@@ -49,30 +49,38 @@
           <el-row :gutter="16" class="form-row identity-row">
             <el-col :xs="24" :sm="12">
               <el-form-item label="手机号" prop="phone" :error="phoneError">
-                <el-input
-                  v-model="form.phone"
-                  placeholder="请输入11位手机号"
-                  maxlength="11"
-                  clearable
-                  @blur="onPhoneBlur"
-                  :suffix-icon="phoneValid && !phoneConflict ? SuccessFilled : undefined"
-                >
-                  <template #prefix>
-                    <span class="phone-prefix">+86</span>
-                  </template>
-                </el-input>
+                <div class="input-with-icon">
+                  <el-input
+                    v-model="form.phone"
+                    placeholder="请输入11位手机号"
+                    maxlength="11"
+                    clearable
+                    @blur="onPhoneBlur"
+                  >
+                    <template #prefix>
+                      <span class="phone-prefix">+86</span>
+                    </template>
+                  </el-input>
+                  <span v-if="phoneValid && !phoneConflict" class="icon-success">
+                    <el-icon size="16" color="#67C23A"><SuccessFilled /></el-icon>
+                  </span>
+                </div>
               </el-form-item>
             </el-col>
             <el-col :xs="24" :sm="12">
               <el-form-item label="身份证号" prop="idCard" :error="idCardError">
-                <el-input
-                  v-model="form.idCard"
-                  placeholder="请输入18位身份证号"
-                  maxlength="18"
-                  clearable
-                  :suffix-icon="idCardValid && !idCardConflict ? SuccessFilled : undefined"
-                  @blur="onIdCardBlur"
-                />
+                <div class="input-with-icon">
+                  <el-input
+                    v-model="form.idCard"
+                    placeholder="请输入18位身份证号"
+                    maxlength="18"
+                    clearable
+                    @blur="onIdCardBlur"
+                  />
+                  <span v-if="idCardValid && !idCardConflict" class="icon-success">
+                    <el-icon size="16" color="#67C23A"><SuccessFilled /></el-icon>
+                  </span>
+                </div>
               </el-form-item>
             </el-col>
           </el-row>
@@ -114,7 +122,12 @@
           <el-row :gutter="24" class="form-row">
             <el-col :xs="24" :sm="12">
               <el-form-item label="姓名" prop="name">
-                <el-input v-model="form.name" placeholder="请输入中文姓名" maxlength="10" clearable :suffix-icon="nameValid ? SuccessFilled : undefined" @blur="onNameBlur" />
+                <div class="input-with-icon">
+                  <el-input v-model="form.name" placeholder="请输入中文姓名" maxlength="10" clearable @blur="onNameBlur" />
+                  <span v-if="nameValid" class="icon-success">
+                    <el-icon size="16" color="#67C23A"><SuccessFilled /></el-icon>
+                  </span>
+                </div>
               </el-form-item>
             </el-col>
           </el-row>
@@ -229,20 +242,16 @@ const nameValid = ref(false)
 const phoneValid = ref(false)        // 手机号格式校验通过
 const loading = ref(false)
 const descDialogVisible = ref(false)
-// 查重相关状态（按字段分开，方便单独显示）
+// 查重相关状态（按字段分开）
 const phoneConflict = ref(false)     // 手机号已被其他班级使用
 const phoneConflictClass = ref('')
 const idCardConflict = ref(false)    // 身份证已被其他班级使用
 const idCardConflictClass = ref('')
-const sameClassConflict = ref(false) // 同班级重复报名
 const phoneError = ref('')
 const idCardError = ref('')
 
-// 冲突提示文案（根据冲突字段组合）
+// 冲突提示文案：手机号/身份证各自独立提示，两者都冲突时合并
 const conflictAlertText = computed(() => {
-  if (sameClassConflict.value) {
-    return '您已报名此班级，不能重复报名'
-  }
   const parts = []
   if (phoneConflict.value) {
     parts.push(`该手机号已报名【${phoneConflictClass.value}】`)
@@ -255,7 +264,7 @@ const conflictAlertText = computed(() => {
 
 // 提交按钮禁用：有任何冲突时不可提交
 const hasConflict = computed(() =>
-  phoneConflict.value || idCardConflict.value || sameClassConflict.value
+  phoneConflict.value || idCardConflict.value
 )
 
 function showClassDesc() {
@@ -420,7 +429,6 @@ async function checkDuplicate() {
     phoneConflictClass.value = res.phoneClassName || ''
     idCardConflict.value = res.hasIdCardConflict
     idCardConflictClass.value = res.idCardClassName || ''
-    sameClassConflict.value = res.hasSameClassConflict
   } catch {
     // 网络错误不清状态，后端提交时会再次校验
   }
@@ -578,6 +586,29 @@ async function onSubmit() {
   .identity-row .el-col {
     margin-bottom: 0;
   }
+}
+
+/* ===== 输入框+右侧图标（绿色勾移到输入框右侧） ===== */
+.input-with-icon {
+  display: flex;
+  align-items: center;
+}
+.input-with-icon .el-input {
+  flex: 1;
+}
+.icon-success {
+  flex-shrink: 0;
+  margin-left: 8px;
+  display: flex;
+  align-items: center;
+}
+
+/* ===== 清除按钮改灰色 ===== */
+.form-card :deep(.el-input__clear) {
+  color: #c0c4cc;  /* 灰色，跟默认文字色一致 */
+}
+.form-card :deep(.el-input__clear:hover) {
+  color: #909399;  /* hover 时稍深 */
 }
 
 .form-category-tags {
