@@ -45,7 +45,21 @@
             </button>
           </div>
 
-          <!-- ===== 手机号 + 身份证输入行（并排，Web同排，移动端堆叠）===== -->
+          <!-- ===== 第一行：姓名（独占一行）===== -->
+          <el-row :gutter="24" class="form-row">
+            <el-col :xs="24" :sm="24">
+              <el-form-item label="姓名" prop="name">
+                <div class="input-with-icon">
+                  <el-input v-model="form.name" placeholder="请输入中文姓名" maxlength="10" clearable @blur="onNameBlur" />
+                  <span v-if="nameValid" class="icon-success">
+                    <el-icon size="16" color="#67C23A"><SuccessFilled /></el-icon>
+                  </span>
+                </div>
+              </el-form-item>
+            </el-col>
+          </el-row>
+
+          <!-- ===== 第二行：手机号 + 身份证（并排，Web同排，移动端堆叠）===== -->
           <el-row :gutter="16" class="form-row identity-row">
             <el-col :xs="24" :sm="12">
               <el-form-item label="手机号" prop="phone" :error="phoneError">
@@ -95,21 +109,7 @@
             />
           </div>
 
-          <!-- ===== 第一行：姓名（独占一行）===== -->
-          <el-row :gutter="24" class="form-row">
-            <el-col :xs="24" :sm="24">
-              <el-form-item label="姓名" prop="name">
-                <div class="input-with-icon">
-                  <el-input v-model="form.name" placeholder="请输入中文姓名" maxlength="10" clearable @blur="onNameBlur" />
-                  <span v-if="nameValid" class="icon-success">
-                    <el-icon size="16" color="#67C23A"><SuccessFilled /></el-icon>
-                  </span>
-                </div>
-              </el-form-item>
-            </el-col>
-          </el-row>
-
-          <!-- ===== 第二行：性别 + 选考物理 + 选考英语 ===== -->
+          <!-- ===== 第三行：性别 + 选考物理 + 选考英语 ===== -->
           <el-row :gutter="24" class="form-row">
             <el-col :xs="24" :sm="8">
               <el-form-item label="性别" prop="gender">
