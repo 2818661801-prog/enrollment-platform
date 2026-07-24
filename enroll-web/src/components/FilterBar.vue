@@ -46,11 +46,6 @@
       </div>
     </div>
 
-    <!-- 重置按钮 -->
-    <button type="button" class="reset-btn" @click="onReset">
-      重置
-    </button>
-
     <!-- 轮次筛选下拉框：动态从 periods JSON 提取所有 round 值 -->
     <el-select
       v-if="availableRounds.length > 1"
@@ -84,7 +79,13 @@
       <el-option label="已截止" value="closed" />
     </el-select>
 
-    <!-- 移动端第二行：轮次 + 时间状态 + 登录 + 我的报名 四列均分 -->
+    <!-- 重置按钮（桌面端放在轮次和状态右侧） -->
+    <button type="button" class="reset-btn" @click="onReset">
+      重置
+    </button>
+
+    <!-- 移动端第一行：班级名称筛选（独占一行） -->
+    <!-- 移动端第二行：轮次 + 时间状态 + 重置 三列均分 -->
     <div class="mobile-actions-row">
       <!-- 第1列：轮次筛选 -->
       <el-select
@@ -112,6 +113,10 @@
         <el-option label="未开始" value="not_started" />
         <el-option label="已截止" value="closed" />
       </el-select>
+      <!-- 第3列：重置按钮 -->
+      <button type="button" class="reset-btn mobile-reset-btn" @click="onReset">
+        重置
+      </button>
     </div>
   </div>
 </template>

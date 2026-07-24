@@ -603,8 +603,8 @@ async function onSubmit() {
   align-items: center;
 }
 
-/* ===== 清除按钮改灰色（覆盖 el-input-icon-color 变量）===== */
-.form-card :deep(.el-input__wrapper) {
+/* ===== 清除按钮改灰色（CSS 变量定义在 .el-input 根上，需 global 穿透）===== */
+:global(.form-card .el-input) {
   --el-input-icon-color: #c0c4cc;
   --el-input-clear-hover-color: #909399;
 }
