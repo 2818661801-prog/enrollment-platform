@@ -110,13 +110,8 @@
         </nav>
       </div>
       </div>
-    </div>
 
-    <!-- 底部版权 -->
-    <div class="footer-bottom">
-      <p>© 2026 杭州电子科技大学信息工程学院 · 招生办公室 · 保留所有权利</p>
-      <p style="margin-top: 4px;">教育部代码：13279（浙江省代码：0095）</p>
-      <!-- 移动端独有：地址 + 邮编 一行排列（左地址，右邮编 chip） -->
+      <!-- 移动端独有：地址 + 邮编（移到分割线和版权之间） -->
       <div class="footer-addr-zip-row">
         <span class="footer-loc">
           <svg viewBox="0 0 24 24" class="footer-loc-icon"><path d="M12 21s-7-5.6-7-11a7 7 0 0 1 14 0c0 5.4-7 11-7 11Z"/><circle cx="12" cy="10" r="2.6"/></svg>
@@ -124,6 +119,12 @@
         </span>
         <span class="footer-zip-chip"><b>邮编</b>311305</span>
       </div>
+    </div>
+
+    <!-- 底部版权 -->
+    <div class="footer-bottom">
+      <p>© 2026 杭州电子科技大学信息工程学院 · 招生办公室 · 保留所有权利</p>
+      <p style="margin-top: 4px;">教育部代码：13279（浙江省代码：0095）</p>
     </div>
 
     <!-- 自定义 Toast（移动端） -->
@@ -601,8 +602,8 @@ onUnmounted(() => {
   .footer-addr-zip-row {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 10px;
+    justify-content: center;
+    gap: 16px;
     margin-top: 6px;
     font-size: 10px;
     color: #cbd5e1;
@@ -611,16 +612,9 @@ onUnmounted(() => {
     display: inline-flex;
     align-items: center;
     gap: 5px;
-    flex: 1 1 auto;
-    min-width: 0;
-    text-align: left;
   }
   .footer-addr-zip-row .footer-loc-text {
-    overflow: hidden;
-    text-overflow: ellipsis;
     white-space: nowrap;
-    flex: 1 1 auto;
-    min-width: 0;
   }
   .footer-addr-zip-row .footer-loc-icon {
     width: 11px;
@@ -631,7 +625,6 @@ onUnmounted(() => {
     flex: 0 0 auto;
   }
   .footer-addr-zip-row .footer-zip-chip {
-    flex: 0 0 auto;
     font-size: 10px;
     padding: 2px 10px;
   }
