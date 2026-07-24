@@ -53,6 +53,7 @@
                   v-model="form.phone"
                   placeholder="请输入11位手机号"
                   maxlength="11"
+                  clearable
                   @blur="onPhoneBlur"
                   :suffix-icon="phoneValid && !phoneConflict ? SuccessFilled : undefined"
                 >
@@ -68,6 +69,7 @@
                   v-model="form.idCard"
                   placeholder="请输入18位身份证号"
                   maxlength="18"
+                  clearable
                   :suffix-icon="idCardValid && !idCardConflict ? SuccessFilled : undefined"
                   @blur="onIdCardBlur"
                 />
@@ -75,33 +77,15 @@
             </el-col>
           </el-row>
 
-          <!-- 冲突提示（三行分别显示，优先显示同班重复） -->
-          <div v-if="sameClassConflict" class="conflict-row">
+          <!-- 冲突提示（合并显示，根据冲突字段组合文案） -->
+          <div v-if="phoneConflict || idCardConflict" class="conflict-row">
             <el-alert
-              title="您已报名此班级，不能重复报名"
+              :title="conflictAlertText"
               type="error"
               show-icon
               :closable="false"
             />
           </div>
-          <template v-else>
-            <div v-if="phoneConflict" class="conflict-row">
-              <el-alert
-                :title="`该手机号已报名【${phoneConflictClass}】`"
-                type="error"
-                show-icon
-                :closable="false"
-              />
-            </div>
-            <div v-if="idCardConflict" class="conflict-row">
-              <el-alert
-                :title="`该身份证持有者已报名【${idCardConflictClass}】`"
-                type="error"
-                show-icon
-                :closable="false"
-              />
-            </div>
-          </template>
 
           <!-- 班级介绍弹窗 -->
           <el-dialog
@@ -130,7 +114,7 @@
           <el-row :gutter="24" class="form-row">
             <el-col :xs="24" :sm="12">
               <el-form-item label="姓名" prop="name">
-                <el-input v-model="form.name" placeholder="请输入中文姓名" maxlength="10" :suffix-icon="nameValid ? SuccessFilled : undefined" @blur="onNameBlur" />
+                <el-input v-model="form.name" placeholder="请输入中文姓名" maxlength="10" clearable :suffix-icon="nameValid ? SuccessFilled : undefined" @blur="onNameBlur" />
               </el-form-item>
             </el-col>
           </el-row>
@@ -212,7 +196,7 @@
 
           <!-- ===== 按钮组 ===== -->
           <div class="submit-btn-wrap">
-            <el-button type="primary" size="large" class="submit-btn" @click="onSubmit" :loading="submitting" :disabled="submitting || !timeStatus?.canApply">
+            <el-button type="primary" size="large" class="submit-btn" @click="onSubmit" :loading="submitting" :disabled="submitting || hasConflict || !timeStatus?.canApply">
               提交报名
             </el-button>
           </div>
@@ -253,6 +237,26 @@ const idCardConflictClass = ref('')
 const sameClassConflict = ref(false) // 同班级重复报名
 const phoneError = ref('')
 const idCardError = ref('')
+
+// 冲突提示文案（根据冲突字段组合）
+const conflictAlertText = computed(() => {
+  if (sameClassConflict.value) {
+    return '您已报名此班级，不能重复报名'
+  }
+  const parts = []
+  if (phoneConflict.value) {
+    parts.push(`该手机号已报名【${phoneConflictClass.value}】`)
+  }
+  if (idCardConflict.value) {
+    parts.push(`该身份证持有者已报名【${idCardConflictClass.value}】`)
+  }
+  return parts.join('；')
+})
+
+// 提交按钮禁用：有任何冲突时不可提交
+const hasConflict = computed(() =>
+  phoneConflict.value || idCardConflict.value || sameClassConflict.value
+)
 
 function showClassDesc() {
   descDialogVisible.value = true
