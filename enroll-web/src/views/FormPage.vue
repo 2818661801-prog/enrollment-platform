@@ -28,48 +28,7 @@
           validateOnMount="false"
           @submit.prevent
         >
-          <!-- ===== 手机号 + 身份证输入行（并排，Web同排，移动端堆叠）===== -->
-          <el-row :gutter="16" class="form-row identity-row">
-            <el-col :xs="24" :sm="12">
-              <el-form-item label="手机号" prop="phone" :error="phoneError">
-                <el-input
-                  v-model="form.phone"
-                  placeholder="请输入11位手机号"
-                  maxlength="11"
-                  @blur="onIdentityBlur"
-                  :disabled="formLocked"
-                >
-                  <template #prefix>
-                    <span class="phone-prefix">+86</span>
-                  </template>
-                </el-input>
-              </el-form-item>
-            </el-col>
-            <el-col :xs="24" :sm="12">
-              <el-form-item label="身份证号" prop="idCard" :error="idCardError">
-                <el-input
-                  v-model="form.idCard"
-                  placeholder="请输入18位身份证号"
-                  maxlength="18"
-                  :suffix-icon="idCardValid ? SuccessFilled : undefined"
-                  @blur="onIdentityBlur"
-                  :disabled="formLocked"
-                />
-              </el-form-item>
-            </el-col>
-          </el-row>
-
-          <!-- 冲突提示 -->
-          <el-alert
-            v-if="duplicateAlert"
-            :title="duplicateAlert"
-            type="error"
-            show-icon
-            :closable="false"
-            style="margin-bottom: 12px;"
-          />
-
-          <!-- 当前报名班级 + 班级介绍按钮（同一行） -->
+          <!-- ===== 当前报名班级 + 班级介绍按钮 ===== -->
           <div v-if="selectedClass" class="class-desc-row">
             <div class="class-desc-alert">
               <el-icon size="18"><InfoFilled /></el-icon>
@@ -85,6 +44,64 @@
               班级介绍
             </button>
           </div>
+
+          <!-- ===== 手机号 + 身份证输入行（并排，Web同排，移动端堆叠）===== -->
+          <el-row :gutter="16" class="form-row identity-row">
+            <el-col :xs="24" :sm="12">
+              <el-form-item label="手机号" prop="phone" :error="phoneError">
+                <el-input
+                  v-model="form.phone"
+                  placeholder="请输入11位手机号"
+                  maxlength="11"
+                  @blur="onPhoneBlur"
+                  :suffix-icon="phoneValid && !phoneConflict ? SuccessFilled : undefined"
+                >
+                  <template #prefix>
+                    <span class="phone-prefix">+86</span>
+                  </template>
+                </el-input>
+              </el-form-item>
+            </el-col>
+            <el-col :xs="24" :sm="12">
+              <el-form-item label="身份证号" prop="idCard" :error="idCardError">
+                <el-input
+                  v-model="form.idCard"
+                  placeholder="请输入18位身份证号"
+                  maxlength="18"
+                  :suffix-icon="idCardValid && !idCardConflict ? SuccessFilled : undefined"
+                  @blur="onIdCardBlur"
+                />
+              </el-form-item>
+            </el-col>
+          </el-row>
+
+          <!-- 冲突提示（三行分别显示，优先显示同班重复） -->
+          <div v-if="sameClassConflict" class="conflict-row">
+            <el-alert
+              title="您已报名此班级，不能重复报名"
+              type="error"
+              show-icon
+              :closable="false"
+            />
+          </div>
+          <template v-else>
+            <div v-if="phoneConflict" class="conflict-row">
+              <el-alert
+                :title="`该手机号已报名【${phoneConflictClass}】`"
+                type="error"
+                show-icon
+                :closable="false"
+              />
+            </div>
+            <div v-if="idCardConflict" class="conflict-row">
+              <el-alert
+                :title="`该身份证持有者已报名【${idCardConflictClass}】`"
+                type="error"
+                show-icon
+                :closable="false"
+              />
+            </div>
+          </template>
 
           <!-- 班级介绍弹窗 -->
           <el-dialog
@@ -109,22 +126,11 @@
             </div>
           </el-dialog>
 
-          <!-- ===== 第一行：姓名 + 身份证号 ===== -->
+          <!-- ===== 第一行：姓名 ===== -->
           <el-row :gutter="24" class="form-row">
             <el-col :xs="24" :sm="12">
               <el-form-item label="姓名" prop="name">
                 <el-input v-model="form.name" placeholder="请输入中文姓名" maxlength="10" :suffix-icon="nameValid ? SuccessFilled : undefined" @blur="onNameBlur" />
-              </el-form-item>
-            </el-col>
-            <el-col :xs="24" :sm="12">
-              <el-form-item label="身份证号" prop="idCard">
-                <el-input
-                  v-model="form.idCard"
-                  placeholder="请输入18位身份证号"
-                  maxlength="18"
-                  :suffix-icon="idCardValid ? SuccessFilled : undefined"
-                  @blur="onIdCardBlur"
-                />
               </el-form-item>
             </el-col>
           </el-row>
@@ -206,7 +212,7 @@
 
           <!-- ===== 按钮组 ===== -->
           <div class="submit-btn-wrap">
-            <el-button type="primary" size="large" class="submit-btn" @click="onSubmit" :loading="submitting" :disabled="submitting || formLocked || !timeStatus?.canApply">
+            <el-button type="primary" size="large" class="submit-btn" @click="onSubmit" :loading="submitting" :disabled="submitting || !timeStatus?.canApply">
               提交报名
             </el-button>
           </div>
@@ -236,11 +242,15 @@ const formRef = ref(null)
 const submitting = ref(false)
 const idCardValid = ref(false)
 const nameValid = ref(false)
+const phoneValid = ref(false)        // 手机号格式校验通过
 const loading = ref(false)
 const descDialogVisible = ref(false)
-// 查重相关状态
-const formLocked = ref(false)
-const duplicateAlert = ref('')
+// 查重相关状态（按字段分开，方便单独显示）
+const phoneConflict = ref(false)     // 手机号已被其他班级使用
+const phoneConflictClass = ref('')
+const idCardConflict = ref(false)    // 身份证已被其他班级使用
+const idCardConflictClass = ref('')
+const sameClassConflict = ref(false) // 同班级重复报名
 const phoneError = ref('')
 const idCardError = ref('')
 
@@ -319,10 +329,45 @@ function onNameBlur() {
   nameValid.value = validateName(name)
 }
 
+/**
+ * 手机号失焦 → 格式校验通过后绿色勾，格式错误清状态
+ */
+function onPhoneBlur() {
+  const ph = form.phone.trim()
+  if (!ph) {
+    phoneValid.value = false
+    phoneConflict.value = false
+    return
+  }
+  phoneValid.value = /^1[3-9]\d{9}$/.test(ph)
+  if (!phoneValid.value) {
+    phoneConflict.value = false
+    return
+  }
+  // 格式通过 → 查重
+  checkDuplicate()
+}
+
+/**
+ * 身份证失焦 → 格式校验通过后绿色勾，格式错误清状态
+ * 格式通过且性别为空时自动推断性别
+ */
 function onIdCardBlur() {
   const id = form.idCard.trim()
+  if (!id) {
+    idCardValid.value = false
+    idCardConflict.value = false
+    return
+  }
   idCardValid.value = validateIdCard(id)
-  if (idCardValid.value && !form.gender) {
+  if (!idCardValid.value) {
+    idCardConflict.value = false
+    return
+  }
+  // 格式通过 → 查重
+  checkDuplicate()
+  // 自动推断性别
+  if (!form.gender) {
     form.gender = inferGender(id)
   }
 }
@@ -356,40 +401,24 @@ function goBack() {
 }
 
 /**
- * 手机号/身份证失焦 → 调后端查重接口
- * 有冲突则锁定表单，显示对应提示
+ * 查重核心逻辑：调后端接口，按字段设置冲突状态
+ * onPhoneBlur / onIdCardBlur 失焦时调用
  */
-async function onIdentityBlur() {
+async function checkDuplicate() {
   const ph = form.phone.trim()
   const ic = form.idCard.trim()
-  // 两个都填了才查
   if (!ph || !/^1[3-9]\d{9}$/.test(ph)) return
   if (!ic || ic.length !== 18) return
-
   try {
     const res = await checkDuplicateAPI(ph, ic, form.classId)
     if (!res) return
-    const msgs = []
-    if (res.hasPhoneConflict) {
-      msgs.push(`该手机号已报名【${res.phoneClassName}】`)
-    }
-    if (res.hasIdCardConflict) {
-      msgs.push(`该身份证持有者已报名【${res.idCardClassName}】`)
-    }
-    if (res.hasSameClassConflict) {
-      msgs.push('您已报名此班级，不能重复报名')
-    }
-    if (msgs.length > 0) {
-      duplicateAlert.value = msgs.join('；')
-      formLocked.value = true
-    } else {
-      duplicateAlert.value = ''
-      formLocked.value = false
-    }
+    phoneConflict.value = res.hasPhoneConflict
+    phoneConflictClass.value = res.phoneClassName || ''
+    idCardConflict.value = res.hasIdCardConflict
+    idCardConflictClass.value = res.idCardClassName || ''
+    sameClassConflict.value = res.hasSameClassConflict
   } catch {
-    // 网络错误不锁定，后端提交时会再次校验
-    duplicateAlert.value = ''
-    formLocked.value = false
+    // 网络错误不清状态，后端提交时会再次校验
   }
 }
 
