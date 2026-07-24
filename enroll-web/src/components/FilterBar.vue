@@ -375,8 +375,8 @@ onUnmounted(() => {
 
 /* ==================== 重置按钮 ==================== */
 .reset-btn {
-  height: 38px;
-  padding: 0 18px;
+  height: 34px;
+  padding: 0 14px;
   background: #ffffff;
   border: 1px solid #e8ecf2;
   border-radius: 8px;
@@ -385,6 +385,11 @@ onUnmounted(() => {
   font-family: inherit;
   cursor: pointer;
   transition: border-color 0.2s, color 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 .reset-btn:hover {
   border-color: #3b7bf8;
@@ -419,24 +424,60 @@ onUnmounted(() => {
 
 /* ==================== 响应式 ≤768px ==================== */
 .mobile-actions-row { display: none; }
+/* 桌面端重置按钮在移动端隐藏（已移至 mobile-actions-row） */
+.reset-btn { display: inline-flex; }
 @media (max-width: 768px) {
   .filter-bar {
     gap: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
   }
   /* PC端轮次+时间状态下拉框移动端隐藏 */
   .pc-round-select,
-  .pc-time-select {
-    display: none;
+  .pc-time-select,
+  .reset-btn:not(.mobile-reset-btn) {
+    display: none !important;
   }
-  /* 移动端第二行：两个 el-select 均分 */
+  /* 移动端第一行：班级名称下拉框独占一行 */
+  .custom-select {
+    display: flex;
+    min-width: 0;
+    width: 100%;
+    flex: 1;
+  }
+  /* 移动端第二行：轮次 + 状态 + 重置 三列均分 */
   .mobile-actions-row {
     display: flex;
-    gap: 4px;
+    gap: 8px;
     width: 100%;
+    flex-shrink: 0;
   }
   .mobile-actions-row > * {
     flex: 1;
     min-width: 0;
+  }
+  /* 移动端重置按钮样式：与 el-select 高度对齐 */
+  .mobile-reset-btn {
+    display: inline-flex;
+    height: 34px;
+    padding: 0 12px;
+    background: #ffffff;
+    border: 1px solid #e8ecf2;
+    border-radius: 8px;
+    color: #555b70;
+    font-size: 14px;
+    font-family: inherit;
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    transition: border-color 0.2s, color 0.2s;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .mobile-reset-btn:hover {
+    border-color: #3b7bf8;
+    color: #3b7bf8;
   }
 }
 /* ===== 退出登录弹窗移动端适配 ===== */

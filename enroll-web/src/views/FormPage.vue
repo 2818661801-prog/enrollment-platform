@@ -603,10 +603,15 @@ async function onSubmit() {
   align-items: center;
 }
 
-/* ===== 清除按钮改灰色（CSS 变量定义在 .el-input 根上，需 global 穿透）===== */
-:global(.form-card .el-input) {
-  --el-input-icon-color: #c0c4cc;
-  --el-input-clear-hover-color: #909399;
+/* ===== 清除按钮改灰色（直接覆盖 color 属性 + !important）===== */
+:global(.form-card .el-input__clear) {
+  color: #c0c4cc !important;
+}
+:global(.form-card .el-input__clear:hover) {
+  color: #909399 !important;
+}
+:global(.form-card .el-input__password) {
+  color: #c0c4cc !important;
 }
 
 .form-category-tags {
