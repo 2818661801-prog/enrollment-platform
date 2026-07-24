@@ -575,6 +575,9 @@ async function onSubmit() {
 .identity-row {
   margin-bottom: 8px;
 }
+.identity-row .el-input__wrapper {
+  min-width: 200px;   /* 手机号有+86前缀，内容区被压缩；身份证号无前缀，两者需等宽 */
+}
 .phone-prefix {
   font-size: 14px;
   color: #94a3b8;
