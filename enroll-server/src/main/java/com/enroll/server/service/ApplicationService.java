@@ -457,6 +457,54 @@ public class ApplicationService {
         );
     }
 
+    /**
+     * 查重接口（给表单页实时查询用）
+     * 返回结构：
+     *   { hasPhoneConflict: bool, phoneClassName: string,
+     *     hasIdCardConflict: bool, idCardClassName: string,
+     *     hasSameClassConflict: bool }
+     * 三种冲突分别提示，不抛异常。
+     */
+    public java.util.Map<String, Object> checkDuplicate(String phone, String idCard, Integer classId) {
+        java.util.Map<String, Object> result = new java.util.LinkedHashMap<>();
+        result.put("hasPhoneConflict", false);
+        result.put("phoneClassName", null);
+        result.put("hasIdCardConflict", false);
+        result.put("idCardClassName", null);
+        result.put("hasSameClassConflict", false);
+
+        // 1) 手机号全局唯一检查
+        java.util.List<Application> phoneDup = appRepo.findByPhoneAndStatusInAndIsDeleted(
+                phone, java.util.List.of(STATUS_APPLIED, STATUS_ENROLLED), 0);
+        if (!phoneDup.isEmpty()) {
+            Application existing = phoneDup.get(0);
+            String className = classRepo.findById(existing.getClassId())
+                    .map(ClassInfo::getName).orElse("未知班级");
+            result.put("hasPhoneConflict", true);
+            result.put("phoneClassName", className);
+        }
+
+        // 2) 身份证全局唯一检查
+        java.util.List<Application> idCardDup = appRepo.findByIdCardAndStatusInAndIsDeleted(
+                idCard, java.util.List.of(STATUS_APPLIED, STATUS_ENROLLED), 0);
+        if (!idCardDup.isEmpty()) {
+            Application existing = idCardDup.get(0);
+            String className = classRepo.findById(existing.getClassId())
+                    .map(ClassInfo::getName).orElse("未知班级");
+            result.put("hasIdCardConflict", true);
+            result.put("idCardClassName", className);
+        }
+
+        // 3) 同班级防重（同一身份证+同一班级）
+        java.util.List<Application> sameClassDup = appRepo.findByIdCardAndClassIdAndStatusInAndIsDeleted(
+                idCard, classId, java.util.List.of(STATUS_APPLIED, STATUS_ENROLLED, STATUS_REJECTED), 0);
+        if (!sameClassDup.isEmpty()) {
+            result.put("hasSameClassConflict", true);
+        }
+
+        return result;
+    }
+
     // ==================== 内部工具 ====================
 
     private Integer parseFlag(Object val) {

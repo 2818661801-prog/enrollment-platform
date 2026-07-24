@@ -112,4 +112,20 @@ public class ApplicationController {
             return R.fail(ResultCode.PARAM_INVALID, "登录已过期，请重新登录");
         }
     }
+
+    /**
+     * 报名查重接口（GET，查询不写数据库）
+     * 前端表单页输入手机号+身份证后失焦调用
+     * GET /api/applications/check?phone=&idCard=&classId=
+     */
+    @GetMapping("/check")
+    public java.util.Map<String, Object> checkDuplicate(
+            @RequestParam String phone,
+            @RequestParam String idCard,
+            @RequestParam Integer classId) {
+        if (phone == null || idCard == null || classId == null) {
+            return R.fail(ResultCode.PARAM_INVALID, "参数不完整");
+        }
+        return R.ok(applicationService.checkDuplicate(phone, idCard, classId));
+    }
 }
