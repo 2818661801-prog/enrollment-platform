@@ -95,32 +95,9 @@
             />
           </div>
 
-          <!-- 班级介绍弹窗 -->
-          <el-dialog
-            v-model="descDialogVisible"
-            width="90%"
-            max-width="460px"
-            destroy-on-close
-            :show-close="false"
-            class="class-desc-dialog"
-          >
-            <div class="class-desc-dialog-bar" />
-            <div class="class-desc-dialog-head">
-              <img :src="descIcon" alt="" class="class-desc-dialog-icon" />
-              <span class="class-desc-dialog-title">{{ selectedClass?.name }}</span>
-            </div>
-            <div class="class-desc-dialog-subtitle">班级介绍</div>
-            <div class="class-desc-dialog-body">
-              <p class="class-desc-dialog-text">{{ selectedClass?.description }}</p>
-            </div>
-            <div class="class-desc-dialog-footer">
-              <el-button class="class-desc-dialog-close" @click="descDialogVisible = false">我知道了</el-button>
-            </div>
-          </el-dialog>
-
-          <!-- ===== 第一行：姓名 ===== -->
+          <!-- ===== 第一行：姓名（独占一行）===== -->
           <el-row :gutter="24" class="form-row">
-            <el-col :xs="24" :sm="12">
+            <el-col :xs="24" :sm="24">
               <el-form-item label="姓名" prop="name">
                 <div class="input-with-icon">
                   <el-input v-model="form.name" placeholder="请输入中文姓名" maxlength="10" clearable @blur="onNameBlur" />
@@ -159,6 +136,29 @@
               </el-form-item>
             </el-col>
           </el-row>
+
+          <!-- 班级介绍弹窗 -->
+          <el-dialog
+            v-model="descDialogVisible"
+            width="90%"
+            max-width="460px"
+            destroy-on-close
+            :show-close="false"
+            class="class-desc-dialog"
+          >
+            <div class="class-desc-dialog-bar" />
+            <div class="class-desc-dialog-head">
+              <img :src="descIcon" alt="" class="class-desc-dialog-icon" />
+              <span class="class-desc-dialog-title">{{ selectedClass?.name }}</span>
+            </div>
+            <div class="class-desc-dialog-subtitle">班级介绍</div>
+            <div class="class-desc-dialog-body">
+              <p class="class-desc-dialog-text">{{ selectedClass?.description }}</p>
+            </div>
+            <div class="class-desc-dialog-footer">
+              <el-button class="class-desc-dialog-close" @click="descDialogVisible = false">我知道了</el-button>
+            </div>
+          </el-dialog>
 
           <!-- 申报班级由 URL 参数直接指定，无需下拉选择 -->
 
