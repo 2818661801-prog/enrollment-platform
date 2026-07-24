@@ -175,3 +175,17 @@ export const fetchNotice = async () => {
     return null
   }
 }
+
+/**
+ * 报名查重接口（GET）
+ * @param {string} phone - 手机号
+ * @param {string} idCard - 身份证号
+ * @param {number} classId - 班级ID
+ * @returns {Promise<{hasPhoneConflict, phoneClassName, hasIdCardConflict, idCardClassName, hasSameClassConflict}>}
+ */
+export const checkDuplicateAPI = async (phone, idCard, classId) => {
+  const res = await request(
+    `/api/applications/check?phone=${encodeURIComponent(phone)}&idCard=${encodeURIComponent(idCard)}&classId=${classId}`
+  )
+  return res.code === 200 ? res.data : null
+}
