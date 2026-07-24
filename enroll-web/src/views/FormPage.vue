@@ -287,6 +287,15 @@ const classes = ref([])
 
 const form = reactive(initialForm())
 
+// 处理跨页面登出：监听 login_changed 事件，登出后自动退回 Step 1
+function onLoginChanged() {
+  if (!localStorage.getItem('student_token')) {
+    step.value = 1
+    phoneCode.reset()  // 清除手机号+验证码输入框
+    formRef.value?.clearValidate()
+  }
+}
+
 onMounted(async () => {
   // 同步服务器时间（防止直接 URL 进入时本地时间被篡改）
   await syncServerTime()
@@ -309,6 +318,9 @@ onMounted(async () => {
     step.value = 2
     form.phone = existingPhone
   }
+
+  // 监听其他页面退出登录事件
+  window.addEventListener('login_changed', onLoginChanged)
 
   // 进入页面时清除所有校验提示（不自动校验）
   nextTick(() => formRef.value?.clearValidate())
@@ -345,7 +357,10 @@ const selectedClass = computed(() =>
 const now = ref(Date.now())
 let _timer = null
 onMounted(() => { _timer = setInterval(() => { now.value = Date.now() }, 1000) })
-onUnmounted(() => clearInterval(_timer))
+onUnmounted(() => {
+  clearInterval(_timer)
+  window.removeEventListener('login_changed', onLoginChanged)
+})
 
 const timeStatus = computed(() => {
   now.value  // 强制依赖：每秒触发重新计算

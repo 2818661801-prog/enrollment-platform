@@ -4,14 +4,24 @@
 -->
 <template>
   <div class="home-page">
-    <!-- ===== Banner 轮播区（全屏幕宽度，不受 1200px 容器约束） ===== -->
-    <div class="banner-fullscreen-wrapper">
-      <HeroBanner
-        :server-year="serverYear"
-        :classes-count="classes.length"
-        :classes="classes"
-        @cta-click="showNotice = true"
-      />
+    <!-- ===== Banner + 帮助提示横条（放在同一容器，保证左右对齐） ===== -->
+    <div class="banner-hint-container">
+      <div class="banner-fullscreen-wrapper">
+        <HeroBanner
+          :server-year="serverYear"
+          :classes-count="classes.length"
+          :classes="classes"
+          @cta-click="showNotice = true"
+        />
+      </div>
+
+      <!-- ===== 帮助提示横条 ===== -->
+      <div class="hint-bar-wrapper">
+        <div class="help-hint-bar">
+          <InfoFilled class="hint-icon" />
+          <span>如在报名过程中遇到任何问题，请添加张老师微信咨询，微信号：<strong>softzzy</strong></span>
+        </div>
+      </div>
     </div>
 
     <div class="home-body">
@@ -122,7 +132,7 @@
 import { ref, reactive, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Close } from '@element-plus/icons-vue'
+import { Close, InfoFilled } from '@element-plus/icons-vue'
 import { getClassTimeStatus, parsePeriod, syncServerTime, formatTime } from '../utils/data.js'
 import { fetchClasses, fetchNotice, fetchMyApplicationsMe, fetchServerYear } from '../utils/api.js'
 import AppFooter from '../components/AppFooter.vue'
@@ -158,6 +168,7 @@ let pollTimer = null
 // storage 事件处理器（需存引用才能在 unmount 时正确移除）
 const onStorageChange = (e) => { if (e.key === 'application_changed') loadData() }
 const onAppChanged = () => loadData()
+const onLoginChanged = () => loadData()
 
 onMounted(async () => {
   // 检测学生端登录态（有 student_token 视为已登录）
@@ -194,12 +205,14 @@ onMounted(async () => {
   // 监听其他页面报名变化，刷新已报名状态（storage 事件跨标签页，自定义事件同标签页）
   window.addEventListener('storage', onStorageChange)
   window.addEventListener('application_changed', onAppChanged)
+  window.addEventListener('login_changed', onLoginChanged)
 })
 
 onUnmounted(() => {
   if (pollTimer) clearInterval(pollTimer)
   window.removeEventListener('storage', onStorageChange)
   window.removeEventListener('application_changed', onAppChanged)
+  window.removeEventListener('login_changed', onLoginChanged)
 })
 
 async function loadData() {
@@ -441,22 +454,61 @@ function parsePeriodsArray(classRounds, fallbackPeriod) {
   flex-direction: column;
 }
 
-/* ===== Banner 全屏 wrapper ===== */
-/* Banner 和下方内容共享 1200px 容器，完全左右对齐 */
-.banner-fullscreen-wrapper {
+/* ===== Banner + 帮助提示横条统一容器 ===== */
+.banner-hint-container {
   max-width: 1200px;
   width: 100%;
   margin: 0 auto;
-  padding: 0 16px;           /* 与 home-body 的左右 padding 同步 */
+  padding: 0 16px;
   box-sizing: border-box;
-  overflow: hidden;
   flex-shrink: 0;
   margin-top: 16px;          /* 和 header 的间距 */
+  display: flex;
+  flex-direction: column;    /* banner 在上，横条在下 */
+}
+
+/* ===== Banner wrapper ===== */
+.banner-fullscreen-wrapper {
+  width: 100%;
+  overflow: hidden;
+  flex-shrink: 0;
 }
 /* hero-banner 宽度 = wrapper（1200px），完全对齐下方模块 */
 :deep(.hero-banner) {
   width: 100%;
   border-radius: 14px;       /* 恢复圆角（wrapper 的 overflow:hidden 裁圆角） */
+}
+
+/* ===== 帮助提示横条 ===== */
+.hint-bar-wrapper {
+  width: 100%;
+  margin-top: 12px;          /* 与 banner 的间距 */
+}
+.help-hint-bar {
+  width: 100%;
+  padding: 6px 20px;
+  background: #ffffff;
+  border: 2px solid #c7d2fe;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #0369a1;
+  line-height: 1.4;
+  box-sizing: border-box;
+}
+.help-hint-bar .hint-icon {
+  width: 14px;
+  height: 14px;
+  color: #0284c7;
+  flex-shrink: 0;
+  line-height: 1;
+}
+.help-hint-bar strong {
+  color: #0369a1;
+  font-weight: 700;
 }
 
 /* Banner + 主体内容统一包在 home-body 里，最大宽度 1200px 居中 */
@@ -483,9 +535,27 @@ function parsePeriodsArray(classRounds, fallbackPeriod) {
   align-items: stretch;            /* 同行卡片等高 */
 }
 
-/* ===== Banner 下边距（web 端，移动端不动） ===== */
-:deep(.hero-banner) {
-  margin-bottom: 24px;
+/* ===== 响应式：手机 ===== */
+@media (max-width: 768px) {
+  .banner-hint-container {
+    margin-top: 12px;
+    padding: 8px 12px;
+  }
+  .hint-bar-wrapper {
+    margin-top: 10px;
+  }
+  .help-hint-bar {
+    padding: 8px 12px;
+    font-size: 12px;
+    border-radius: 6px;
+    justify-content: flex-start;
+    flex-wrap: nowrap;
+    gap: 6px;
+  }
+  .help-hint-bar .hint-icon {
+    width: 13px;
+    height: 13px;
+  }
 }
 
 /* ===== 报名须知弹窗样式 ===== */
@@ -526,10 +596,6 @@ function parsePeriodsArray(classRounds, fallbackPeriod) {
 @media (max-width: 768px) {
   .home-page {
     padding-top: 52px;   /* 移动端 header 52px */
-  }
-  .banner-fullscreen-wrapper {
-    padding: 0 12px;
-    margin-top: 12px;
   }
   :deep(.hero-banner) {
     border-radius: 10px;

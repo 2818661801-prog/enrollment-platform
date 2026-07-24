@@ -157,7 +157,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { ArrowLeft, User, Loading } from '@element-plus/icons-vue'
@@ -209,9 +209,25 @@ function onLogout() {
     isLoggedIn.value = false
     records.value = []
     ElMessage.success('已退出登录')
+    window.dispatchEvent(new Event('login_changed'))
     router.push('/student-login')
   }).catch(() => {})
 }
+
+// 监听其他页面触发的退出登录（跨页面通知）
+function onLoginChanged() {
+  if (!localStorage.getItem('student_token')) {
+    records.value = []
+    isLoggedIn.value = false
+    router.push('/student-login')
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('login_changed', onLoginChanged)
+  fetchMyRecords()
+})
+onUnmounted(() => window.removeEventListener('login_changed', onLoginChanged))
 
 async function fetchMyRecords() {
   const token = localStorage.getItem('student_token')
@@ -346,8 +362,6 @@ function formatTime(applyTime) {
   // 去掉 ISO 的 'T'，去掉小数点后的纳秒（如 .9991521）
   return applyTime.replace('T', ' ').replace(/\.\d+$/, '')
 }
-
-onMounted(fetchMyRecords)
 </script>
 
 <style scoped>
