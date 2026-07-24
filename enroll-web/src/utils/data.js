@@ -52,13 +52,14 @@ export function trustedNow() {
  * @returns {object} 空白报名表单
  */
 export const initialForm = () => ({
-  name: '',        // 姓名
-  idCard: '',      // 身份证号
-  gender: '',      // 性别（身份证自动推断，也可手动选）
-  hasPhysics: '',  // 是否选考物理
-  hasEnglish: '',  // 是否选考英语
-  classId: null,   // 所选班级 ID
-  appliedCategory: '',   // 班级类别（学生报名时选择）
+  name: '',           // 姓名
+  phone: '',          // 手机号（新增，之前靠 token 存储）
+  idCard: '',         // 身份证号
+  gender: '',         // 性别（身份证自动推断，也可手动选）
+  hasPhysics: '',     // 是否选考物理
+  hasEnglish: '',     // 是否选考英语
+  classId: null,      // 所选班级 ID
+  appliedCategory: '', // 班级类别（学生报名时选择）
 })
 
 /**
