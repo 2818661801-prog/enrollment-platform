@@ -9,7 +9,7 @@ server:
 
 spring:
   datasource:
-    url: jdbc:mysql://localhost:3306/enroll_db?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=utf-8&allowPublicKeyRetrieval=true
+    url: jdbc:mysql://localhost:3306/enroll_db?useSSL=false&serverTimezone=Asia/Shanghai&connectionTimeZone=Asia/Shanghai&characterEncoding=utf-8&allowPublicKeyRetrieval=true
     username: enroll
     password: ***REMOVED***
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -45,7 +45,7 @@ sms:
   pwd: 3365CB7EB11EEC171571E8E91C61EF30
   url: http://***REMOVED***:8061/mdsmssend.ashx
   sign: 【杭州电子科技大学信息工程学院】
-  test-mode: true
+  test-mode: false
 
 jwt:
   enabled: true

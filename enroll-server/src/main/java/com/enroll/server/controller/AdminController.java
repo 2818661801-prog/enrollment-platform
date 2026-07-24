@@ -112,6 +112,9 @@ public class AdminController {
     @PostMapping("/applications/admit")
     public Map<String, Object> batchAdmit(@RequestBody Map<String, Object> body) {
         List<Integer> idList = parseIdsField(body.get("ids"));
+        if (idList.isEmpty()) {
+            return R.ok("没有需要录取的记录", null);
+        }
         String auditComment = (String) body.getOrDefault("auditComment", "");
         applicationService.batchAdmit(idList, auditComment);
         // log.info("批量录取: ids={}, auditComment={}", idList, auditComment);
@@ -126,6 +129,9 @@ public class AdminController {
     @PostMapping("/applications/reject")
     public Map<String, Object> batchReject(@RequestBody Map<String, Object> body) {
         List<Integer> idList = parseIdsField(body.get("ids"));
+        if (idList.isEmpty()) {
+            return R.ok("没有需要驳回的记录", null);
+        }
         String auditComment = (String) body.getOrDefault("auditComment", "");
         applicationService.batchReject(idList, auditComment);
         // log.info("批量未录取: ids={}, auditComment={}", idList, auditComment);
@@ -140,6 +146,9 @@ public class AdminController {
     @PostMapping("/applications/delete")
     public Map<String, Object> batchDelete(@RequestBody Map<String, Object> body) {
         List<Integer> idList = parseIdsField(body.get("ids"));
+        if (idList.isEmpty()) {
+            return R.ok("没有需要删除的记录", null);
+        }
         applicationService.batchUpdateStatus(idList, ApplicationService.STATUS_WITHDRAWN);
         // log.info("批量删除报名: ids={}", idList);
         return R.ok("已删除 " + idList.size() + " 条记录", null);
