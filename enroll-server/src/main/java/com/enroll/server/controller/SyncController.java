@@ -146,7 +146,8 @@ public class SyncController {
             cls.setDescription((String) item.get("description"));
             cls.setIsDeleted(0);
             cls.setEnrolled(0);
-            cls.setSource("sync");
+            cls.setSource((String) item.getOrDefault("source", "sync"));
+            cls.setGroupInfo((String) item.get("groupInfo"));
             cls.setPeriod(period);
             // 存内网传过来的 innerId 到 outer_id（用于跨系统 id 映射，2026-07-15）
             Object innerIdVal = item.get("innerId");

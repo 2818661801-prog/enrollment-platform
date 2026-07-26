@@ -228,7 +228,7 @@ public class AdminController {
 
     /**
      * 读取报名须知
-     * 返回 {title, conditions, notices} 结构（换行分隔字符串）
+     * 返回 {title, conditions, notices, contactInfo} 结构（换行分隔字符串）
      */
     @GetMapping("/notice")
     public Map<String, Object> getNotice() {
@@ -236,16 +236,17 @@ public class AdminController {
                 .map(cfg -> R.ok(java.util.Map.of(
                     "title", cfg.getTitle() != null ? cfg.getTitle() : "",
                     "conditions", cfg.getConditions() != null ? cfg.getConditions() : "",
-                    "notices", cfg.getNotices() != null ? cfg.getNotices() : ""
+                    "notices", cfg.getNotices() != null ? cfg.getNotices() : "",
+                    "contactInfo", cfg.getContactInfo() != null ? cfg.getContactInfo() : ""
                 )))
-                .orElse(R.ok(java.util.Map.of("title", "", "conditions", "", "notices", "")));
+                .orElse(R.ok(java.util.Map.of("title", "", "conditions", "", "notices", "", "contactInfo", "")));
     }
 
     // ==================== 报名须知 · 写（全部 POST） ====================
 
     /**
      * 更新报名须知
-     * Body: { title: "...", conditions: "条件1\n条件2", notices: "须知1\n须知2", updatedBy: "admin" }
+     * Body: { title: "...", conditions: "条件1\n条件2", notices: "须知1\n须知2", contactInfo: "微信:xxx", updatedBy: "admin" }
      */
     @Transactional
     @PostMapping("/notice/update")
