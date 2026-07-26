@@ -41,6 +41,10 @@ public class SysConfig {
     @Column(name = "updated_by", length = 50)
     private String updatedBy;
 
+    /** 全局联系方式（2026-07-26 新增）*/
+    @Column(name = "contact_info", columnDefinition = "TEXT")
+    private String contactInfo;
+
     // ==================== getter / setter ====================
 
     public Integer getId() { return id; }
@@ -60,4 +64,7 @@ public class SysConfig {
 
     public String getUpdatedBy() { return updatedBy; }
     public void setUpdatedBy(String updatedBy) { this.updatedBy = updatedBy; }
+
+    public String getContactInfo() { return contactInfo; }
+    public void setContactInfo(String contactInfo) { this.contactInfo = contactInfo; }
 }

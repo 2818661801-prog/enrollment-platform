@@ -80,4 +80,11 @@ public class ClassInfo {
 
     public Integer getOuterId() { return outerId; }
     public void setOuterId(Integer outerId) { this.outerId = outerId; }
+
+    /** 班级社群信息（2026-07-26 新增）*/
+    @Column(name = "group_info", length = 200)
+    private String groupInfo;
+
+    public String getGroupInfo() { return groupInfo; }
+    public void setGroupInfo(String groupInfo) { this.groupInfo = groupInfo; }
 }
