@@ -11,15 +11,22 @@
           :server-year="serverYear"
           :classes-count="classes.length"
           :classes="classes"
-          @cta-click="showNotice = true"
         />
+        <div class="action-buttons">
+          <el-button type="primary" size="large" @click="showNotice = true">
+            查看报名须知
+          </el-button>
+          <el-button type="primary" size="large" @click="showGroupInfo = true">
+            查看咨询方式
+          </el-button>
+        </div>
       </div>
 
       <!-- ===== 帮助提示横条 ===== -->
-      <div class="hint-bar-wrapper">
+      <div v-if="contactInfo" class="hint-bar-wrapper">
         <div class="help-hint-bar">
           <InfoFilled class="hint-icon" />
-          <span>如在报名过程中遇到任何问题，请添加张老师微信咨询，微信号：<strong>softzzy</strong></span>
+          <span>{{ contactInfo }}</span>
         </div>
       </div>
     </div>
@@ -124,6 +131,29 @@
       </template>
     </el-dialog>
 
+    <!-- ===== 咨询方式弹窗 ===== -->
+    <el-dialog
+      v-model="showGroupInfo"
+      title="咨询方式"
+      width="500px"
+      class="group-info-dialog"
+      :append-to-body="true"
+    >
+      <div class="group-info-list">
+        <div
+          v-for="cls in classesWithGroupInfo"
+          :key="cls.id"
+          class="group-info-item"
+        >
+          <span class="group-info-class">{{ cls.name }}</span>
+          <span class="group-info-content">{{ cls.groupInfo || '暂无信息' }}</span>
+        </div>
+        <div v-if="classesWithGroupInfo.length === 0" class="group-info-empty">
+          暂无信息
+        </div>
+      </div>
+    </el-dialog>
+
     <AppFooter />
   </div>
 </template>
@@ -157,6 +187,15 @@ const loadError = ref('')
 const showNotice = ref(false)
 const noticeData = ref({ conditions: [], notices: [] })
 
+// 咨询方式弹窗
+const showGroupInfo = ref(false)
+const contactInfo = ref('')
+
+// 有咨询信息的班级
+const classesWithGroupInfo = computed(() =>
+  classes.value.filter(c => c.groupInfo && c.groupInfo.trim() !== '')
+)
+
 // 已报名的班级 ID（status=1/4，不含撤回）
 const appliedClassIds = reactive({})
 // 已录取的班级 ID（status=3，单独显示黄色"已录取"）
@@ -183,6 +222,11 @@ onMounted(async () => {
 
   // 再加载数据（loadData 会填充 appliedClassIds）
   await loadData()
+
+  // 读取 contactInfo（loadData 里已调用 fetchNotice，noticeData 已有值）
+  if (noticeData.value.contactInfo) {
+    contactInfo.value = noticeData.value.contactInfo
+  }
 
   // 报名须知弹窗判断（loadData 后执行，因为要用 appliedClassIds）：
   // 1. 已登录 + 有报名记录 → 不弹（已报过，肯定看过）
@@ -613,6 +657,58 @@ function parsePeriodsArray(classRounds, fallbackPeriod) {
     font-size: 12px;
     line-height: 1.8;
     padding-left: 14px;
+  }
+}
+
+/* ===== 操作按钮 ===== */
+.action-buttons {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 12px;
+}
+.action-buttons .el-button {
+  flex: 1;
+  max-width: 200px;
+}
+
+/* ===== 咨询方式弹窗列表 ===== */
+.group-info-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.group-info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  background: #f5f7fa;
+  border-radius: 8px;
+}
+.group-info-class {
+  font-weight: 600;
+  color: #303133;
+  font-size: 14px;
+}
+.group-info-content {
+  color: #606266;
+  font-size: 13px;
+}
+.group-info-empty {
+  text-align: center;
+  color: #909399;
+  padding: 20px;
+}
+
+/* ===== 移动端适配 ===== */
+@media (max-width: 768px) {
+  .action-buttons {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .action-buttons .el-button {
+    max-width: 100%;
   }
 }
 </style>
