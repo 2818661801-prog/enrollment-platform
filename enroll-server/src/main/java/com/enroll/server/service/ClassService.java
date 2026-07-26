@@ -205,6 +205,7 @@ public class ClassService {
                 .isDeleted(e.getIsDeleted() != null ? e.getIsDeleted() : 0)
                 .categories(cats)
                 .source(e.getSource() != null ? e.getSource() : "admin")
+                .groupInfo(e.getGroupInfo())
                 .build();
     }
 
