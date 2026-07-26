@@ -28,7 +28,8 @@ CREATE TABLE `ssc_classes` (
   `description` TEXT                               COMMENT '班级说明',
   `is_deleted`  INT          NOT NULL DEFAULT 0      COMMENT '软删除：0=正常，1=已删除',
   `source`      VARCHAR(20)  NOT NULL DEFAULT 'admin' COMMENT '数据来源：admin(管理员建)/sync(低代码同步)/student(预留)',
-  `outer_id`    INT          DEFAULT NULL            COMMENT '外网班级ID（sync后回填，用于跨系统 id 映射）'
+  `outer_id`    INT          DEFAULT NULL            COMMENT '外网班级ID（sync后回填，用于跨系统 id 映射）',
+  `group_info` VARCHAR(200) DEFAULT NULL            COMMENT '班级社群信息（群号/群二维码描述等，纯文本）'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='特色班表';
 
 -- ---------- 2. class_category 中间表（班级-类别 N:N 关联）----------
@@ -85,6 +86,7 @@ CREATE TABLE `ssc_sys_config` (
   `title`      VARCHAR(200) DEFAULT NULL COMMENT '报名须知标题',
   `conditions` TEXT                      COMMENT '报名条件（换行分隔）',
   `notices`    TEXT                      COMMENT '报名须知（换行分隔）',
+  `contact_info` TEXT                    COMMENT '全局联系方式（微信/QQ/电话等，纯文本）',
   `updated_at` DATETIME(6)  DEFAULT NULL  COMMENT '最后修改时间',
   `updated_by` VARCHAR(50)  DEFAULT NULL  COMMENT '最后修改人'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='系统配置表';
@@ -95,14 +97,14 @@ INSERT INTO `ssc_categories` (`id`, `name`) VALUES
 (2, '理工类');
 
 -- ---------- 7. 初始数据：7个班级 ----------
-INSERT INTO `ssc_classes` (`id`, `name`, `period`, `quota`, `enrolled`, `is_deleted`, `source`) VALUES
-(1, '2026级拔尖创新人才实验班（杭电班）', '2026/09/01 08:00 - 2026/09/13 23:59', -1, 0, 0, 'admin'),
-(2, '2026级计算机科学与技术（成电联合培养·计算机学院成电班）', '2026/09/01 08:00 - 2026/09/13 23:59', -1, 0, 0, 'admin'),
-(3, '2026级电子信息工程（成电联合培养·电子工程学院成电班）', '2026/09/01 08:00 - 2026/09/13 23:59', -1, 0, 0, 'admin'),
-(4, '2026级会计学ACCA班', '2026/08/15 08:00 - 2026/09/16 23:59', -1, 0, 0, 'admin'),
-(5, '2026级金融学CFA班', '2026/08/15 08:00 - 2026/09/16 23:59', -1, 0, 0, 'admin'),
-(6, '2026级会计学（智能财务）特色方向班', '2026/08/15 08:00 - 2026/08/25 23:59', -1, 0, 0, 'admin'),
-(7, '2026级湖畔实验班（计算机）', '2026/08/05 08:00 - 2026/08/15 23:59', -1, 0, 0, 'admin');
+INSERT INTO `ssc_classes` (`id`, `name`, `period`, `quota`, `enrolled`, `is_deleted`, `source`, `group_info`) VALUES
+(1, '2026级拔尖创新人才实验班（杭电班）', '2026/09/01 08:00 - 2026/09/13 23:59', -1, 0, 0, 'admin', '***REMOVED***_test2026'),
+(2, '2026级计算机科学与技术（成电联合培养·计算机学院成电班）', '2026/09/01 08:00 - 2026/09/13 23:59', -1, 0, 0, 'admin', '***REMOVED***（成电联合培养班咨询群）'),
+(3, '2026级电子信息工程（成电联合培养·电子工程学院成电班）', '2026/09/01 08:00 - 2026/09/13 23:59', -1, 0, 0, 'admin', '邮箱:***REMOVED***'),
+(4, '2026级会计学ACCA班', '2026/08/15 08:00 - 2026/09/16 23:59', -1, 0, 0, 'admin', '***REMOVED***_teacher（ACCA班李老师）'),
+(5, '2026级金融学CFA班', '2026/08/15 08:00 - 2026/09/16 23:59', -1, 0, 0, 'admin', '***REMOVED***_teacher（CFA班王老师）'),
+(6, '2026级会计学（智能财务）特色方向班', '2026/08/15 08:00 - 2026/08/25 23:59', -1, 0, 0, 'admin', '***REMOVED***_test2026（智能财务方向咨询）'),
+(7, '2026级湖畔实验班（计算机）', '2026/08/05 08:00 - 2026/08/15 23:59', -1, 0, 0, 'admin', '邮箱:***REMOVED***（湖畔实验班咨询）');
 
 -- ---------- 8. 初始数据：班级-类别中间表 ----------
 INSERT INTO `ssc_class_category` (`class_id`, `category_id`) VALUES
@@ -122,5 +124,5 @@ INSERT INTO `ssc_class_rounds` (`class_id`, `round_num`, `period_start`, `period
 (7, 1, '2026-08-05 08:00:00', '2026-08-15 23:59:00');
 
 -- ---------- 10. 初始数据：sys_config（报名须知）----------
-INSERT INTO `ssc_sys_config` (`id`, `title`, `conditions`, `notices`, `updated_by`) VALUES
-(1, '2026年特色班报名须知', '报名者须为2026级新生\n每人限报1个特色班\n报名信息填写须真实有效', '部分特色班设有两轮报名（第一轮+第二轮），两轮时间不同，请注意查看所报班级的具体时间段\n报名时间截止后不可修改\n录取结果另行通知\n如有疑问请联系教务处', 'admin');
+INSERT INTO `ssc_sys_config` (`id`, `title`, `conditions`, `notices`, `contact_info`, `updated_by`) VALUES
+(1, '2026年特色班报名须知', '报名者须为2026级新生\n每人限报1个特色班\n报名信息填写须真实有效', '部分特色班设有两轮报名（第一轮+第二轮），两轮时间不同，请注意查看所报班级的具体时间段\n报名时间截止后不可修改\n录取结果另行通知\n如有疑问请联系教务处', '***REMOVED*** / QQ:123456789', 'admin');
