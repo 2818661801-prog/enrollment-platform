@@ -130,6 +130,7 @@ public class ClassService {
         }
         if (body.containsKey("description")) cls.setDescription((String) body.get("description"));
         if (body.containsKey("isDeleted"))  cls.setIsDeleted((Integer) body.get("isDeleted"));
+        if (body.containsKey("groupInfo"))   cls.setGroupInfo((String) body.get("groupInfo"));
 
         // classRounds 单独处理：先删旧轮次，再插新轮次
         if (body.containsKey("classRounds")) {
