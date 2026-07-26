@@ -22,4 +22,8 @@ export default defineConfig({
       },
     },
   },
+  test: {
+    globals: true,
+    environment: 'node',  // data.js 是纯工具函数，用 node 环境即可
+  },
 })
