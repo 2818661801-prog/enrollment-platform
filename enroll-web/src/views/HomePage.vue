@@ -742,10 +742,13 @@ function parsePeriodsArray(classRounds, fallbackPeriod) {
   border-left: 3px solid var(--brand-primary);
 }
 .group-info-card-body {
-  color: var(--text-secondary);
-  font-size: 13px;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 500;
   line-height: 1.8;
-  padding-left: 11px;
+  padding: 6px 12px;
+  background: #ecf5ff;
+  border-radius: 6px;
 }
 .group-info-empty {
   text-align: center;
@@ -760,7 +763,8 @@ function parsePeriodsArray(classRounds, fallbackPeriod) {
     font-size: 14px;
   }
   .group-info-card-body {
-    font-size: 12px;
+    font-size: 13px;
+    padding: 5px 10px;
   }
 }
 </style>
