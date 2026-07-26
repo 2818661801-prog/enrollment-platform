@@ -38,7 +38,7 @@ public class ApplicationTimeBoundaryTest {
     private static final int TEST_CLASS_ID = 1;
     private static final DateTimeFormatter DTF = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss");
     private static final String[] TEST_ID_CARDS = {
-        "110101***REMOVED***4", "110101***REMOVED***9", "110101***REMOVED***8"
+        "110101***REMOVED***7", "110101***REMOVED***2", "110101***REMOVED***5"
     };
 
     @BeforeEach
@@ -123,7 +123,7 @@ public class ApplicationTimeBoundaryTest {
         headers.setContentType(MediaType.APPLICATION_JSON);
         java.util.Map<String, Object> body = new java.util.HashMap<>();
         body.put("name", "测试边界时间");
-        body.put("idCard", "110101***REMOVED***4");
+        body.put("idCard", "110101***REMOVED***7");
         body.put("gender", "男");
         body.put("phone", "***REMOVED***");
         body.put("classId", TEST_CLASS_ID);
@@ -153,7 +153,7 @@ public class ApplicationTimeBoundaryTest {
         headers.setContentType(MediaType.APPLICATION_JSON);
         java.util.Map<String, Object> body = new java.util.HashMap<>();
         body.put("name", "测试截止时间");
-        body.put("idCard", "110101***REMOVED***9");
+        body.put("idCard", "110101***REMOVED***2");
         body.put("gender", "女");
         body.put("phone", "***REMOVED***");
         body.put("classId", TEST_CLASS_ID);
@@ -182,7 +182,7 @@ public class ApplicationTimeBoundaryTest {
         headers.setContentType(MediaType.APPLICATION_JSON);
         java.util.Map<String, Object> body = new java.util.HashMap<>();
         body.put("name", "测试窗口在未来");
-        body.put("idCard", "110101***REMOVED***8");
+        body.put("idCard", "110101***REMOVED***5");
         body.put("gender", "男");
         body.put("phone", "***REMOVED***");
         body.put("classId", TEST_CLASS_ID);
