@@ -77,6 +77,7 @@ public class ApplicationService {
         try {
         String idCard   = (String) form.get("idCard");
         String phone    = (String) form.get("phone");
+        String name     = (String) form.get("name");
         Integer classId = (Integer) form.get("classId");
 
         // 1) 校验班级存在（只读，无需加锁）
@@ -94,6 +95,20 @@ public class ApplicationService {
         Object lock = submitLocks.computeIfAbsent(idCard, k -> new Object());
         synchronized (lock) {
             try {
+            // ===== 字段格式校验（防止绕过前端直接调API） =====
+            if (name == null || !name.matches("^[一-龥]{2,10}$")) {
+                throw new BusinessException(ResultCode.PARAM_INVALID, "姓名格式不正确（2-10个中文）");
+            }
+            if (phone == null || !phone.matches("^1[3-9]\\d{9}$")) {
+                throw new BusinessException(ResultCode.PARAM_INVALID, "手机号格式不正确");
+            }
+            if (idCard == null || !idCard.matches("^\\d{17}[\\dXx]$")) {
+                throw new BusinessException(ResultCode.PARAM_INVALID, "身份证号格式不正确");
+            }
+            if (!validateIdCardChecksum(idCard)) {
+                throw new BusinessException(ResultCode.PARAM_INVALID, "身份证号校验码不正确");
+            }
+
             // 3) 身份证全局唯一：已报名（审核中）或已录取（永久锁定）不可再报（只查未删除）
             List<Application> idCardDup = appRepo.findByIdCardAndStatusInAndIsDeleted(
                     idCard, List.of(STATUS_APPLIED, STATUS_ENROLLED), 0);
@@ -555,5 +570,18 @@ public class ApplicationService {
                 .innerId(innerId)
                 .enrollmentYear(e.getEnrollmentYear())
                 .build();
+    }
+
+    // ===== 字段格式校验 =====
+
+    /** 身份证校验码验证（GB 11643-1999） */
+    private boolean validateIdCardChecksum(String idCard) {
+        int[] weights = {7, 9, 10, 5, 8, 4, 2, 1, 6, 3, 7, 9, 10, 5, 8, 4, 2};
+        char[] codes = {'1', '0', 'X', '9', '8', '7', '6', '5', '4', '3', '2'};
+        int sum = 0;
+        for (int i = 0; i < 17; i++) {
+            sum += (idCard.charAt(i) - '0') * weights[i];
+        }
+        return Character.toUpperCase(idCard.charAt(17)) == codes[sum % 11];
     }
 }
