@@ -37,6 +37,24 @@ public class ApplicationTimeBoundaryTest {
 
     private static final int TEST_CLASS_ID = 1;
     private static final DateTimeFormatter DTF = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss");
+    private static final String[] TEST_ID_CARDS = {
+        "110101***REMOVED***4", "110101***REMOVED***9", "110101***REMOVED***8"
+    };
+
+    @BeforeEach
+    void cleanupTestData() {
+        // 清理之前的测试报名记录，确保每次测试都是干净状态
+        TransactionTemplate tx = new TransactionTemplate(transactionManager);
+        tx.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+        tx.executeWithoutResult(status -> {
+            for (String idCard : TEST_ID_CARDS) {
+                entityManager.createNativeQuery(
+                        "DELETE FROM ssc_applications WHERE id_card = ?")
+                        .setParameter(1, idCard)
+                        .executeUpdate();
+            }
+        });
+    }
 
     // 辅助方法：返回 "yyyy/MM/dd HH:mm:ss" 格式的时间串
     private String getTimeStr(int offsetDays, int offsetSeconds) {
