@@ -30,9 +30,10 @@ public class PublicConfigController {
             return R.ok(java.util.Map.of(
                 "title", c.getTitle() != null ? c.getTitle() : "",
                 "conditions", c.getConditions() != null ? c.getConditions() : "",
-                "notices", c.getNotices() != null ? c.getNotices() : ""
+                "notices", c.getNotices() != null ? c.getNotices() : "",
+                "contactInfo", c.getContactInfo() != null ? c.getContactInfo() : ""
             ));
         }
-        return R.ok(java.util.Map.of("title", "", "conditions", "", "notices", ""));
+        return R.ok(java.util.Map.of("title", "", "conditions", "", "notices", "", "contactInfo", ""));
     }
 }
