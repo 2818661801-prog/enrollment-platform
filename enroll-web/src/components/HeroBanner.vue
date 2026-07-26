@@ -35,10 +35,16 @@
       </div>
       <h2 class="banner-title">{{ slides[current].title }}</h2>
       <p v-if="slides[current].subtitle" class="banner-subtitle">{{ slides[current].subtitle }}</p>
-      <button type="button" class="banner-cta" @click="onCtaClick">
-        <img :src="docIcon" alt="" class="cta-icon" />
-        <span>查看报名须知</span>
-      </button>
+      <div class="banner-cta-group">
+        <button type="button" class="banner-cta" @click="onCtaClick">
+          <img :src="docIcon" alt="" class="cta-icon" />
+          <span>查看报名须知</span>
+        </button>
+        <button type="button" class="banner-cta" @click="onConsultClick">
+          <img :src="searchIcon" alt="" class="cta-icon" />
+          <span>咨询方式</span>
+        </button>
+      </div>
     </div>
 
     <!-- 左右箭头 -->
@@ -79,6 +85,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import docIcon from '../assets/images/checklist.svg'
+import searchIcon from '../assets/images/search.svg'
 
 const props = defineProps({
   serverYear: { type: Number, default: () => new Date().getFullYear() },
@@ -86,7 +93,7 @@ const props = defineProps({
   classes:      { type: Array,  default: () => [] },  // 班级列表（动态生成类别、年份）
 })
 
-const emit = defineEmits(['cta-click'])
+const emit = defineEmits(['cta-click', 'consult-click'])
 
 /**
  * 动态副标题生成（根据班级数量自适应）
@@ -217,6 +224,10 @@ function onTouchEnd(e) {
 
 function onCtaClick() {
   emit('cta-click')
+}
+
+function onConsultClick() {
+  emit('consult-click')
 }
 
 onMounted(() => {
@@ -360,9 +371,15 @@ onUnmounted(() => {
   margin: 0 0 16px;
 }
 
-/* CTA 按钮 */
-.banner-cta {
+/* CTA 按钮组 */
+.banner-cta-group {
+  display: flex;
+  gap: 10px;
   align-self: flex-start;
+}
+
+/* CTA 按钮（通用样式）*/
+.banner-cta {
   display: inline-flex;
   align-items: center;
   gap: 6px;

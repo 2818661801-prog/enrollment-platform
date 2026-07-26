@@ -11,15 +11,9 @@
           :server-year="serverYear"
           :classes-count="classes.length"
           :classes="classes"
+          @cta-click="showNotice = true"
+          @consult-click="showGroupInfo = true"
         />
-        <div class="action-buttons">
-          <el-button type="primary" size="large" @click="showNotice = true">
-            查看报名须知
-          </el-button>
-          <el-button type="primary" size="large" @click="showGroupInfo = true">
-            查看咨询方式
-          </el-button>
-        </div>
       </div>
 
       <!-- ===== 帮助提示横条 ===== -->
@@ -136,21 +130,28 @@
       v-model="showGroupInfo"
       title="咨询方式"
       width="500px"
+      :close-on-click-modal="true"
+      :destroy-on-close="false"
       class="group-info-dialog"
-      :append-to-body="true"
     >
-      <div class="group-info-list">
+      <template #header>
+        <span class="group-info-dialog-title">咨询方式</span>
+        <button class="group-info-dialog-close" @click="showGroupInfo = false" type="button" aria-label="关闭">
+          <el-icon :size="18"><Close /></el-icon>
+        </button>
+      </template>
+      <div class="nd-section" v-if="classesWithGroupInfo.length > 0">
         <div
           v-for="cls in classesWithGroupInfo"
           :key="cls.id"
-          class="group-info-item"
+          class="group-info-card"
         >
-          <span class="group-info-class">{{ cls.name }}</span>
-          <span class="group-info-content">{{ cls.groupInfo || '暂无信息' }}</span>
+          <div class="group-info-card-header">{{ cls.name }}</div>
+          <div class="group-info-card-body">{{ cls.groupInfo }}</div>
         </div>
-        <div v-if="classesWithGroupInfo.length === 0" class="group-info-empty">
-          暂无信息
-        </div>
+      </div>
+      <div v-else class="group-info-empty">
+        <span>暂无信息</span>
       </div>
     </el-dialog>
 
@@ -331,6 +332,50 @@ watch(showNotice, async (val) => {
       const headerH = dialog.querySelector('.el-dialog__header')?.getBoundingClientRect().height ?? 60
       const footerH = dialog.querySelector('.el-dialog__footer')?.getBoundingClientRect().height ?? 49
       const maxBodyH = Math.floor(85 * window.innerHeight / 100 - headerH - footerH - 8)
+      const body = dialog.querySelector('.el-dialog__body')
+      if (body) {
+        body.style.setProperty('max-height', maxBodyH + 'px', 'important')
+        body.style.overflowY = 'auto'
+      }
+    }
+  }
+})
+
+// 监听咨询方式弹窗打开 → 屏幕适配（与 notice-dialog 相同逻辑）
+watch(showGroupInfo, async (val) => {
+  if (val) {
+    await new Promise(resolve => setTimeout(resolve, 200))
+    const dialog = document.querySelector('.group-info-dialog')
+    if (!dialog) return
+
+    const isMobile = window.innerWidth < 768
+
+    if (isMobile) {
+      dialog.style.setProperty('width', '95vw', 'important')
+      dialog.style.maxWidth = '355px'
+      dialog.style.maxHeight = '88vh'
+      dialog.style.setProperty('top', 'auto', 'important')
+      dialog.style.setProperty('transform', 'none', 'important')
+      const overlayDialog = document.querySelector('.el-overlay-dialog')
+      if (overlayDialog) {
+        overlayDialog.style.setProperty('align-items', 'flex-start', 'important')
+        overlayDialog.style.setProperty('justify-content', 'center', 'important')
+        overlayDialog.style.setProperty('display', 'flex', 'important')
+        overlayDialog.style.setProperty('padding-top', '5vh', 'important')
+      }
+      await new Promise(resolve => setTimeout(resolve, 50))
+      const headerH = dialog.querySelector('.el-dialog__header')?.getBoundingClientRect().height ?? 53
+      const maxBodyH = Math.floor(88 * window.innerHeight / 100 - headerH - 8)
+      const body = dialog.querySelector('.el-dialog__body')
+      if (body) {
+        body.style.setProperty('max-height', maxBodyH + 'px', 'important')
+        body.style.overflowY = 'auto'
+      }
+    } else {
+      dialog.style.maxWidth = '500px'
+      await new Promise(resolve => setTimeout(resolve, 50))
+      const headerH = dialog.querySelector('.el-dialog__header')?.getBoundingClientRect().height ?? 60
+      const maxBodyH = Math.floor(85 * window.innerHeight / 100 - headerH - 8)
       const body = dialog.querySelector('.el-dialog__body')
       if (body) {
         body.style.setProperty('max-height', maxBodyH + 'px', 'important')
@@ -660,55 +705,62 @@ function parsePeriodsArray(classRounds, fallbackPeriod) {
   }
 }
 
-/* ===== 操作按钮 ===== */
-.action-buttons {
-  display: flex;
-  gap: 12px;
-  justify-content: center;
-  margin-top: 12px;
+/* ===== 咨询方式弹窗样式 ===== */
+.group-info-dialog-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
 }
-.action-buttons .el-button {
-  flex: 1;
-  max-width: 200px;
+.group-info-dialog-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  color: #909399;
+  border-radius: 4px;
+  transition: color 0.2s, background 0.2s;
+}
+.group-info-dialog-close:hover {
+  color: #409eff;
+  background: #f0f9ff;
 }
 
-/* ===== 咨询方式弹窗列表 ===== */
-.group-info-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+.group-info-card {
+  margin-bottom: 16px;
 }
-.group-info-item {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 12px;
-  background: #f5f7fa;
-  border-radius: 8px;
+.group-info-card:last-child {
+  margin-bottom: 0;
 }
-.group-info-class {
+.group-info-card-header {
+  font-size: 15px;
   font-weight: 600;
-  color: #303133;
-  font-size: 14px;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+  padding-left: 8px;
+  border-left: 3px solid var(--brand-primary);
 }
-.group-info-content {
-  color: #606266;
+.group-info-card-body {
+  color: var(--text-secondary);
   font-size: 13px;
+  line-height: 1.8;
+  padding-left: 11px;
 }
 .group-info-empty {
   text-align: center;
   color: #909399;
-  padding: 20px;
+  font-size: 14px;
+  padding: 32px 0;
 }
 
 /* ===== 移动端适配 ===== */
 @media (max-width: 768px) {
-  .action-buttons {
-    flex-direction: column;
-    align-items: stretch;
+  .group-info-card-header {
+    font-size: 14px;
   }
-  .action-buttons .el-button {
-    max-width: 100%;
+  .group-info-card-body {
+    font-size: 12px;
   }
 }
 </style>
@@ -831,6 +883,40 @@ function parsePeriodsArray(classRounds, fallbackPeriod) {
 
   .notice-dialog .el-alert__title {
     font-size: 12px !important;
+  }
+}
+
+/* ===== 咨询方式弹窗非 scoped 样式 ===== */
+.group-info-dialog .el-dialog__header {
+  padding: 14px 16px 10px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+}
+.group-info-dialog .el-dialog__headerbtn {
+  display: none !important;
+}
+.group-info-dialog .el-dialog__body {
+  padding: 12px 16px !important;
+  overflow-y: auto !important;
+}
+.group-info-dialog.el-dialog {
+  max-width: 500px !important;
+  width: 90% !important;
+}
+
+/* ===== 移动端咨询方式弹窗 ===== */
+@media (max-width: 768px) {
+  .group-info-dialog.el-dialog {
+    width: 96% !important;
+    max-width: 355px !important;
+    margin-top: 5vh !important;
+    max-height: 85vh !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+  .group-info-dialog .el-dialog__body {
+    padding: 12px 15px !important;
   }
 }
 </style>
