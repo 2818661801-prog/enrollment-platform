@@ -254,6 +254,7 @@ public class AdminController {
         cfg.setTitle((String) body.get("title"));
         cfg.setConditions((String) body.get("conditions"));
         cfg.setNotices((String) body.get("notices"));
+        cfg.setContactInfo((String) body.get("contactInfo"));
         sysConfigRepo.save(cfg);
         // log.info("更新报名须知: title={}", body.get("title"));
         return R.ok("保存成功", null);
