@@ -94,6 +94,14 @@
                     <!-- Lombok exclude 已移除（项目不再使用 Lombok） -->
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <!-- 测试运行时使用 Asia/Shanghai 时区，使 LocalDateTime.now() 与 MySQL NOW() 一致 -->
+                    <argLine>-Duser.timezone=Asia/Shanghai</argLine>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 </project>

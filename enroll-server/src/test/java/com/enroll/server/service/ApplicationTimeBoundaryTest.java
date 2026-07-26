@@ -1,42 +1,39 @@
 package com.enroll.server.service;
 
-import com.enroll.server.entity.ClassInfo;
-import com.enroll.server.entity.ClassRound;
-import com.enroll.server.repository.ClassInfoRepository;
-import com.enroll.server.repository.ClassRoundRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.http.*;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-@Transactional  // 测试结束后自动回滚，不污染DB
+// 不加 @Transactional，手动管理事务，确保每步操作独立可见
 public class ApplicationTimeBoundaryTest {
-
-    @Autowired
-    private ClassInfoRepository classInfoRepository;
-
-    @Autowired
-    private ClassRoundRepository roundRepository;
 
     @Autowired
     private TestRestTemplate restTemplate;
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    @Autowired
+    private PlatformTransactionManager transactionManager;
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     private static final int TEST_CLASS_ID = 1;
     private static final DateTimeFormatter DTF = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss");
@@ -62,83 +59,81 @@ public class ApplicationTimeBoundaryTest {
         }
     }
 
-    // ========== 场景A：窗口刚开放（起点刚到，当前时间在窗口内）==========
+    // 辅助方法：用 native SQL UPDATE 修改 class_rounds 表（REQUIRES_NEW事务），确保数据立即落盘
+    private void updateRoundInNewTransaction(int classId, int roundNum,
+            LocalDateTime periodStart, LocalDateTime periodEnd) {
+        TransactionTemplate tx = new TransactionTemplate(transactionManager);
+        tx.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+        tx.executeWithoutResult(status -> {
+            entityManager.createNativeQuery(
+                    "UPDATE ssc_class_rounds SET period_start = ?, period_end = ? " +
+                    "WHERE class_id = ? AND round_num = ?")
+                    .setParameter(1, periodStart)
+                    .setParameter(2, periodEnd)
+                    .setParameter(3, classId)
+                    .setParameter(4, roundNum)
+                    .executeUpdate();
+        });
+    }
+
+    // 辅助方法：用 native SQL UPDATE 修改 ssc_classes 表（REQUIRES_NEW事务）
+    private void updateClassInNewTransaction(int classId, String period) {
+        TransactionTemplate tx = new TransactionTemplate(transactionManager);
+        tx.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+        tx.executeWithoutResult(status -> {
+            entityManager.createNativeQuery(
+                    "UPDATE ssc_classes SET period = ? WHERE id = ?")
+                    .setParameter(1, period)
+                    .setParameter(2, classId)
+                    .executeUpdate();
+        });
+    }
+
+    // ========== 场景A：窗口刚开放（起点刚过，当前时间在窗口内）==========
     @Test
     @Order(1)
     void shouldAllowEnrollment_whenStartTimeJustReached() {
-        // GIVEN：构造一个极窄窗口，起点是当前时间前1秒，终点是当前时间后1小时
-        LocalDateTime start = ldt(0, -1);
+        // GIVEN：窗口 now-30s ~ now+3600s，起点刚过（now >= start），终点在未来1小时
+        LocalDateTime start = ldt(0, -30);
         LocalDateTime end = ldt(0, 3600);
 
-        // 查 id=1 的班级，确保存在
-        ClassInfo cls = classInfoRepository.findById(TEST_CLASS_ID)
-                .orElseThrow(() -> new RuntimeException("测试班级不存在，id=1"));
-        cls.setPeriod(getTimeStr(0, -1) + " - " + getTimeStr(0, 3600));
-        classInfoRepository.save(cls);
-
-        // 更新/创建 class_rounds 表的 round=1
-        List<ClassRound> existing = roundRepository.findByClassIdOrderByRoundNum(TEST_CLASS_ID);
-        ClassRound round;
-        if (existing.isEmpty()) {
-            round = new ClassRound();
-            round.setClassId(TEST_CLASS_ID);
-            round.setRoundNum(1);
-        } else {
-            round = existing.get(0);
-        }
-        round.setPeriodStart(start);
-        round.setPeriodEnd(end);
-        round.setCreatedAt(LocalDateTime.now());
-        roundRepository.save(round);
+        updateClassInNewTransaction(TEST_CLASS_ID, getTimeStr(0, -30) + " - " + getTimeStr(0, 3600));
+        updateRoundInNewTransaction(TEST_CLASS_ID, 1, start, end);
 
         // WHEN：发报名请求（合法数据）
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        Map<String, Object> body = new HashMap<>();
+        java.util.Map<String, Object> body = new java.util.HashMap<>();
         body.put("name", "测试边界时间");
         body.put("idCard", "110101***REMOVED***4");
         body.put("gender", "男");
         body.put("phone", "***REMOVED***");
         body.put("classId", TEST_CLASS_ID);
+        body.put("hasPhysics", "否");
 
         ResponseEntity<String> resp = restTemplate.postForEntity(
                 "/api/applications", new HttpEntity<>(body, headers), String.class);
 
-        // THEN：报名成功（202 或 200）
-        assertTrue(resp.getStatusCode().is2xxSuccessful(),
-                "报名时间刚到，应可报名，实际响应：" + resp.getStatusCode() + " - " + resp.getBody());
+        // THEN：报名成功（HTTP 2xx 且业务 code = 200）
+        assertTrue(resp.getStatusCode().is2xxSuccessful() && getCode(resp) == 200,
+                "报名时间刚到，应可报名（code=200），实际响应：" + resp.getStatusCode() + " code=" + getCode(resp) + " body=" + resp.getBody());
     }
 
-    // ========== 场景C：窗口刚关闭（起点=终点，0秒窗口，等于已过）==========
+    // ========== 场景C：窗口已关闭（now > endTime，严格成立）==========
     @Test
     @Order(2)
     void shouldRejectEnrollment_whenEndTimeJustPassed() {
-        // GIVEN：构造窗口 = 0秒，即 startTime == endTime
-        LocalDateTime moment = ldt(0, -1);
+        // GIVEN：窗口已过，start = now-2s，end = now-1s → now > endTime 严格成立
+        LocalDateTime start = ldt(0, -2);
+        LocalDateTime end = ldt(0, -1);
 
-        ClassInfo cls = classInfoRepository.findById(TEST_CLASS_ID)
-                .orElseThrow(() -> new RuntimeException("测试班级不存在，id=1"));
-        cls.setPeriod(getTimeStr(0, -1) + " - " + getTimeStr(0, -1));
-        classInfoRepository.save(cls);
-
-        List<ClassRound> existing = roundRepository.findByClassIdOrderByRoundNum(TEST_CLASS_ID);
-        ClassRound round;
-        if (existing.isEmpty()) {
-            round = new ClassRound();
-            round.setClassId(TEST_CLASS_ID);
-            round.setRoundNum(1);
-        } else {
-            round = existing.get(0);
-        }
-        round.setPeriodStart(moment);
-        round.setPeriodEnd(moment);
-        round.setCreatedAt(LocalDateTime.now());
-        roundRepository.save(round);
+        updateClassInNewTransaction(TEST_CLASS_ID, getTimeStr(0, -2) + " - " + getTimeStr(0, -1));
+        updateRoundInNewTransaction(TEST_CLASS_ID, 1, start, end);
 
         // WHEN：发报名请求
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        Map<String, Object> body = new HashMap<>();
+        java.util.Map<String, Object> body = new java.util.HashMap<>();
         body.put("name", "测试截止时间");
         body.put("idCard", "110101***REMOVED***9");
         body.put("gender", "女");
@@ -148,9 +143,9 @@ public class ApplicationTimeBoundaryTest {
         ResponseEntity<String> resp = restTemplate.postForEntity(
                 "/api/applications", new HttpEntity<>(body, headers), String.class);
 
-        // THEN：报名失败（code != 200）
-        assertNotEquals(200, getCode(resp),
-                "截止时间已过，应拒绝报名，实际响应：" + resp.getStatusCode() + " - " + resp.getBody());
+        // THEN：报名失败（HTTP 2xx 且业务 code = 4005）
+        assertTrue(resp.getStatusCode().is2xxSuccessful() && getCode(resp) == 4005,
+                "截止时间已过，应拒绝报名（code=4005），实际响应：" + resp.getStatusCode() + " code=" + getCode(resp) + " body=" + resp.getBody());
     }
 
     // ========== 场景B：窗口在未来（当前时间不在窗口内，1小时后才开）==========
@@ -161,29 +156,13 @@ public class ApplicationTimeBoundaryTest {
         LocalDateTime start = ldt(0, 3600);
         LocalDateTime end = ldt(0, 7200);
 
-        ClassInfo cls = classInfoRepository.findById(TEST_CLASS_ID)
-                .orElseThrow(() -> new RuntimeException("测试班级不存在，id=1"));
-        cls.setPeriod(getTimeStr(0, 3600) + " - " + getTimeStr(0, 7200));
-        classInfoRepository.save(cls);
-
-        List<ClassRound> existing = roundRepository.findByClassIdOrderByRoundNum(TEST_CLASS_ID);
-        ClassRound round;
-        if (existing.isEmpty()) {
-            round = new ClassRound();
-            round.setClassId(TEST_CLASS_ID);
-            round.setRoundNum(1);
-        } else {
-            round = existing.get(0);
-        }
-        round.setPeriodStart(start);
-        round.setPeriodEnd(end);
-        round.setCreatedAt(LocalDateTime.now());
-        roundRepository.save(round);
+        updateClassInNewTransaction(TEST_CLASS_ID, getTimeStr(0, 3600) + " - " + getTimeStr(0, 7200));
+        updateRoundInNewTransaction(TEST_CLASS_ID, 1, start, end);
 
         // WHEN：发报名请求
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        Map<String, Object> body = new HashMap<>();
+        java.util.Map<String, Object> body = new java.util.HashMap<>();
         body.put("name", "测试窗口在未来");
         body.put("idCard", "110101***REMOVED***8");
         body.put("gender", "男");
@@ -193,8 +172,8 @@ public class ApplicationTimeBoundaryTest {
         ResponseEntity<String> resp = restTemplate.postForEntity(
                 "/api/applications", new HttpEntity<>(body, headers), String.class);
 
-        // THEN：报名失败（当前时间不在窗口内，窗口1小时后才开）
-        assertNotEquals(200, getCode(resp),
-                "当前时间不在窗口内（窗口1小时后才开），应拒绝报名，实际响应：" + resp.getStatusCode() + " - " + resp.getBody());
+        // THEN：报名失败（HTTP 2xx 且业务 code = 4005）
+        assertTrue(resp.getStatusCode().is2xxSuccessful() && getCode(resp) == 4005,
+                "当前时间不在窗口内（窗口1小时后才开），应拒绝报名（code=4005），实际响应：" + resp.getStatusCode() + " code=" + getCode(resp) + " body=" + resp.getBody());
     }
 }
