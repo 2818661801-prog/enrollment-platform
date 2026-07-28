@@ -169,6 +169,7 @@ const slides = computed(() => [
 const slideCount = computed(() => slides.value.length)
 const current = ref(0)            // 当前 slide 索引
 const isPaused = ref(false)       // hover 暂停标记
+const ctaLocked = ref(false)     // 按钮防抖（两个 CTA 共用）
 const AUTO_INTERVAL = 5000        // 自动播放间隔（ms）
 const SWIPE_THRESHOLD = 50        // 触屏滑动阈值（px）
 
@@ -223,11 +224,17 @@ function onTouchEnd(e) {
 }
 
 function onCtaClick() {
+  if (ctaLocked.value) return
+  ctaLocked.value = true
   emit('cta-click')
+  setTimeout(() => { ctaLocked.value = false }, 300)
 }
 
 function onConsultClick() {
+  if (ctaLocked.value) return
+  ctaLocked.value = true
   emit('consult-click')
+  setTimeout(() => { ctaLocked.value = false }, 300)
 }
 
 onMounted(() => {

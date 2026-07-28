@@ -66,6 +66,8 @@
                 <el-button
                   v-if="record.status === '1' && canWithdraw(record)"
                   text type="danger" size="small"
+                  :loading="withdrawing"
+                  :disabled="withdrawing"
                   @click="onWithdraw(record)"
                 >撤回</el-button>
               </div>
@@ -174,6 +176,7 @@ const loading = ref(false)
 const editDialogVisible = ref(false)
 const editLoading = ref(false)
 const editingId = ref(null)
+const withdrawing = ref(false)  // 撤回按钮防抖
 
 const editForm = reactive({
   name: '',
@@ -272,6 +275,8 @@ function onEdit(row) {
 }
 
 async function onEditSubmit() {
+  // 防抖：正在提交中，拒绝重复调用
+  if (editLoading.value) return
   // 姓名校验
   const name = editForm.name.trim()
   if (!name) {
@@ -326,12 +331,17 @@ function canWithdraw(record) {
 }
 
 async function onWithdraw(row) {
+  // 防抖：正在撤回中，拒绝重复调用
+  if (withdrawing.value) return
+  withdrawing.value = true
   try {
     await ElMessageBox.confirm('确定撤回该报名吗？撤回后不可恢复。', '提示', { type: 'warning' })
     await withdrawApplicationAPI(row.id)
     ElMessage.success('已撤回')
     await fetchMyRecords()
-  } catch {}
+  } catch {} finally {
+    withdrawing.value = false
+  }
 }
 
 // 状态标签颜色
