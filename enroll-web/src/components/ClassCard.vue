@@ -72,6 +72,7 @@
       class="desc-dialog"
       :width="dialogWidth"
       :show-close="false"
+      :lock-scroll="windowWidth > 768"
       append-to-body
       destroy-on-close
     >

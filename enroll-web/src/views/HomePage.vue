@@ -64,6 +64,7 @@
       width="720px"
       :close-on-click-modal="true"
       :destroy-on-close="false"
+      :lock-scroll="windowWidth > 768"
       class="notice-dialog"
     >
       <template #header>
@@ -132,6 +133,7 @@
       width="500px"
       :close-on-click-modal="true"
       :destroy-on-close="false"
+      :lock-scroll="windowWidth > 768"
       class="group-info-dialog"
     >
       <template #header>
@@ -172,6 +174,11 @@ import HeroBanner from '../components/HeroBanner.vue'
 import FilterBar from '../components/FilterBar.vue'
 
 const router = useRouter()
+
+// ===== 响应式窗口宽度（用于弹窗 lock-scroll 判断） =====
+const windowWidth = ref(window.innerWidth)
+function onResize() { windowWidth.value = window.innerWidth }
+
 const searchKeyword = ref(null)
 const selectedRound = ref(null)  // null=全部轮次，数字=只看第N轮
 const selectedTimeStatus = ref(null)  // null=全部状态，open/not_started/closed
@@ -251,6 +258,8 @@ onMounted(async () => {
   window.addEventListener('storage', onStorageChange)
   window.addEventListener('application_changed', onAppChanged)
   window.addEventListener('login_changed', onLoginChanged)
+  // 弹窗 lock-scroll 响应式判断需要监听窗口尺寸
+  window.addEventListener('resize', onResize)
 })
 
 onUnmounted(() => {
@@ -258,6 +267,7 @@ onUnmounted(() => {
   window.removeEventListener('storage', onStorageChange)
   window.removeEventListener('application_changed', onAppChanged)
   window.removeEventListener('login_changed', onLoginChanged)
+  window.removeEventListener('resize', onResize)
 })
 
 async function loadData() {
@@ -390,9 +400,9 @@ watch(showGroupInfo, async (val) => {
  * 为什么排序：主人要求"按时间最早排前面"
  */
 const displayClasses = computed(() => {
-  // 1. 过滤（保留原逻辑）
+  // 1. 过滤：按班级名称匹配（同名班级全部查出，不掉）
   const filtered = searchKeyword.value
-    ? classes.value.filter(c => c.id === searchKeyword.value)
+    ? classes.value.filter(c => c.name === searchKeyword.value)
     : classes.value
 
   // 2. 按报名开始时间升序排序

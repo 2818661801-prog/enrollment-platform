@@ -15,7 +15,6 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -160,11 +159,14 @@ public class ApplicationService {
             app.setStatus(STATUS_APPLIED);
             Object agreed = form.get("noticeAgreed");
             app.setNoticeAgreed(parseFlag(agreed));
-            app.setApplyTime(LocalDateTime.now().withNano(0));  // 截断到秒，避免纳秒→MySQL DATETIME 四舍五入导致时间不一致
+            // apply_time 不再由 Java 设值 → 留 null → @DynamicInsert INSERT 不含该列 → MySQL DEFAULT CURRENT_TIMESTAMP (=NOW()) 自动填入
+            // 彻底不依赖 JVM 时区，解决线上 Docker 容器 UTC 时区导致 apply_time 偏移问题
             app.setRound(currentRound);
             // enrollmentYear：后端自动取当前年份（2026/2027）
             app.setEnrollmentYear(java.time.LocalDate.now().getYear());
             Application saved = appRepo.save(app);
+            // apply_time 由 MySQL DEFAULT CURRENT_TIMESTAMP 自动填入，实体内存值为 null
+            // DTO 返回的 applyTime 也会是 null，但学生前端不展示此字段，管理员端/我的报名走 DB 查询不受影响
 
             // S16 修复：enrolled+1 已由上面的原子 UPDATE 完成，无需再 save classRepo
             return toDTO(saved, cls.getName());
@@ -432,7 +434,7 @@ public class ApplicationService {
                 app.setClassId(classId);
                 app.setStatus((Integer) item.getOrDefault("status", 1));
                 app.setNoticeAgreed(parseFlag(item.get("noticeAgreed")));
-                app.setApplyTime(LocalDateTime.now().withNano(0));  // 截断到秒
+                // apply_time 不再由 Java 设值 → 留 null → MySQL DEFAULT CURRENT_TIMESTAMP 自动填入
                 app.setRound((Integer) item.getOrDefault("round", 1));
                 app.setEnrollmentYear((Integer) item.getOrDefault("enrollmentYear", java.time.LocalDate.now().getYear()));
                 app.setIsDeleted(0);  // 默认未删除

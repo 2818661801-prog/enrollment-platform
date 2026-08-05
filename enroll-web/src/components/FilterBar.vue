@@ -35,13 +35,13 @@
       <!-- 下拉面板 -->
       <div v-show="isOpen" class="select-dropdown">
         <div
-          v-for="c in classes"
-          :key="c.id"
+          v-for="c in uniqueClasses"
+          :key="c.name"
           class="select-option"
-          :class="{ 'is-selected': modelValue === c.id }"
+          :class="{ 'is-selected': modelValue === c.name }"
           @click="pick(c)"
         >
-          {{ getClassLabel(c) }}
+          {{ c.name }}
         </div>
       </div>
     </div>
@@ -154,9 +154,22 @@ const selectRef = ref(null)
 const isOpen = ref(false)
 
 const selectedLabel = computed(() => {
+  // modelValue 即为班级名称（用户名选择后 emit 的是 class name 字符串）
   if (!props.modelValue) return null
-  const found = props.classes.find(c => c.id === props.modelValue)
-  return found ? found.name : null
+  return props.modelValue
+})
+
+/**
+ * 下拉去重：按班级名称去重，同名班级只显示一次
+ * 管理员可能创建同名班级但不同报名时间，下拉选一次出全部卡片
+ */
+const uniqueClasses = computed(() => {
+  const seen = new Set()
+  return (props.classes || []).filter(c => {
+    if (!c.name || seen.has(c.name)) return false
+    seen.add(c.name)
+    return true
+  })
 })
 
 /**
@@ -197,7 +210,8 @@ function toggleDrop() {
 }
 
 function pick(c) {
-  emit('update:modelValue', c.id)
+  // 按班级名称筛选（同名班级可能有多条，全部一起查出），不再按 id
+  emit('update:modelValue', c.name)
   isOpen.value = false
 }
 
@@ -213,16 +227,6 @@ function onReset() {
   emit('reset')
 }
 
-/**
- * 生成班级选项显示名称：多轮班加"（第X轮报名）"后缀
- */
-function getClassLabel(cls) {
-  const arr = cls.classRounds
-  if (Array.isArray(arr) && arr.length > 1) {
-    return `${cls.name}（第1轮报名） / 第2轮报名`
-  }
-  return cls.name
-}
 
 // 点击外部不关闭（mousedown 拦截，不拦截 click）
 // 这样下拉框可以保持打开，用户可以正常操作

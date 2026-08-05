@@ -144,6 +144,7 @@
             max-width="460px"
             destroy-on-close
             :show-close="false"
+            :lock-scroll="windowWidth > 768"
             class="class-desc-dialog"
           >
             <div class="class-desc-dialog-bar" />
@@ -242,6 +243,9 @@ const nameValid = ref(false)
 const phoneValid = ref(false)        // 手机号格式校验通过
 const loading = ref(false)
 const descDialogVisible = ref(false)
+// 弹窗 lock-scroll 响应式判断（移动端关锁滚动，避免 body padding-right 导致页面偏移）
+const windowWidth = ref(window.innerWidth)
+function onResize() { windowWidth.value = window.innerWidth }
 // 查重相关状态（按字段分开）
 const phoneConflict = ref(false)     // 手机号已被其他班级使用
 const phoneConflictClass = ref('')
@@ -324,9 +328,10 @@ const selectedClass = computed(() =>
 // 每秒刷新的"可信当前时间"，驱动 timeStatus 实时重新计算
 const now = ref(Date.now())
 let _timer = null
-onMounted(() => { _timer = setInterval(() => { now.value = Date.now() }, 1000) })
+onMounted(() => { _timer = setInterval(() => { now.value = Date.now() }, 1000); window.addEventListener('resize', onResize) })
 onUnmounted(() => {
   clearInterval(_timer)
+  window.removeEventListener('resize', onResize)
 })
 
 const timeStatus = computed(() => {

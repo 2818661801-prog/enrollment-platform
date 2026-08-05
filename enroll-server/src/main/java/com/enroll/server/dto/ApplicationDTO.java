@@ -23,7 +23,7 @@ public class ApplicationDTO implements Serializable {
     private Integer round;       // 报名轮次：1=第一轮，2=第二轮（存提交时确定的值）
     private Integer isDeleted;   // 软删除：0=正常，1=已删除（管理员删除）
     private Integer innerId;     // 内网班级ID（= classes.outer_id，用于跨系统 id 映射，2026-07-15 新增）
-    private Integer enrollmentYear; // 报名年级：26/27，后端自动写入（2026-07-19 新增）
+    private Integer enrollmentYear; // 报名年级：2026/2027，后端自动写入（2026-07-19 新增）
 
     public ApplicationDTO() {}
 

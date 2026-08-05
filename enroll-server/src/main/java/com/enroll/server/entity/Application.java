@@ -3,6 +3,8 @@ package com.enroll.server.entity;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
+import org.hibernate.annotations.DynamicInsert;
+
 /**
  * 报名记录实体 — 对应数据库 applications 表
  *
@@ -17,6 +19,7 @@ import java.time.LocalDateTime;
  */
 @Entity
 @Table(name = "ssc_applications")
+@DynamicInsert   // INSERT 时 null 字段不出现 → MySQL DEFAULT CURRENT_TIMESTAMP 生效
 public class Application {
 
     @Id
@@ -70,7 +73,7 @@ public class Application {
     @Column(name = "audit_comment", length = 500)
     private String auditComment;
 
-    @Column(name = "apply_time", nullable = false)
+    @Column(name = "apply_time", nullable = true, columnDefinition = "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '报名时间，MySQL NOW()自动填入，不依赖JVM时区'")
     private LocalDateTime applyTime;
 
     /**
@@ -104,7 +107,7 @@ public class Application {
      * 2026 年报名存 26，2027 年报名存 27
      * 后端自动从当前年份计算写入，无需前端传参
      */
-    @Column(name = "enrollment_year", columnDefinition = "INT DEFAULT NULL COMMENT '报名年级：26=2026年，27=2027年，后端自动写入'")
+    @Column(name = "enrollment_year", columnDefinition = "INT DEFAULT NULL COMMENT '报名年级：2026=2026年，2027=2027年，后端自动写入'")
     private Integer enrollmentYear;
 
     // ==================== 生命周期回调 ====================
@@ -113,7 +116,7 @@ public class Application {
     void onCreate() {
         if (this.status == null) this.status = 0;       // 默认 0 = 未报名
         if (this.noticeAgreed == null) this.noticeAgreed = 0;
-        if (this.applyTime == null) this.applyTime = LocalDateTime.now();
+        // apply_time 不再由 Java 设值 → 留 null → @DynamicInsert 不含该列 → MySQL DEFAULT CURRENT_TIMESTAMP 生效
         if (this.isDeleted == null) this.isDeleted = 0; // 默认 0 = 未删除
     }
 
