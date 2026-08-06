@@ -110,7 +110,7 @@
 </template>
 
 <script setup>
-import { computed, ref, onMounted, onUnmounted } from 'vue'
+import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
 import calendarIcon from '../assets/images/calendar(1).svg'
 import descIcon from '../assets/images/description.svg'
 import { getClassTimeStatus, formatTime } from '../utils/data.js'
@@ -127,6 +127,11 @@ const dialogVisible = ref(false)
 const isExpanded = ref(false)
 const isVisible = ref(false)   // 移动端入场动画：是否已进入视口
 const cardRef = ref(null)      // 卡片 DOM 引用
+
+// 筛选切换导致卡片数据变化时，重置展开状态
+watch(() => props.classInfo._uid, () => {
+  isExpanded.value = false
+})
 
 // ===== 响应式弹窗宽度：PC 500px，移动端 calc(100vw-40px) =====
 // 为什么用 JS 而不用 CSS @media？Element Plus 把 width 写成 inline style，
