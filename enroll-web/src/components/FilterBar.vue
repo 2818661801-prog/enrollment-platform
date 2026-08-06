@@ -225,6 +225,7 @@ function onReset() {
   emit('update:selectedRound', null)
   emit('update:selectedTimeStatus', null)
   emit('reset')
+  isOpen.value = false    // 关闭下拉面板，防止选中状态残留
   ElMessage.info('已重置筛选')
 }
 
