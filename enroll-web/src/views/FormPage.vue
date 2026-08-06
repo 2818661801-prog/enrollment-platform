@@ -505,7 +505,13 @@ async function onSubmit() {
       window.dispatchEvent(new Event('application_changed'))
       router.push('/my-applications')
     } else {
-      ElMessage.error(result.message || '提交失败')
+      const msg = result.message || '提交失败'
+      // 截止/时间相关错误用 warning（黄色），更友好
+      if (msg.includes('不在报名时间') || msg.includes('已截止')) {
+        ElMessage.warning(msg)
+      } else {
+        ElMessage.error(msg)
+      }
     }
   } catch {
     ElMessage.error('网络错误，请稍后重试')
