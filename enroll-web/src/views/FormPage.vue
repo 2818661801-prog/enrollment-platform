@@ -189,6 +189,16 @@
             style="margin-bottom: 8px;"
           />
 
+          <!-- 服务器时间同步失败告警 -->
+          <el-alert
+            v-if="!serverTimeSynced"
+            title="服务器时间同步失败，暂时无法提交报名，请刷新页面重试"
+            type="error"
+            show-icon
+            :closable="false"
+            style="margin-bottom: 8px;"
+          />
+
           <!-- 报名未开始提示 -->
           <el-alert
             v-if="timeStatus && timeStatus.status === 'not_started'"
@@ -211,7 +221,7 @@
 
           <!-- ===== 按钮组 ===== -->
           <div class="submit-btn-wrap">
-            <el-button type="primary" size="large" class="submit-btn" @click="onSubmit" :loading="submitting" :disabled="submitting || hasConflict || !timeStatus?.canApply">
+            <el-button type="primary" size="large" class="submit-btn" @click="onSubmit" :loading="submitting" :disabled="submitting || hasConflict || !timeStatus?.canApply || !serverTimeSynced">
               提交报名
             </el-button>
           </div>
@@ -283,10 +293,16 @@ const form = reactive(initialForm())
 // 已登录时手机号从 localStorage 预填，并禁用编辑
 const isLoggedIn = ref(false)
 const loggedInPhone = ref('')
+const serverTimeSynced = ref(true)  // 服务器时间是否同步成功
 
 onMounted(async () => {
   // 同步服务器时间（防止直接 URL 进入时本地时间被篡改）
-  await syncServerTime()
+  try {
+    await syncServerTime()
+  } catch (e) {
+    console.warn('[FormPage] 服务器时间同步失败：', e)
+    serverTimeSynced.value = false
+  }
 
   // 已登录 → 预填手机号并标记禁用
   const token = localStorage.getItem('student_token')
