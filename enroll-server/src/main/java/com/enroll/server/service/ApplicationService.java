@@ -133,8 +133,9 @@ public class ApplicationService {
             }
 
             // 4) 本轮防重复（同一身份证+同一班级，防止同一人报两次同一班，只查未删除）
+            // 只拦截"已报名(1)"和"已录取(3)"，未录取(4)和已撤回(2)后允许重报
             List<Application> roundDup = appRepo.findByIdCardAndClassIdAndStatusInAndIsDeleted(
-                    idCard, classId, List.of(STATUS_APPLIED, STATUS_ENROLLED, STATUS_REJECTED), 0);
+                    idCard, classId, List.of(STATUS_APPLIED, STATUS_ENROLLED), 0);
             if (!roundDup.isEmpty()) {
                 throw new BusinessException(ResultCode.DUPLICATE_APPLICATION);
             }
@@ -513,8 +514,9 @@ public class ApplicationService {
         }
 
         // 3) 同班级防重（同一身份证+同一班级）
+        // 只拦截"已报名(1)"和"已录取(3)"，未录取(4)和已撤回(2)后允许重报
         java.util.List<Application> sameClassDup = appRepo.findByIdCardAndClassIdAndStatusInAndIsDeleted(
-                idCard, classId, java.util.List.of(STATUS_APPLIED, STATUS_ENROLLED, STATUS_REJECTED), 0);
+                idCard, classId, java.util.List.of(STATUS_APPLIED, STATUS_ENROLLED), 0);
         if (!sameClassDup.isEmpty()) {
             result.put("hasSameClassConflict", true);
         }
