@@ -260,6 +260,18 @@ function showDescription() {
     transform: translateY(0);
   }
 }
+/* 移动端动画声明（必须在非 scoped 块，否则 keyframes 名与 animation 引用不匹配） */
+@media (max-width: 768px) {
+  .class-card {
+    animation: cardSlideIn 0.3s ease-out both;
+    animation-delay: var(--anim-delay, 0s);
+    /* 移动端禁用 hover transform，避免与 animation transform 冲突 */
+    transition: border-color 0.18s ease, box-shadow 0.18s ease !important;
+  }
+  .class-card:hover {
+    transform: none !important;
+  }
+}
 </style>
 
 <style scoped>
@@ -653,11 +665,6 @@ function showDescription() {
 
 /* ==================== 移动端适配 ==================== */
 @media (max-width: 768px) {
-  /* 移动端入场动画：滑入+淡入，stagger 延迟由 --anim-delay CSS 变量控制 */
-  .class-card {
-    animation: cardSlideIn 0.3s ease-out both;
-    animation-delay: var(--anim-delay, 0s);
-  }
   .card-body {
     padding: 15px 17px;
     gap: 8px;
