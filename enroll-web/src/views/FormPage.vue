@@ -388,7 +388,8 @@ function onPhoneBlur() {
     phoneConflict.value = false
     return
   }
-  // 格式通过 → 查重
+  // 手机号变了 → 先清旧冲突状态，再重新查重
+  phoneConflict.value = false
   checkDuplicate()
 }
 
@@ -408,7 +409,8 @@ function onIdCardBlur() {
     idCardConflict.value = false
     return
   }
-  // 格式通过 → 查重
+  // 身份证变了 → 先清旧冲突状态，再重新查重
+  idCardConflict.value = false
   checkDuplicate()
   // 自动推断性别
   if (!form.gender) {
