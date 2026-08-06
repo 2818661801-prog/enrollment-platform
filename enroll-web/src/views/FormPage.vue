@@ -309,7 +309,19 @@ onMounted(async () => {
 
   // 进入页面时清除所有校验提示（不自动校验）
   nextTick(() => formRef.value?.clearValidate())
+
+  // 监听退出登录：清除手机号预填 + 恢复可编辑
+  window.addEventListener('login_changed', onLoginChanged)
 })
+
+// 监听退出登录：清除手机号预填 + 恢复可编辑
+function onLoginChanged() {
+  if (!localStorage.getItem('student_token')) {
+    isLoggedIn.value = false
+    loggedInPhone.value = ''
+    form.phone = ''
+  }
+}
 
 // 监听班级列表 + 路由 classId，两者都就绪才预填表单
 // 多轮班：period 从 URL query param 传入（第2轮时间），而非 cls.period（第一轮时间）
@@ -345,6 +357,7 @@ onMounted(() => { _timer = setInterval(() => { now.value = Date.now() }, 1000); 
 onUnmounted(() => {
   clearInterval(_timer)
   window.removeEventListener('resize', onResize)
+  window.removeEventListener('login_changed', onLoginChanged)
 })
 
 const timeStatus = computed(() => {
