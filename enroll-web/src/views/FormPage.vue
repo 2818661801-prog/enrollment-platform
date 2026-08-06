@@ -519,7 +519,8 @@ async function onSubmit() {
     if (result.code === 200) {
       ElMessage.success('报名提交成功！')
       window.dispatchEvent(new Event('application_changed'))
-      router.push('/my-applications')
+      // 延迟 300ms 跳转，让事件传播 + 后端数据落盘
+      setTimeout(() => router.push('/my-applications'), 300)
     } else {
       const msg = result.message || '提交失败'
       // 截止/时间相关错误用 warning（黄色），更友好
