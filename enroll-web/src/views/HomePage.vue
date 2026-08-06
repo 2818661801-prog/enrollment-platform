@@ -505,6 +505,7 @@ function onAgreeNotice() {
   // 记录同意时间戳，后续报名提交时后端写入 notice_agreed=1
   localStorage.setItem('student_notice_agreed', String(Date.now()))
   showNotice.value = false
+  ElMessage.success('已确认报名须知')
 }
 
 async function goFormDirect({ id, period }) {

@@ -225,6 +225,7 @@ function onReset() {
   emit('update:selectedRound', null)
   emit('update:selectedTimeStatus', null)
   emit('reset')
+  ElMessage.info('已重置筛选')
 }
 
 
