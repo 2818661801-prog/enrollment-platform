@@ -220,7 +220,15 @@ const admittedClassIds = reactive({})
 // 为什么用 sessionStorage：关闭标签即清除，localStorage 会永久记着
 let pollTimer = null
 // storage 事件处理器（需存引用才能在 unmount 时正确移除）
-const onStorageChange = (e) => { if (e.key === 'application_changed') loadData() }
+const onStorageChange = (e) => {
+  if (e.key === 'application_changed') loadData()
+  // 跨标签页退出登录：另一个标签页删除了 student_token → 清空已报名标记
+  if (e.key === 'student_token' && !e.newValue) {
+    isLoggedIn.value = false
+    Object.keys(appliedClassIds).forEach(k => delete appliedClassIds[k])
+    Object.keys(admittedClassIds).forEach(k => delete admittedClassIds[k])
+  }
+}
 const onAppChanged = () => loadData()
 const onLoginChanged = () => loadData()
 
