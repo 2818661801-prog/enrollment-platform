@@ -45,12 +45,13 @@
         <el-empty v-if="flatCards.length === 0" description="暂无匹配班级" />
         <div v-else class="card-grid">
           <ClassCard
-            v-for="c in flatCards"
+            v-for="(c, idx) in flatCards"
             :key="c._uid"
             :class-info="c"
             :is-applied="appliedClassIds[c.id]"
             :is-admitted="admittedClassIds[c.id]"
             :is-logged-in="isLoggedIn"
+            :style="{ '--anim-delay': `${idx * 0.05}s` }"
             @select="goFormDirect"
           />
         </div>

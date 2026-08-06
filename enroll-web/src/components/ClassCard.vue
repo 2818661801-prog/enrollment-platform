@@ -248,6 +248,18 @@ function showDescription() {
     box-sizing: border-box !important;
   }
 }
+
+/* ==================== 移动端卡片入场动画 ==================== */
+@keyframes cardSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 </style>
 
 <style scoped>
@@ -641,6 +653,11 @@ function showDescription() {
 
 /* ==================== 移动端适配 ==================== */
 @media (max-width: 768px) {
+  /* 移动端入场动画：滑入+淡入，stagger 延迟由 --anim-delay CSS 变量控制 */
+  .class-card {
+    animation: cardSlideIn 0.3s ease-out both;
+    animation-delay: var(--anim-delay, 0s);
+  }
   .card-body {
     padding: 15px 17px;
     gap: 8px;
