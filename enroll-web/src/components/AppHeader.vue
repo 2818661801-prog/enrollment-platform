@@ -112,6 +112,7 @@ function onLogout() {
     // 通知其他页面登录态变化（HomePage 监听 application_changed，会触发 loadData 重刷数据）
     window.dispatchEvent(new Event('login_changed'))
     window.dispatchEvent(new Event('application_changed'))
+    ElMessage.success('已退出登录')
   }).catch(() => {})
 }
 </script>
