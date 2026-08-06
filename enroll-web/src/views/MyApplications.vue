@@ -451,13 +451,13 @@ function formatTime(applyTime) {
   box-shadow: 0 4px 12px rgba(51, 126, 255, 0.1);
 }
 
-/* 状态色条 */
+/* 状态色条（贴齐卡片两侧，不突出） */
 .record-card::before {
   content: '';
   display: block;
   height: 3px;
-  border-radius: 3px 3px 0 0;
-  margin: -16px -16px 0 -16px;
+  border-radius: 0;
+  margin: 0;
 }
 .status-1::before { background: #f59e0b; }  /* 审核中-黄 */
 .status-2::before { background: #94a3b8; }  /* 已撤回-灰 */
