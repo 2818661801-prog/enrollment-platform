@@ -68,7 +68,8 @@
                     v-model="form.phone"
                     placeholder="请输入11位手机号"
                     maxlength="11"
-                    clearable
+                    :clearable="!isLoggedIn"
+                    :disabled="isLoggedIn"
                     @blur="onPhoneBlur"
                   >
                     <template #prefix>
@@ -279,10 +280,22 @@ function showClassDesc() {
 const classes = ref([])
 
 const form = reactive(initialForm())
+// 已登录时手机号从 localStorage 预填，并禁用编辑
+const isLoggedIn = ref(false)
+const loggedInPhone = ref('')
 
 onMounted(async () => {
   // 同步服务器时间（防止直接 URL 进入时本地时间被篡改）
   await syncServerTime()
+
+  // 已登录 → 预填手机号并标记禁用
+  const token = localStorage.getItem('student_token')
+  const phone = localStorage.getItem('student_phone')
+  if (token && phone) {
+    isLoggedIn.value = true
+    loggedInPhone.value = phone
+    form.phone = phone
+  }
 
   // 拉取班级列表
   loading.value = true
