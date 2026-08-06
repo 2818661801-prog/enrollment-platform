@@ -199,10 +199,16 @@ const noticeData = ref({ conditions: [], notices: [] })
 const showGroupInfo = ref(false)
 const contactInfo = ref('')
 
-// 有咨询信息的班级
-const classesWithGroupInfo = computed(() =>
-  classes.value.filter(c => c.groupInfo && c.groupInfo.trim() !== '')
-)
+// 有咨询信息的班级（按班级名称去重，同名只保留第一条）
+const classesWithGroupInfo = computed(() => {
+  const seen = new Set()
+  return classes.value.filter(c => {
+    if (!c.groupInfo || c.groupInfo.trim() === '') return false
+    if (seen.has(c.name)) return false
+    seen.add(c.name)
+    return true
+  })
+})
 
 // 已报名的班级 ID（status=1/4，不含撤回）
 const appliedClassIds = reactive({})
