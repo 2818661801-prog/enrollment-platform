@@ -6,8 +6,9 @@
 -->
 <template>
   <article
+    ref="cardRef"
     class="class-card"
-    :class="{ 'is-disabled': !timeStatus.canApply, 'is-single': !isMultiRound, 'is-multi': isMultiRound }"
+    :class="{ 'is-disabled': !timeStatus.canApply, 'is-single': !isMultiRound, 'is-multi': isMultiRound, 'is-visible': isVisible }"
     @click="onClick"
   >
     <!-- 顶部色条（签名元素：从招生章程里剪下来的视觉特征） -->
@@ -124,13 +125,30 @@ const props = defineProps({
 const emit = defineEmits(['select'])
 const dialogVisible = ref(false)
 const isExpanded = ref(false)
+const isVisible = ref(false)   // 移动端入场动画：是否已进入视口
+const cardRef = ref(null)      // 卡片 DOM 引用
 
 // ===== 响应式弹窗宽度：PC 500px，移动端 calc(100vw-40px) =====
 // 为什么用 JS 而不用 CSS @media？Element Plus 把 width 写成 inline style，
 // CSS 选择器在 Teleport + scoped 组合下容易失效，直接控 prop 最可靠
 const windowWidth = ref(window.innerWidth)
 function onResize() { windowWidth.value = window.innerWidth }
-onMounted(() => window.addEventListener('resize', onResize))
+onMounted(() => {
+  window.addEventListener('resize', onResize)
+  // 移动端入场动画：IntersectionObserver 检测卡片进入视口时触发
+  if (window.innerWidth <= 768 && cardRef.value) {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          isVisible.value = true
+          observer.disconnect()  // 只触发一次，不再监听
+        }
+      },
+      { threshold: 0.1 }  // 卡片露出 10% 即触发
+    )
+    observer.observe(cardRef.value)
+  }
+})
 onUnmounted(() => window.removeEventListener('resize', onResize))
 const dialogWidth = computed(() => {
   return windowWidth.value <= 768 ? 'calc(100vw - 40px)' : '500px'
@@ -262,14 +280,19 @@ function showDescription() {
 }
 /* 移动端动画声明（必须在非 scoped 块，否则 keyframes 名与 animation 引用不匹配） */
 @media (max-width: 768px) {
+  /* 初始状态：隐藏，等待 IntersectionObserver 触发 */
   .class-card {
-    animation: cardSlideIn 0.3s ease-out both;
-    animation-delay: var(--anim-delay, 0s);
-    /* 移动端禁用 hover transform，避免与 animation transform 冲突 */
+    opacity: 0;
+    transform: translateY(20px);
     transition: border-color 0.18s ease, box-shadow 0.18s ease !important;
   }
   .class-card:hover {
     transform: none !important;
+  }
+  /* 进入视口后：播放滑入动画 */
+  .class-card.is-visible {
+    animation: cardSlideIn 0.3s ease-out both;
+    animation-delay: var(--anim-delay, 0s);
   }
 }
 </style>
