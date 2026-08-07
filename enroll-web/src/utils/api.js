@@ -90,13 +90,6 @@ export const withdrawApplicationAPI = (id) =>
     body: JSON.stringify({ id }),
   })
 
-/** 修改报名信息（2026-07-02：PUT → POST） */
-export const updateApplicationAPI = (id, data) =>
-  request('/api/applications/update', {
-    method: 'POST',
-    body: JSON.stringify({ id, ...data }),
-  })
-
 /** JWT 版我的报名（token 由 request() 自动注入，无需手动读 localStorage） */
 export const fetchMyApplicationsMe = async () => {
   const res = await request('/api/applications/me')

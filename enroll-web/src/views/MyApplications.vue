@@ -100,91 +100,25 @@
 
       <!-- 无记录 -->
       <el-empty v-else description="暂无报名记录" />
-
-      <!-- 修改弹窗 -->
-      <el-dialog
-        v-model="editDialogVisible"
-        width="90%"
-        max-width="440px"
-        destroy-on-close
-        :show-close="false"
-        class="edit-dialog"
-      >
-        <div class="edit-dialog-bar" />
-        <div class="edit-dialog-head">
-          <img :src="editToolsIcon" alt="" class="edit-dialog-icon" />
-          <span class="edit-dialog-title">修改报名信息</span>
-        </div>
-
-        <div class="edit-dialog-body">
-          <div class="edit-field">
-            <label class="edit-label">姓名</label>
-            <el-input v-model="editForm.name" maxlength="10" placeholder="请输入姓名" class="edit-input" />
-          </div>
-          <div class="edit-field">
-            <label class="edit-label">身份证号</label>
-            <el-input v-model="editForm.idCard" maxlength="18" placeholder="请输入18位身份证号" class="edit-input" />
-          </div>
-          <div class="edit-field">
-            <label class="edit-label">性别</label>
-            <el-radio-group v-model="editForm.gender" class="edit-radio-group">
-              <el-radio-button value="男">男</el-radio-button>
-              <el-radio-button value="女">女</el-radio-button>
-            </el-radio-group>
-          </div>
-          <div class="edit-field">
-            <label class="edit-label">选考物理</label>
-            <el-radio-group v-model="editForm.hasPhysics" class="edit-radio-group">
-              <el-radio-button value="是">是</el-radio-button>
-              <el-radio-button value="否">否</el-radio-button>
-            </el-radio-group>
-          </div>
-          <div class="edit-field">
-            <label class="edit-label">选考英语</label>
-            <el-radio-group v-model="editForm.hasEnglish" class="edit-radio-group">
-              <el-radio-button value="是">是</el-radio-button>
-              <el-radio-button value="否">否</el-radio-button>
-            </el-radio-group>
-          </div>
-        </div>
-
-        <div class="edit-dialog-footer">
-          <el-button class="edit-cancel-btn" @click="editDialogVisible = false">取消</el-button>
-          <el-button type="primary" :loading="editLoading" class="edit-save-btn" @click="onEditSubmit">保存修改</el-button>
-        </div>
-      </el-dialog>
     </div>
     <AppFooter />
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { ArrowLeft, User, Loading } from '@element-plus/icons-vue'
-import { withdrawApplicationAPI, updateApplicationAPI } from '../utils/api.js'
-import { validateIdCard } from '../utils/validate.js'
+import { withdrawApplicationAPI } from '../utils/api.js'
 import { syncServerTime, trustedNow } from '../utils/data.js'
-import editToolsIcon from '../assets/images/edit-tools.svg'
 import AppFooter from '../components/AppFooter.vue'
 
 const router = useRouter()
 const isLoggedIn = ref(false)
 const records = ref([])
 const loading = ref(false)
-const editDialogVisible = ref(false)
-const editLoading = ref(false)
-const editingId = ref(null)
 const withdrawing = ref(false)  // 撤回按钮防抖
-
-const editForm = reactive({
-  name: '',
-  idCard: '',
-  gender: '',
-  hasPhysics: '',
-  hasEnglish: '',
-})
 
 function goBack() { router.push('/home') }
 function goLogin() { router.push('/student-login') }
@@ -261,52 +195,6 @@ async function fetchMyRecords() {
     ElMessage.error('网络错误，无法加载报名记录')
   } finally {
     loading.value = false
-  }
-}
-
-function onEdit(row) {
-  editingId.value = row.id
-  editForm.name = row.name
-  editForm.idCard = row.idCardRaw || row.idCard
-  editForm.gender = row.gender || ''
-  editForm.hasPhysics = row.hasPhysics || '否'
-  editForm.hasEnglish = row.hasEnglish || '否'
-  editDialogVisible.value = true
-}
-
-async function onEditSubmit() {
-  // 防抖：正在提交中，拒绝重复调用
-  if (editLoading.value) return
-  // 姓名校验
-  const name = editForm.name.trim()
-  if (!name) {
-    ElMessage.warning('姓名不能为空')
-    return
-  }
-  if (name.length < 2) {
-    ElMessage.warning('姓名至少2个字符')
-    return
-  }
-  // 身份证校验
-  const idCard = editForm.idCard.trim()
-  if (!idCard) {
-    ElMessage.warning('身份证号不能为空')
-    return
-  }
-  if (!validateIdCard(idCard)) {
-    ElMessage.warning('身份证号格式不正确（18位，末位可为X）')
-    return
-  }
-  editLoading.value = true
-  try {
-    await updateApplicationAPI(editingId.value, { ...editForm })
-    ElMessage.success('修改成功')
-    editDialogVisible.value = false
-    await fetchMyRecords()
-  } catch (e) {
-    ElMessage.error(e.message || '修改失败')
-  } finally {
-    editLoading.value = false
   }
 }
 
@@ -554,95 +442,4 @@ function formatTime(applyTime) {
   
 }
 
-/* ===== 修改弹窗样式 ===== */
-.edit-dialog :deep(.el-dialog__header) { display: none; }
-.edit-dialog :deep(.el-dialog__body)   { padding: 0; }
-.edit-dialog :deep(.el-dialog__footer) { display: none; }
-
-.edit-dialog-bar {
-  height: 4px;
-  background: linear-gradient(90deg, #337eff, #5b9bff);
-}
-
-.edit-dialog-icon {
-  width: 24px;
-  height: 24px;
-  flex-shrink: 0;
-}
-
-.edit-dialog-head {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 24px 24px 0;
-}
-.edit-dialog-title {
-  font-size: 17px;
-  font-weight: 700;
-  color: #0f172a;
-}
-
-.edit-dialog-body {
-  padding: 20px 24px 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.edit-field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.edit-label {
-  font-size: 13px;
-  font-weight: 600;
-  color: #475569;
-}
-
-.edit-input :deep(.el-input__wrapper) {
-  border-radius: 8px;
-  box-shadow: 0 0 0 1px #e2e8f0;
-}
-.edit-input :deep(.el-input__wrapper:hover) {
-  box-shadow: 0 0 0 1px #337eff;
-}
-
-.edit-radio-group :deep(.el-radio-button__inner) {
-  border-radius: 6px;
-}
-
-.edit-dialog-footer {
-  display: flex;
-  gap: 12px;
-  padding: 8px 24px 24px;
-}
-.edit-cancel-btn {
-  flex: 1;
-  height: 42px;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  background: #fff;
-  color: #64748b;
-  border: 1px solid #e2e8f0;
-}
-.edit-cancel-btn:hover {
-  border-color: #337eff;
-  color: #337eff;
-}
-.edit-save-btn {
-  flex: 1;
-  height: 42px;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
-}
-
-@media (max-width: 768px) {
-  .edit-dialog :deep(.el-dialog) { max-width: 92vw !important; }
-  .edit-dialog-head { padding: 20px 16px 0; }
-  .edit-dialog-body { padding: 16px 16px 4px; gap: 14px; }
-  .edit-dialog-footer { padding: 4px 16px 20px; }
-}
 </style>
