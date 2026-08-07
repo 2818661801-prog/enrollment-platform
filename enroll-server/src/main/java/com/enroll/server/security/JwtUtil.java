@@ -98,4 +98,21 @@ public class JwtUtil {
                 .parseSignedClaims(token)
                 .getPayload();
     }
+
+    /**
+     * 从 Authorization header 解析学生手机号
+     * @param authHeader "Bearer xxx" 格式的 header
+     * @return 手机号，解析失败返回 null
+     */
+    public String getStudentPhoneFromAuthHeader(String authHeader) {
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) return null;
+        try {
+            Claims claims = parse(authHeader.substring(7));
+            String role = String.valueOf(claims.get("role"));
+            if (!"student".equals(role)) return null;
+            return claims.getSubject();
+        } catch (Exception e) {
+            return null;
+        }
+    }
 }
