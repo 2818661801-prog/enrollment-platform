@@ -110,10 +110,11 @@
 </template>
 
 <script setup>
-import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
+import { computed, ref, onMounted, watch } from 'vue'
 import calendarIcon from '../assets/images/calendar(1).svg'
 import descIcon from '../assets/images/description.svg'
 import { getClassTimeStatus, formatTime } from '../utils/data.js'
+import { useWindowWidth } from '../composables/useWindowWidth.js'
 
 const props = defineProps({
   classInfo: { type: Object, required: true }, // 班级数据对象
@@ -136,10 +137,8 @@ watch(() => props.classInfo._uid, () => {
 // ===== 响应式弹窗宽度：PC 500px，移动端 calc(100vw-40px) =====
 // 为什么用 JS 而不用 CSS @media？Element Plus 把 width 写成 inline style，
 // CSS 选择器在 Teleport + scoped 组合下容易失效，直接控 prop 最可靠
-const windowWidth = ref(window.innerWidth)
-function onResize() { windowWidth.value = window.innerWidth }
+const windowWidth = useWindowWidth()
 onMounted(() => {
-  window.addEventListener('resize', onResize)
   // 移动端入场动画：IntersectionObserver 检测卡片进入视口时触发
   if (window.innerWidth <= 768 && cardRef.value) {
     const observer = new IntersectionObserver(
@@ -154,7 +153,6 @@ onMounted(() => {
     observer.observe(cardRef.value)
   }
 })
-onUnmounted(() => window.removeEventListener('resize', onResize))
 const dialogWidth = computed(() => {
   return windowWidth.value <= 768 ? 'calc(100vw - 40px)' : '500px'
 })

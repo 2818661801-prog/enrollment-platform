@@ -169,6 +169,7 @@ import { ElMessage } from 'element-plus'
 import { Close, InfoFilled } from '@element-plus/icons-vue'
 import { getClassTimeStatus, parsePeriod, syncServerTime, formatTime } from '../utils/data.js'
 import { fetchClasses, fetchNotice, fetchMyApplicationsMe, fetchServerYear } from '../utils/api.js'
+import { useWindowWidth } from '../composables/useWindowWidth.js'
 import AppFooter from '../components/AppFooter.vue'
 import ClassCard from '../components/ClassCard.vue'
 import HeroBanner from '../components/HeroBanner.vue'
@@ -176,9 +177,8 @@ import FilterBar from '../components/FilterBar.vue'
 
 const router = useRouter()
 
-// ===== 响应式窗口宽度（用于弹窗 lock-scroll 判断） =====
-const windowWidth = ref(window.innerWidth)
-function onResize() { windowWidth.value = window.innerWidth }
+// ===== 响应式窗口宽度（用于弹窗 lock-scroll 判断，resize 监听由组合式函数管理） =====
+const windowWidth = useWindowWidth()
 
 const searchKeyword = ref(null)
 const selectedRound = ref(null)  // null=全部轮次，数字=只看第N轮
@@ -273,8 +273,6 @@ onMounted(async () => {
   window.addEventListener('storage', onStorageChange)
   window.addEventListener('application_changed', onAppChanged)
   window.addEventListener('login_changed', onLoginChanged)
-  // 弹窗 lock-scroll 响应式判断需要监听窗口尺寸
-  window.addEventListener('resize', onResize)
 })
 
 onUnmounted(() => {
@@ -282,7 +280,6 @@ onUnmounted(() => {
   window.removeEventListener('storage', onStorageChange)
   window.removeEventListener('application_changed', onAppChanged)
   window.removeEventListener('login_changed', onLoginChanged)
-  window.removeEventListener('resize', onResize)
 })
 
 async function loadData() {
