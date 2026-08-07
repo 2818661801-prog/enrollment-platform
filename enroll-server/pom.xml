@@ -77,6 +77,13 @@
             <artifactId>spring-boot-starter-data-redis</artifactId>
         </dependency>
 
+        <!-- Bean Validation：@NotBlank/@Pattern 等校验注解（请求参数自动校验） -->
+        <!-- 注意：不用 Lombok（Java 24 下注解处理不兼容，见上方 properties 注释），DTO 手写 getter/setter -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+
         <!-- 测试依赖：JUnit 5 + Spring Boot Test + AssertJ -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
