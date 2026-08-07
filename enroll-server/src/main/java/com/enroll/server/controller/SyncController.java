@@ -1,295 +1,47 @@
 package com.enroll.server.controller;
 
-import com.enroll.server.dto.R;
-import com.enroll.server.dto.ResultCode;
-import com.enroll.server.entity.Category;
-import com.enroll.server.entity.ClassCategory;
-import com.enroll.server.entity.ClassInfo;
-import com.enroll.server.entity.ClassRound;
-import com.enroll.server.entity.SysConfig;
-import com.enroll.server.repository.CategoryRepository;
-import com.enroll.server.repository.ClassCategoryRepository;
-import com.enroll.server.repository.ClassInfoRepository;
-import com.enroll.server.repository.ClassRoundRepository;
-import com.enroll.server.repository.SysConfigRepository;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.persistence.PersistenceContext;
-import org.springframework.transaction.annotation.Transactional;
+import com.enroll.server.dto.request.SyncCategoriesRequest;
+import com.enroll.server.dto.request.SyncClassesRequest;
+import com.enroll.server.dto.request.SyncConfigRequest;
+import com.enroll.server.service.SyncService;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
-
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.*;
+import java.util.Map;
 
 /**
- * 低代码平台数据同步 API
+ * 低代码平台数据同步 API（瘦身后：只收 Body → 调 SyncService，业务全在 Service）
  *
  * 同步按钮流程：
  *   ① b查a  GET /api/admin/classes  → 低代码平台了解 enroll_db 现状
  *   ② 在b里做增删改                  → 低代码平台操作自己的内网 DB
  *   ③ b查b                          → 低代码平台拿到 b 的完整数据
  *   ④ 增删a  POST /api/admin/sync/{table}  → 全量同步到 enroll_db
- *
- * 同步逻辑：
- *   b有、a无  → 新增
- *   b有、a有  → 更新
- *   b有、isDeleted=1 → 软删（更新 is_deleted=1）
- *   a有、b无  → 真正删除
  */
 @RestController
 @RequestMapping("/api/admin/sync")
 public class SyncController {
 
-    private final ClassInfoRepository classRepo;
-    private final ClassRoundRepository roundRepo;
-    private final ClassCategoryRepository classCatRepo;
-    private final CategoryRepository categoryRepo;
-    private final SysConfigRepository sysConfigRepo;
-    private final ObjectMapper objectMapper;
+    private final SyncService syncService;
 
-    @PersistenceContext
-    private jakarta.persistence.EntityManager entityManager;
-
-    public SyncController(ClassInfoRepository classRepo,
-                          ClassRoundRepository roundRepo,
-                          ClassCategoryRepository classCatRepo,
-                          CategoryRepository categoryRepo,
-                          SysConfigRepository sysConfigRepo) {
-        this.classRepo = classRepo;
-        this.roundRepo = roundRepo;
-        this.classCatRepo = classCatRepo;
-        this.categoryRepo = categoryRepo;
-        this.sysConfigRepo = sysConfigRepo;
-        this.objectMapper = new ObjectMapper();
+    public SyncController(SyncService syncService) {
+        this.syncService = syncService;
     }
 
-    // ==================== 内部工具 ====================
-
-    /** 清空表（禁用外键检查后 truncate，避免外键约束阻挡） */
-    private void truncateWithForeignKeyDisabled(String table) {
-        entityManager.createNativeQuery("SET FOREIGN_KEY_CHECKS=0").executeUpdate();
-        entityManager.createNativeQuery("TRUNCATE TABLE " + table).executeUpdate();
-        entityManager.createNativeQuery("SET FOREIGN_KEY_CHECKS=1").executeUpdate();
-    }
-
-    /** 从 item 的 classRounds 字段计算 period 字符串（取第一轮） */
-    @SuppressWarnings("unchecked")
-    private String computePeriod(Map<String, Object> item) {
-        Object roundsObj = item.get("classRounds");
-        if (roundsObj == null) return null;
-        List<Map> rounds = (roundsObj instanceof List) ? (List<Map>) roundsObj : List.of();
-        if (rounds.isEmpty()) return null;
-        Map first = rounds.get(0);
-        Object ps = first.get("periodStart");
-        Object pe = first.get("periodEnd");
-        if (ps == null || pe == null) return null;
-        DateTimeFormatter dtFmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-        DateTimeFormatter dFmt = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-        try {
-            String start = LocalDateTime.parse(ps.toString(), dtFmt).format(dtFmt);
-            String end = LocalDateTime.parse(pe.toString(), dtFmt).format(dtFmt);
-            return start + " - " + end;
-        } catch (Exception e) {
-            try {
-                String start = java.time.LocalDate.parse(ps.toString(), dFmt).format(dFmt);
-                String end = java.time.LocalDate.parse(pe.toString(), dFmt).format(dFmt);
-                return start + " - " + end;
-            } catch (Exception ex) { return null; }
-        }
-    }
-
-    // ==================== 班级同步 ====================
-
-    /**
-     * 全量同步班级（先清再插）
-     * Body: {
-     *   "data": [{
-     *     "name": "成电班1",
-     *     "quota": 50,
-     *     "categoryNames": ["理工类"],
-     *     "classRounds": [
-     *       { "roundNum": 1, "periodStart": "2026-09-01 00:00:00", "periodEnd": "2026-09-13 23:59:59" }
-     *     ]
-     *   }]
-     * }
-     */
-    @Transactional
+    /** 全量同步班级（先清再插） */
     @PostMapping("/classes")
-    public Map<String, Object> syncClasses(@RequestBody Map<String, Object> body) {
-        List<Map> dataList = extractList(body, "data");
-
-        // ① 清空（顺序：先中间表，再轮次，最后主表）
-        truncateWithForeignKeyDisabled("ssc_class_category");
-        truncateWithForeignKeyDisabled("ssc_class_rounds");
-        truncateWithForeignKeyDisabled("ssc_classes");
-
-        // ② 全量插入
-        int inserted = 0;
-        DateTimeFormatter dtFmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-        DateTimeFormatter dFmt = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-
-        for (Map<String, Object> item : dataList) {
-            String name = (String) item.get("name");
-            if (name == null || name.isBlank()) continue;
-
-            // 计算 period（取第一轮的 periodStart - periodEnd）
-            String period = computePeriod(item);
-            // 防御：如果 period 为空，给默认值（2026-07-15）
-            if (period == null || period.isBlank()) {
-                period = "待定";
-            }
-
-            // 插入 class 主表
-            ClassInfo cls = new ClassInfo();
-            cls.setName(name);
-            cls.setQuota(item.get("quota") == null ? 0 : (Integer) item.get("quota"));
-            cls.setDescription((String) item.get("description"));
-            cls.setIsDeleted(0);
-            cls.setEnrolled(0);
-            cls.setSource((String) item.getOrDefault("source", "sync"));
-            cls.setGroupInfo((String) item.get("groupInfo"));
-            cls.setPeriod(period);
-            // 存内网传过来的 innerId 到 outer_id（用于跨系统 id 映射，2026-07-15）
-            Object innerIdVal = item.get("innerId");
-            if (innerIdVal != null) {
-                cls.setOuterId((Integer) innerIdVal);
-            }
-            ClassInfo saved = classRepo.save(cls);
-
-            // 插入轮次（class_rounds）
-            Object roundsObj = item.get("classRounds");
-            if (roundsObj instanceof List) {
-                for (Map<String, Object> r : (List<Map>) roundsObj) {
-                    ClassRound cr = new ClassRound();
-                    cr.setClassId(saved.getId());
-                    cr.setRoundNum(r.get("roundNum") == null ? 1 : (Integer) r.get("roundNum"));
-                    cr.setPeriodStart(parseDt(r.get("periodStart"), dtFmt, dFmt, true));
-                    cr.setPeriodEnd(parseDt(r.get("periodEnd"), dtFmt, dFmt, false));
-                    roundRepo.save(cr);
-                }
-            }
-
-            // 插入类别关联（class_category）
-            Object namesObj = item.get("categoryNames");
-            if (namesObj instanceof List) {
-                for (String catName : (List<String>) namesObj) {
-                    if (catName == null || catName.isBlank()) continue;
-                    final String n = catName.trim();
-                    categoryRepo.findByName(n).ifPresent(cat -> {
-                        ClassCategory cc = new ClassCategory();
-                        cc.setClassId(saved.getId());
-                        cc.setCategoryId(cat.getId());
-                        classCatRepo.save(cc);
-                    });
-                }
-            }
-
-            inserted++;
-        }
-
-        Map<String, Object> response = new LinkedHashMap<>();
-        response.put("code", ResultCode.SUCCESS.getCode());
-        response.put("message", "同步成功");
-        response.put("data", null); // CW 平台各接口 data 类型不同，null 兼容所有类型
-        return response;
+    public Map<String, Object> syncClasses(@RequestBody @Valid SyncClassesRequest req) {
+        return syncService.syncClasses(req.getData());
     }
 
-    /**
-     * 解析日期字符串，支持 ISO 格式（yyyy-MM-dd HH:mm:ss）和纯日期格式（yyyy-MM-dd）
-     * isStart=true：纯日期补 00:00:00
-     * isStart=false：纯日期补 23:59:59
-     */
-    private java.time.LocalDateTime parseDt(Object val, DateTimeFormatter dtFmt,
-                                             DateTimeFormatter dFmt, boolean isStart) {
-        if (val == null) return null;
-        String s = val.toString().trim();
-        try {
-            return java.time.LocalDateTime.parse(s, dtFmt);
-        } catch (Exception e) {
-            java.time.LocalDate d = java.time.LocalDate.parse(s, dFmt);
-            return isStart ? d.atStartOfDay() : d.atTime(23, 59, 59);
-        }
-    }
-
-    // ==================== 类别同步 ====================
-
-    /**
-     * 全量同步类别（先清再插）
-     * Body: { "data": [{ "name": "经管类" }] }
-     */
+    /** 全量同步类别（先清再插） */
     @PostMapping("/categories")
-    @Transactional
-    public Map<String, Object> syncCategories(@RequestBody Map<String, Object> body) {
-        List<Map> dataList = extractList(body, "data");
-
-        // ① 清空 categories 和 class_category（外键约束先清中间表）
-        truncateWithForeignKeyDisabled("ssc_class_category");
-        truncateWithForeignKeyDisabled("ssc_categories");
-
-        // ② 全量插入
-        int inserted = 0;
-        for (Map<String, Object> item : dataList) {
-            String name = (String) item.get("name");
-            if (name == null || name.isBlank()) continue;
-            name = name.trim();
-            Category cat = new Category();
-            cat.setName(name);
-            categoryRepo.save(cat);
-            inserted++;
-        }
-
-        Map<String, Object> response = new LinkedHashMap<>();
-        response.put("code", ResultCode.SUCCESS.getCode());
-        response.put("message", "同步成功");
-        response.put("data", null); // CW 平台各接口 data 类型不同，null 兼容所有类型
-        return response;
+    public Map<String, Object> syncCategories(@RequestBody @Valid SyncCategoriesRequest req) {
+        return syncService.syncCategories(req.getData());
     }
 
-    // ==================== 报名记录同步 ====================
-    // 注意：applications 不允许全量覆盖（会覆盖老师录取状态），只能按条件同步（admit/reject/delete）
-    // 条件同步逻辑在 ApplicationService.syncFromLowCode() 中实现
-
-    // ==================== 系统配置同步 ====================
-
-    /**
-     * 全量同步系统配置
-     * 新结构（v2.2）：sys_config 只有一条记录（id=1）
-     * Body: { "data": [{ "title": "...", "conditions": "..\n..", "notices": "..\n..", "updatedBy": "sync" }] }
-     */
+    /** 全量同步系统配置 */
     @PostMapping("/config")
-    @Transactional
-    public Map<String, Object> syncConfig(@RequestBody Map<String, Object> body) {
-        List<Map> dataList = extractList(body, "data");
-        int inserted = 0, updated = 0;
-
-        for (Map<String, Object> item : dataList) {
-            SysConfig cfg = sysConfigRepo.findById(1).orElse(new SysConfig());
-            cfg.setTitle((String) item.get("title"));
-            cfg.setConditions((String) item.get("conditions"));
-            cfg.setNotices((String) item.get("notices"));
-            cfg.setUpdatedBy((String) item.getOrDefault("updatedBy", "sync"));
-            cfg.setUpdatedAt(LocalDateTime.now());
-            sysConfigRepo.save(cfg);
-            // id=1 记录只可能 updated（不存在时 inserted）
-            inserted++;
-        }
-
-        Map<String, Object> response = new LinkedHashMap<>();
-        response.put("code", ResultCode.SUCCESS.getCode());
-        response.put("message", "同步成功");
-        response.put("data", null); // CW 平台各接口 data 类型不同，null 兼容所有类型
-        return response;
+    public Map<String, Object> syncConfig(@RequestBody @Valid SyncConfigRequest req) {
+        return syncService.syncConfig(req.getData());
     }
-
-    // ==================== 内部工具 ====================
-
-    /** 从body里提取List<Map>，兼容空值 */
-    @SuppressWarnings("unchecked")
-    private List<Map> extractList(Map<String, Object> body, String key) {
-        Object val = body.get(key);
-        if (val == null) return List.of();
-        if (val instanceof List) return (List<Map>) val;
-        return List.of();
-    }
-
 }
