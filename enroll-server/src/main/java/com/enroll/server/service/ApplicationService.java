@@ -1,6 +1,7 @@
 package com.enroll.server.service;
 
 import com.enroll.server.dto.ApplicationDTO;
+import com.enroll.server.dto.R;
 import com.enroll.server.dto.ResultCode;
 import com.enroll.server.entity.Application;
 import com.enroll.server.entity.ClassInfo;
@@ -599,5 +600,24 @@ public class ApplicationService {
             sum += (idCard.charAt(i) - '0') * weights[i];
         }
         return Character.toUpperCase(idCard.charAt(17)) == codes[sum % 11];
+    }
+
+    // ==================== 管理端查询（从 AdminController 搬入） ====================
+
+    /**
+     * 管理端查单条报名详情（含 idCardRaw，从 AdminController 搬入）
+     *
+     * 为什么 includeRaw=true：管理员是内部可信角色，需要看到完整身份证；
+     * 学生端接口则传 false（掩码），见 Task 3 的权限控制。
+     */
+    public Map<String, Object> findByIdForAdmin(Integer id) {
+        return appRepo.findById(id)
+                .map(app -> {
+                    String className = classRepo.findById(app.getClassId())
+                            .map(ClassInfo::getName)
+                            .orElse(null);
+                    return R.ok(toDTO(app, className, null, null, true));
+                })
+                .orElse(R.fail(ResultCode.PARAM_INVALID, "报名记录不存在: id=" + id));
     }
 }

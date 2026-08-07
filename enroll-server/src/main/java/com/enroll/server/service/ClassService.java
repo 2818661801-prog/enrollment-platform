@@ -2,6 +2,7 @@ package com.enroll.server.service;
 
 import com.enroll.server.dto.ClassDTO;
 import com.enroll.server.dto.ClassRoundDTO;
+import com.enroll.server.dto.R;
 import com.enroll.server.entity.ClassCategory;
 import com.enroll.server.entity.ClassInfo;
 import com.enroll.server.entity.ClassRound;
@@ -325,5 +326,40 @@ public class ClassService {
                 classCatRepo.save(cc);
             });
         }
+    }
+
+    // ==================== 班级-类别关联（从 AdminController 搬入） ====================
+
+    /** 获取全部班级-类别关联（从 AdminController 搬入） */
+    public List<ClassCategory> listClassCategories() {
+        return classCatRepo.findAll();
+    }
+
+    /** 新增班级-类别关联（从 AdminController 搬入，含查重） */
+    public Map<String, Object> addClassCategory(Integer classId, Integer categoryId) {
+        if (classId == null || categoryId == null) {
+            return R.fail(ResultCode.PARAM_INVALID, "classId 和 categoryId 不能为空");
+        }
+        List<ClassCategory> existing = classCatRepo.findByClassId(classId);
+        boolean alreadyExists = existing.stream()
+                .anyMatch(cc -> cc.getCategoryId().equals(categoryId));
+        if (alreadyExists) {
+            return R.ok("关联已存在，无需重复创建", null);
+        }
+        ClassCategory cc = new ClassCategory();
+        cc.setClassId(classId);
+        cc.setCategoryId(categoryId);
+        cc.setCreatedAt(java.time.LocalDateTime.now());
+        classCatRepo.save(cc);
+        return R.ok("关联创建成功", null);
+    }
+
+    /** 删除班级-类别关联（从 AdminController 搬入） */
+    public Map<String, Object> deleteClassCategory(Integer id) {
+        if (id == null) {
+            return R.fail(ResultCode.PARAM_INVALID, "id 不能为空");
+        }
+        classCatRepo.deleteById(id);
+        return R.ok("关联已删除", null);
     }
 }
