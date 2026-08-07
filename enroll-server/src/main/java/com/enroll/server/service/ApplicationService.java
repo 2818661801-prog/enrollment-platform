@@ -154,8 +154,13 @@ public class ApplicationService {
             app.setIdCardMasked(idCard == null || idCard.length() != 18 ? idCard : idCard.replaceAll("(?<=^.{6}).{8}(?=.{4}$)", "********"));
             app.setGender((String) form.get("gender"));
             app.setPhone((String) form.get("phone"));
-            app.setHasPhysics((String) form.get("hasPhysics"));
-            app.setHasEnglish((String) form.getOrDefault("hasEnglish", "否"));
+            // hasPhysics/hasEnglish 用显式 null 判断兜底：
+            // 注意不能只用 getOrDefault —— DTO 转换时若表单没选，body 里键存在但值为 null，
+            // getOrDefault 对"键存在值为null"仍返回 null（HashMap 允许 null value）
+            Object hp = form.get("hasPhysics");
+            app.setHasPhysics(hp == null ? "否" : (String) hp);
+            Object he = form.get("hasEnglish");
+            app.setHasEnglish(he == null ? "否" : (String) he);
             app.setAppliedCategory((String) form.get("appliedCategory"));
             app.setClassId(classId);
             app.setStatus(STATUS_APPLIED);
