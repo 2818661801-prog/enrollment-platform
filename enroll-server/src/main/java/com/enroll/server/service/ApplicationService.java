@@ -545,19 +545,31 @@ public class ApplicationService {
     }
 
     public ApplicationDTO toDTO(Application e, String className) {
-        return toDTO(e, className, null);
+        return toDTO(e, className, null, null, false);
     }
 
     public ApplicationDTO toDTO(Application e, String className, Integer innerId) {
-        return toDTO(e, className, innerId, null);
+        return toDTO(e, className, innerId, null, false);
     }
 
     public ApplicationDTO toDTO(Application e, String className, Integer innerId, String classPeriods) {
+        return toDTO(e, className, innerId, classPeriods, false);
+    }
+
+    /**
+     * 核心构建方法（⚠️ 2026-08-07 idCardRaw 权限控制）
+     *
+     * @param includeRaw 是否返回原始身份证号
+     *                   true  = 仅管理员接口传（Phase 2 拆分 AdminApplicationController 时启用）
+     *                   false = 学生端一律 false → idCardRaw 为 null，只返回脱敏 idCard
+     * 为什么：避免学生端 API 泄露完整身份证；前端"我的报名"展示脱敏值即可
+     */
+    public ApplicationDTO toDTO(Application e, String className, Integer innerId, String classPeriods, boolean includeRaw) {
         return ApplicationDTO.builder()
                 .id(e.getId())
                 .name(e.getName())
                 .idCard(e.getIdCardMasked())
-                .idCardRaw(e.getIdCard())
+                .idCardRaw(includeRaw ? e.getIdCard() : null)   // ← 受控：非管理员场景不暴露原始身份证
                 .gender(e.getGender())
                 .phone(e.getPhone())
                 .hasPhysics(e.getHasPhysics())
