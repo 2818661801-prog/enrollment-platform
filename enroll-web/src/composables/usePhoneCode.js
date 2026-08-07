@@ -27,6 +27,7 @@
 import { ref, onUnmounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { sendCodeAPI, loginByCodeAPI } from '../utils/api.js'
+import { useAuthStore } from '../stores/auth.js'
 
 const CDOWN_KEY = 'sms_cd_end'       // localStorage key：倒计时截止时间戳
 const CDOWN_SEC = 60                  // 倒计时秒数
@@ -162,12 +163,11 @@ export function usePhoneCode() {
         return false
       }
       const { token, phone: respPhone } = res.data
-      localStorage.setItem('student_token', token)
-      localStorage.setItem('student_phone', respPhone)
+      // 统一走 Pinia store：写 store（响应式）+ 写 localStorage（持久化）+ 派发 login_changed
+      // 组件不再各自 dispatch 事件，避免重复通知
+      useAuthStore().login(token, respPhone)
       ElMessage.success('登录成功')
       clearCountdown()
-      // 通知 AppHeader 等监听器更新登录状态（右上角登录/退出按钮切换）
-      window.dispatchEvent(new Event('login_changed'))
       return true
     } catch {
       ElMessage.error('网络错误，请稍后重试')

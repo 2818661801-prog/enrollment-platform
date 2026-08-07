@@ -53,33 +53,18 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { storeToRefs } from 'pinia'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { useAuthStore } from '../stores/auth.js'
 import logoImg from '../assets/images/logo.png'
 import lockIcon from '../assets/images/lock.svg'
 import folderIcon from '../assets/images/folder.svg'
 
 const router = useRouter()
-const isLoggedIn = ref(false)
-
-// 每次组件挂载时从 localStorage 读取最新登录态
-// （解决在 MyApplications.vue 登录后返回首页状态不同步的问题）
-function refreshLoginState() {
-  isLoggedIn.value = !!localStorage.getItem('student_token')
-}
-
-onMounted(() => {
-  refreshLoginState()
-  // 监听其他页面修改 token，保证跨页面状态同步
-  window.addEventListener('storage', refreshLoginState)
-  window.addEventListener('login_changed', refreshLoginState)
-})
-
-onUnmounted(() => {
-  window.removeEventListener('storage', refreshLoginState)
-  window.removeEventListener('login_changed', refreshLoginState)
-})
+const auth = useAuthStore()
+// 响应式登录态：login/logout 后自动更新（不再手动读 localStorage + 监听事件）
+const { isLoggedIn } = storeToRefs(auth)
 
 function goLogin() {
   // 当前已在登录页 → 提示用户（避免重复点击感觉没反应）
@@ -106,12 +91,9 @@ function onLogout() {
     alignCenter: true,
     roundButton: true,
   }).then(() => {
-    localStorage.removeItem('student_token')
-    localStorage.removeItem('student_phone')
-    isLoggedIn.value = false
-    // 通知其他页面登录态变化（HomePage 监听 application_changed，会触发 loadData 重刷数据）
-    window.dispatchEvent(new Event('login_changed'))
-    window.dispatchEvent(new Event('application_changed'))
+    // 统一走 Pinia：清 store + localStorage + 派发 login_changed/application_changed
+    // （HomePage 监听 application_changed 会重刷已报名标记）
+    auth.logout()
     ElMessage.success('已退出登录')
   }).catch(() => {})
 }

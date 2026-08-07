@@ -106,16 +106,20 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { storeToRefs } from 'pinia'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { ArrowLeft, User, Loading } from '@element-plus/icons-vue'
 import { withdrawApplicationAPI } from '../utils/api.js'
 import { syncServerTime, trustedNow } from '../utils/data.js'
+import { useAuthStore } from '../stores/auth.js'
 import AppFooter from '../components/AppFooter.vue'
 
 const router = useRouter()
-const isLoggedIn = ref(false)
+const auth = useAuthStore()
+// 响应式登录态：登录/退出自动更新，不再手动读 localStorage + 监听事件
+const { isLoggedIn } = storeToRefs(auth)
 const records = ref([])
 const loading = ref(false)
 const withdrawing = ref(false)  // 撤回按钮防抖
@@ -141,38 +145,30 @@ function onLogout() {
     alignCenter: true,
     roundButton: true,
   }).then(() => {
-    localStorage.removeItem('student_token')
-    localStorage.removeItem('student_phone')
-    isLoggedIn.value = false
-    records.value = []
+    // 统一走 Pinia：清 store + localStorage + 派发事件（watch 会清空记录并跳转登录页）
+    auth.logout()
     ElMessage.success('已退出登录')
-    window.dispatchEvent(new Event('login_changed'))
-    router.push('/student-login')
   }).catch(() => {})
 }
 
-// 监听其他页面触发的退出登录（跨页面通知）
-function onLoginChanged() {
-  if (!localStorage.getItem('student_token')) {
+// 登录态变化（响应式）：退出登录 → 清空记录 + 跳转登录页
+// （覆盖本页主动退出、其他页面退出、token 失效三种场景）
+watch(() => auth.isLoggedIn, (loggedIn) => {
+  if (!loggedIn) {
     records.value = []
-    isLoggedIn.value = false
     router.push('/student-login')
   }
-}
+})
 
 onMounted(() => {
-  window.addEventListener('login_changed', onLoginChanged)
   fetchMyRecords()
 })
-onUnmounted(() => window.removeEventListener('login_changed', onLoginChanged))
 
 async function fetchMyRecords() {
-  const token = localStorage.getItem('student_token')
+  const token = auth.token
   if (!token) {
-    isLoggedIn.value = false
     return
   }
-  isLoggedIn.value = true
   loading.value = true
   try {
     await syncServerTime()
@@ -182,9 +178,8 @@ async function fetchMyRecords() {
     const data = await res.json()
     if (data.code !== 200) {
       if (res.status === 401 || data.message?.includes('登录')) {
-        localStorage.removeItem('student_token')
-        localStorage.removeItem('student_phone')
-        router.push('/student-login')
+        // token 失效：统一走 Pinia 登出（watch 会自动清空记录 + 跳转登录页）
+        auth.logout()
         return
       }
       ElMessage.error(data.message || '获取报名记录失败')

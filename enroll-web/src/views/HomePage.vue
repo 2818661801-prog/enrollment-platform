@@ -78,10 +78,12 @@
 <script setup>
 import { ref, reactive, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
+import { storeToRefs } from 'pinia'
 import { ElMessage } from 'element-plus'
 import { InfoFilled } from '@element-plus/icons-vue'
 import { getClassTimeStatus, parsePeriod, syncServerTime, formatTime } from '../utils/data.js'
 import { fetchClasses, fetchNotice, fetchMyApplicationsMe, fetchServerYear } from '../utils/api.js'
+import { useAuthStore } from '../stores/auth.js'
 import AppFooter from '../components/AppFooter.vue'
 import ClassCard from '../components/ClassCard.vue'
 import HeroBanner from '../components/HeroBanner.vue'
@@ -90,12 +92,13 @@ import NoticeDialog from '../components/NoticeDialog.vue'
 import GroupInfoDialog from '../components/GroupInfoDialog.vue'
 
 const router = useRouter()
+const auth = useAuthStore()
+// 响应式登录态：登录/退出自动更新（AppHeader 退出 → store.logout → 这里自动变 false）
+const { isLoggedIn } = storeToRefs(auth)
 
 const searchKeyword = ref(null)
 const selectedRound = ref(null)  // null=全部轮次，数字=只看第N轮
 const selectedTimeStatus = ref(null)  // null=全部状态，open/not_started/closed
-// 是否已登录（学生端 JWT）
-const isLoggedIn = ref(false)
 // 服务器年份（用于 HeroBanner 动态标题，获取失败则用本地）
 const serverYear = ref(new Date().getFullYear())
 // 班级列表：从后端 API 拿
@@ -133,9 +136,9 @@ let pollTimer = null
 // storage 事件处理器（需存引用才能在 unmount 时正确移除）
 const onStorageChange = (e) => {
   if (e.key === 'application_changed') loadData()
-  // 跨标签页退出登录：另一个标签页删除了 student_token → 清空已报名标记
+  // 跨标签页退出登录：另一个标签页删除了 student_token
+  // store 登录态由 syncAuthAcrossTabs 自动更新（isLoggedIn 响应式变 false），这里只需清空已报名标记
   if (e.key === 'student_token' && !e.newValue) {
-    isLoggedIn.value = false
     Object.keys(appliedClassIds).forEach(k => delete appliedClassIds[k])
     Object.keys(admittedClassIds).forEach(k => delete admittedClassIds[k])
   }
@@ -144,8 +147,7 @@ const onAppChanged = () => loadData()
 const onLoginChanged = () => loadData()
 
 onMounted(async () => {
-  // 检测学生端登录态（有 student_token 视为已登录）
-  isLoggedIn.value = !!localStorage.getItem('student_token')
+  // 登录态从 Pinia store 读取（初始化时已从 localStorage 恢复），无需手动判断
 
   // 先同步服务器时间（解决浏览器本地时间可被篡改的问题）
   try {
@@ -206,7 +208,7 @@ async function loadData() {
     Object.keys(appliedClassIds).forEach(k => delete appliedClassIds[k])
     Object.keys(admittedClassIds).forEach(k => delete admittedClassIds[k])
     // 已登录时加载我的报名记录，标记已报名的班级（只要有记录就不让再报）
-    if (localStorage.getItem('student_token')) {
+    if (auth.isLoggedIn) {
       const myApps = await fetchMyApplicationsMe()
       myApps.forEach(a => {
         const key = String(a.classId)
@@ -317,9 +319,8 @@ const flatTableData = computed(() => {
 })
 
 function onLogout() {
-  isLoggedIn.value = false
-  Object.keys(appliedClassIds).forEach(k => delete appliedClassIds[k])
-  Object.keys(admittedClassIds).forEach(k => delete admittedClassIds[k])
+  // 统一走 Pinia：logout() 派发 application_changed → onAppChanged → loadData 重刷（自动清空已报名标记）
+  auth.logout()
   ElMessage.success('已退出登录')
 }
 

@@ -28,19 +28,24 @@ export const useAuthStore = defineStore('auth', {
   },
 
   actions: {
-    /** 登录成功：写 store（响应式）+ 写 localStorage（持久化） */
+    /** 登录成功：写 store（响应式）+ 写 localStorage（持久化）+ 派发事件通知其他页面 */
     login(token, phone) {
       this.token = token
       this.phone = phone || ''
       localStorage.setItem(TOKEN_KEY, token)
       if (phone) localStorage.setItem(PHONE_KEY, phone)
+      // 通知其他页面（FormPage 预填手机号 / HomePage 重刷已报名标记）
+      window.dispatchEvent(new Event('login_changed'))
     },
-    /** 退出登录：清 store + 清 localStorage */
+    /** 退出登录：清 store + 清 localStorage + 派发事件 */
     logout() {
       this.token = ''
       this.phone = ''
       localStorage.removeItem(TOKEN_KEY)
       localStorage.removeItem(PHONE_KEY)
+      // 通知其他页面：登录态变化 + 报名数据需重刷
+      window.dispatchEvent(new Event('login_changed'))
+      window.dispatchEvent(new Event('application_changed'))
     },
   },
 })

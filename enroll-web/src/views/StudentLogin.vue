@@ -72,22 +72,24 @@
 import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePhoneCode } from '../composables/usePhoneCode.js'
+import { useAuthStore } from '../stores/auth.js'
 import AppFooter from '../components/AppFooter.vue'
 
 const router = useRouter()
 const phoneCode = usePhoneCode()
+const auth = useAuthStore()
 
 // 已登录 → 自动跳转到我的报名，不让访问登录页
 onMounted(() => {
-  if (localStorage.getItem('student_token')) {
+  if (auth.isLoggedIn) {
     router.replace('/my-applications')
   }
 })
 
 async function onLogin() {
+  // usePhoneCode.onLogin 内部已 auth.login()（含派发 login_changed），这里不用再 dispatch
   const ok = await phoneCode.onLogin()
   if (ok) {
-    window.dispatchEvent(new Event('login_changed'))
     router.push('/my-applications')
   }
 }

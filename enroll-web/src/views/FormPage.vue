@@ -241,6 +241,8 @@ import { SuccessFilled, ArrowLeft, InfoFilled } from '@element-plus/icons-vue'
 import { initialForm, getClassTimeStatus, syncServerTime } from '../utils/data.js'
 import { fetchClasses, submitApplicationAPI, checkDuplicateAPI } from '../utils/api.js'
 import { validateIdCard, validateName, inferGender } from '../utils/validate.js'
+import { storeToRefs } from 'pinia'
+import { useAuthStore } from '../stores/auth.js'
 import descIcon from '../assets/images/description.svg'
 import AppFooter from '../components/AppFooter.vue'
 
@@ -290,10 +292,16 @@ function showClassDesc() {
 const classes = ref([])
 
 const form = reactive(initialForm())
-// 已登录时手机号从 localStorage 预填，并禁用编辑
-const isLoggedIn = ref(false)
-const loggedInPhone = ref('')
+// 已登录时手机号从 store 预填，并禁用编辑（store.isLoggedIn 响应式，登录/退出自动更新）
+const auth = useAuthStore()
+const { isLoggedIn } = storeToRefs(auth)
 const serverTimeSynced = ref(true)  // 服务器时间是否同步成功
+
+// 登录态变化（响应式）：登录预填手机号，退出清空（immediate 首次进入即生效）
+watch(() => auth.isLoggedIn, (loggedIn) => {
+  if (loggedIn && auth.phone) form.phone = auth.phone
+  else form.phone = ''
+}, { immediate: true })
 
 onMounted(async () => {
   // 同步服务器时间（防止直接 URL 进入时本地时间被篡改）
@@ -302,15 +310,6 @@ onMounted(async () => {
   } catch (e) {
     console.warn('[FormPage] 服务器时间同步失败：', e)
     serverTimeSynced.value = false
-  }
-
-  // 已登录 → 预填手机号并标记禁用
-  const token = localStorage.getItem('student_token')
-  const phone = localStorage.getItem('student_phone')
-  if (token && phone) {
-    isLoggedIn.value = true
-    loggedInPhone.value = phone
-    form.phone = phone
   }
 
   // 拉取班级列表
@@ -325,19 +324,7 @@ onMounted(async () => {
 
   // 进入页面时清除所有校验提示（不自动校验）
   nextTick(() => formRef.value?.clearValidate())
-
-  // 监听退出登录：清除手机号预填 + 恢复可编辑
-  window.addEventListener('login_changed', onLoginChanged)
 })
-
-// 监听退出登录：清除手机号预填 + 恢复可编辑
-function onLoginChanged() {
-  if (!localStorage.getItem('student_token')) {
-    isLoggedIn.value = false
-    loggedInPhone.value = ''
-    form.phone = ''
-  }
-}
 
 // 监听班级列表 + 路由 classId，两者都就绪才预填表单
 // 多轮班：period 从 URL query param 传入（第2轮时间），而非 cls.period（第一轮时间）
@@ -373,7 +360,6 @@ onMounted(() => { _timer = setInterval(() => { now.value = Date.now() }, 1000); 
 onUnmounted(() => {
   clearInterval(_timer)
   window.removeEventListener('resize', onResize)
-  window.removeEventListener('login_changed', onLoginChanged)
 })
 
 const timeStatus = computed(() => {
