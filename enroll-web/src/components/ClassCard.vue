@@ -67,45 +67,12 @@
       </button>
     </div>
 
-    <!-- 班级介绍弹窗：响应式 width，PC=500px，移动端=calc(100vw-40px) -->
-    <el-dialog
-      v-model="dialogVisible"
-      class="desc-dialog"
-      :width="dialogWidth"
-      :show-close="false"
-      :lock-scroll="windowWidth > 768"
-      append-to-body
-      destroy-on-close
-    >
-      <!-- 自定义头部区域 -->
-      <div class="custom-header">
-        <div class="header-content">
-          <img :src="descIcon" alt="" class="custom-icon" />
-          <div class="header-text">
-            <div class="header-title" :title="cardTitle">{{ cardTitle }}</div>
-          </div>
-        </div>
-        <button class="custom-close-btn" @click="dialogVisible = false">
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
-      </div>
-
-      <!-- 统一内容容器 -->
-      <div class="dialog-inner">
-        <span class="desc-tag">班级介绍</span>
-
-        <div class="desc-dialog-body">
-          <p class="desc-dialog-text">{{ classInfo.description }}</p>
-        </div>
-
-        <div class="desc-dialog-footer">
-          <button class="desc-dialog-confirm-btn" @click="dialogVisible = false">我知道了</button>
-        </div>
-      </div>
-    </el-dialog>
+    <!-- 班级介绍弹窗（独立组件，含响应式宽度自适应） -->
+    <ClassDescDialog
+      v-model="showDesc"
+      :title="cardTitle"
+      :description="classInfo.description"
+    />
   </article>
 </template>
 
@@ -114,7 +81,7 @@ import { computed, ref, onMounted, watch } from 'vue'
 import calendarIcon from '../assets/images/calendar(1).svg'
 import descIcon from '../assets/images/description.svg'
 import { getClassTimeStatus, formatTime } from '../utils/data.js'
-import { useWindowWidth } from '../composables/useWindowWidth.js'
+import ClassDescDialog from './ClassDescDialog.vue'
 
 const props = defineProps({
   classInfo: { type: Object, required: true }, // 班级数据对象
@@ -124,7 +91,7 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['select'])
-const dialogVisible = ref(false)
+const showDesc = ref(false)
 const isExpanded = ref(false)
 const isVisible = ref(false)   // 移动端入场动画：是否已进入视口
 const cardRef = ref(null)      // 卡片 DOM 引用
@@ -134,10 +101,6 @@ watch(() => props.classInfo._uid, () => {
   isExpanded.value = false
 })
 
-// ===== 响应式弹窗宽度：PC 500px，移动端 calc(100vw-40px) =====
-// 为什么用 JS 而不用 CSS @media？Element Plus 把 width 写成 inline style，
-// CSS 选择器在 Teleport + scoped 组合下容易失效，直接控 prop 最可靠
-const windowWidth = useWindowWidth()
 onMounted(() => {
   // 移动端入场动画：IntersectionObserver 检测卡片进入视口时触发
   if (window.innerWidth <= 768 && cardRef.value) {
@@ -153,10 +116,6 @@ onMounted(() => {
     observer.observe(cardRef.value)
   }
 })
-const dialogWidth = computed(() => {
-  return windowWidth.value <= 768 ? 'calc(100vw - 40px)' : '500px'
-})
-// top 用 Element Plus 默认 15vh，不做自定义
 
 // 是否为多轮班（classRounds 数组里有超过 1 条）
 const isMultiRound = computed(() => {
@@ -238,38 +197,12 @@ function onClick() {
 }
 
 function showDescription() {
-  dialogVisible.value = true
+  showDesc.value = true
 }
 </script>
 
-<!-- 非 scoped：覆盖 el-dialog Teleport 到 body 后的尺寸 -->
+<!-- 非 scoped：移动端卡片入场动画（keyframes 名与 animation 引用必须在同一作用域） -->
 <style>
-/* 隐藏原生头部/底部（.el-dialog__header 是 .desc-dialog 的子元素，后代选择器正确） */
-.desc-dialog .el-dialog__header,
-.desc-dialog .el-dialog__footer {
-  display: none !important;
-}
-.desc-dialog .el-dialog__body {
-  padding: 0 !important;
-}
-
-/* PC 端弹窗：width 由 JS 响应式 prop 控制，CSS 只管外观 */
-.el-dialog.desc-dialog {
-  border-radius: 16px;
-  overflow: hidden;
-  padding: 36px !important;
-  box-sizing: border-box !important;
-}
-
-/* 移动端弹窗 */
-@media (max-width: 768px) {
-  .el-dialog.desc-dialog {
-    border-radius: 14px !important;
-    padding: 28px 20px !important;
-    box-sizing: border-box !important;
-  }
-}
-
 /* ==================== 移动端卡片入场动画 ==================== */
 @keyframes cardSlideIn {
   from {
@@ -566,230 +499,4 @@ function showDescription() {
   cursor: not-allowed;
 }
 
-/* ==================== 班级介绍弹窗 · 内部内容组件 ==================== */
-.custom-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 20px;
-}
-
-.header-content {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  flex: 1;
-  min-width: 0;
-}
-
-.custom-icon {
-  width: 28px;
-  height: 28px;
-  flex-shrink: 0;
-}
-
-.header-text {
-  flex: 1;
-  min-width: 0;
-}
-
-.header-title {
-  margin: 0 0 4px;
-  font-size: clamp(15px, 4.2vw, 18px);
-  font-weight: 700;
-  color: #1e293b;
-  line-height: 1.4;
-  word-break: keep-all;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.custom-close-btn {
-  width: 32px;
-  height: 32px;
-  flex-shrink: 0;
-  border-radius: 50%;
-  background: #ef4444;
-  color: #fff;
-  border: 2px solid rgba(255, 255, 255, 0.9);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  transition: all 0.15s ease;
-  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
-}
-
-.custom-close-btn:hover {
-  background: #dc2626;
-  transform: scale(1.08);
-}
-
-.dialog-inner {
-  width: 100%;
-}
-
-.desc-tag {
-  display: block;
-  width: fit-content;
-  margin-bottom: 12px;
-  padding: 4px 12px;
-  font-size: 13px;
-  color: #337eff;
-  font-weight: 600;
-  background: #eaf2ff;
-  border-radius: 6px;
-  letter-spacing: 0.04em;
-}
-
-.desc-dialog-body {
-  margin: 0 0 20px;
-  padding: 16px;
-  background: #f1f5f9;
-  border-radius: 8px;
-  border: 1px solid #cbd5e1;
-  max-height: 35vh;
-  overflow-y: auto;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.desc-dialog-text {
-  font-size: 15px;
-  line-height: 1.9;
-  color: #1e293b;
-  margin: 0;
-  white-space: pre-wrap;
-  word-break: break-word;
-  text-align: justify;
-  letter-spacing: 0.02em;
-}
-
-.desc-dialog-footer {
-  width: 100%;
-}
-
-.desc-dialog-confirm-btn {
-  width: 100%;
-  height: 42px;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  background: #337eff;
-  color: #fff;
-  border: none;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.desc-dialog-confirm-btn:hover {
-  background: #2563eb;
-}
-
-/* ==================== 移动端适配 ==================== */
-@media (max-width: 768px) {
-  .card-body {
-    padding: 15px 17px;
-    gap: 8px;
-  }
-  .card-content {
-    display: flex;               /* 移动端恢复 flex，自然流 */
-    flex-direction: column;
-    gap: 0;
-  }
-  .card-head {
-    position: relative;
-    display: flex;
-    align-items: flex-start;
-    gap: 6px;
-    margin-top: 9px;
-  }
-  .card-name {
-    font-size: 15px;
-    padding-right: 52px;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    display: -webkit-box;
-    overflow: hidden;
-  }
-  .desc-btn {
-    position: absolute;
-    top: 0;
-    right: 0;
-    padding: 4px 6px;
-  }
-  .card-rule {
-    display: block;
-  }
-  .card-periods {
-    gap: 4px;
-  }
-  .card-btn {
-    height: 36px;
-    font-size: 13px;
-  }
-}
-/* ==================== 移动端弹窗内容适配 ==================== */
-@media (max-width: 768px) {
-  .custom-header {
-    gap: 10px;
-    margin-bottom: 14px;
-  }
-
-  .header-content {
-    gap: 8px;
-  }
-
-  .custom-icon {
-    width: 24px;
-    height: 24px;
-  }
-
-  .header-title {
-    font-size: clamp(14px, 4vw, 15px) !important;
-    line-height: 1.4 !important;
-  }
-
-  .custom-close-btn {
-    width: 36px !important;
-    height: 36px !important;
-    border-width: 2px !important;
-    box-shadow: 0 3px 10px rgba(239, 68, 68, 0.45) !important;
-  }
-
-  .custom-close-btn svg {
-    width: 18px !important;
-    height: 18px !important;
-  }
-
-  .desc-dialog-body {
-    margin: 0 0 14px;
-    padding: 12px !important;
-    background: #f1f5f9 !important;
-    border: 1px solid #cbd5e1 !important;
-    max-height: 35vh;
-    border-radius: 8px;
-  }
-
-  .desc-dialog-text {
-    font-size: 14px !important;
-    line-height: 1.85 !important;
-    text-align: justify !important;
-  }
-
-  .desc-tag {
-    font-size: 12px;
-    padding: 3px 10px;
-    margin-bottom: 10px;
-  }
-
-  .desc-dialog-confirm-btn {
-    height: 46px !important;
-    font-size: 15px;
-    border-radius: 10px !important;
-  }
-}
 </style>
