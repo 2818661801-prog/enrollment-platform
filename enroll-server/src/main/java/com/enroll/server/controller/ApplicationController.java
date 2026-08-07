@@ -2,13 +2,15 @@ package com.enroll.server.controller;
 
 import com.enroll.server.dto.R;
 import com.enroll.server.dto.ResultCode;
+import com.enroll.server.dto.request.ApplicationSubmitRequest;
+import com.enroll.server.dto.request.ApplicationUpdateRequest;
+import com.enroll.server.dto.request.WithdrawRequest;
 import com.enroll.server.security.JwtUtil;
 import com.enroll.server.service.ApplicationService;
-import com.enroll.server.util.RequestUtils;
-import io.jsonwebtoken.Claims;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
-import jakarta.servlet.http.HttpServletRequest;
 import java.util.Map;
 
 /**
@@ -20,9 +22,9 @@ import java.util.Map;
  *   POST   /api/applications           — 提交报名
  *   POST   /api/applications/update    — 修改报名信息
  *   POST   /api/applications/withdraw  — 撤回报名
- *   GET    /api/applications/my        — 我的报名（idCard 参数）
+ *   GET    /api/applications/my        — 我的报名（JWT 认证，手机号自动提取）
  *   GET    /api/applications/me        — 我的报名（JWT 认证，手机号自动提取）
- *   POST   /api/applications/my-verify — 密码查询
+ *   GET    /api/applications/check     — 报名查重
  */
 @RestController
 @RequestMapping("/api/applications")
@@ -38,7 +40,18 @@ public class ApplicationController {
 
     /** 提交报名 */
     @PostMapping
-    public Map<String, Object> submit(@RequestBody Map<String, Object> form) {
+    public Map<String, Object> submit(@RequestBody @Valid ApplicationSubmitRequest req) {
+        // Request DTO → Map 转换（ApplicationService.submit 仍接受 Map，后续可改）
+        java.util.Map<String, Object> form = new java.util.HashMap<>();
+        form.put("name", req.getName());
+        form.put("idCard", req.getIdCard());
+        form.put("phone", req.getPhone());
+        form.put("gender", req.getGender());
+        form.put("hasPhysics", req.getHasPhysics());
+        form.put("hasEnglish", req.getHasEnglish());
+        form.put("appliedCategory", req.getAppliedCategory());
+        form.put("classId", req.getClassId());
+        form.put("noticeAgreed", req.getNoticeAgreed());
         return R.ok("提交成功", applicationService.submit(form));
     }
 
@@ -48,41 +61,31 @@ public class ApplicationController {
      */
     @GetMapping("/my")
     public Map<String, Object> myApplications(HttpServletRequest request) {
-        String authHeader = request.getHeader("Authorization");
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            return R.fail(ResultCode.PARAM_INVALID, "请先登录");
-        }
-        String token = authHeader.substring(7);
-        try {
-            Claims claims = jwtUtil.parse(token);
-            String phone = claims.getSubject();
-            String role = String.valueOf(claims.get("role"));
-            if (!"student".equals(role)) {
-                return R.fail(ResultCode.PARAM_INVALID, "无效的凭证");
-            }
-            // log.info("【我的报名】phone={}", phone);
-            return R.ok(applicationService.findMyByPhone(phone));
-        } catch (Exception e) {
-            // log.warn("JWT 解析失败: {}", e.getMessage());
-            return R.fail(ResultCode.PARAM_INVALID, "登录已过期，请重新登录");
-        }
+        String phone = jwtUtil.getStudentPhoneFromAuthHeader(request.getHeader("Authorization"));
+        if (phone == null) return R.fail(ResultCode.PARAM_INVALID, "请先登录");
+        return R.ok(applicationService.findMyByPhone(phone));
     }
 
     /** 撤回报名（软删除：status → 0）
      *  2026-07-02 重构：PUT → POST（主人规则） */
     @PostMapping("/withdraw")
-    public Map<String, Object> withdraw(@RequestBody Map<String, Object> body) {
-        Integer id = RequestUtils.parseId(body, "id");
-        applicationService.withdraw(id);
+    public Map<String, Object> withdraw(@RequestBody @Valid WithdrawRequest req) {
+        applicationService.withdraw(req.getId());
         return R.ok("已撤回", null);
     }
 
     /** 修改报名信息（姓名/电话/选科）
      *  2026-07-02 重构：PUT → POST（主人规则） */
     @PostMapping("/update")
-    public Map<String, Object> update(@RequestBody Map<String, Object> body) {
-        Integer id = RequestUtils.parseId(body, "id");
-        applicationService.updateApp(id, body);
+    public Map<String, Object> update(@RequestBody @Valid ApplicationUpdateRequest req) {
+        java.util.Map<String, Object> body = new java.util.HashMap<>();
+        if (req.getName() != null) body.put("name", req.getName());
+        if (req.getPhone() != null) body.put("phone", req.getPhone());
+        if (req.getIdCard() != null) body.put("idCard", req.getIdCard());
+        if (req.getGender() != null) body.put("gender", req.getGender());
+        if (req.getHasPhysics() != null) body.put("hasPhysics", req.getHasPhysics());
+        if (req.getHasEnglish() != null) body.put("hasEnglish", req.getHasEnglish());
+        applicationService.updateApp(req.getId(), body);
         return R.ok("修改成功", null);
     }
 
@@ -93,24 +96,9 @@ public class ApplicationController {
      */
     @GetMapping("/me")
     public Map<String, Object> myApplicationsMe(HttpServletRequest request) {
-        String authHeader = request.getHeader("Authorization");
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            return R.fail(ResultCode.PARAM_INVALID, "缺少有效的登录凭证，请重新登录");
-        }
-        String token = authHeader.substring(7);
-        try {
-            Claims claims = jwtUtil.parse(token);
-            String phone = claims.getSubject();
-            String role = String.valueOf(claims.get("role"));
-            if (!"student".equals(role)) {
-                return R.fail(ResultCode.PARAM_INVALID, "无效的登录凭证");
-            }
-            // log.info("【我的报名】phone={}", phone);
-            return R.ok(applicationService.findMyByPhone(phone));
-        } catch (Exception e) {
-            // log.warn("JWT 解析失败: {}", e.getMessage());
-            return R.fail(ResultCode.PARAM_INVALID, "登录已过期，请重新登录");
-        }
+        String phone = jwtUtil.getStudentPhoneFromAuthHeader(request.getHeader("Authorization"));
+        if (phone == null) return R.fail(ResultCode.PARAM_INVALID, "缺少有效的登录凭证，请重新登录");
+        return R.ok(applicationService.findMyByPhone(phone));
     }
 
     /**
@@ -119,7 +107,7 @@ public class ApplicationController {
      * GET /api/applications/check?phone=&idCard=&classId=
      */
     @GetMapping("/check")
-    public java.util.Map<String, Object> checkDuplicate(
+    public Map<String, Object> checkDuplicate(
             @RequestParam String phone,
             @RequestParam String idCard,
             @RequestParam Integer classId) {

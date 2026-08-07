@@ -1,5 +1,6 @@
 package com.enroll.server.service;
 
+import com.enroll.server.dto.R;
 import com.enroll.server.dto.ResultCode;
 import com.enroll.server.exception.BusinessException;
 import com.enroll.server.security.JwtUtil;
@@ -14,6 +15,8 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -39,6 +42,7 @@ public class AuthService {
 
     private final StringRedisTemplate redis;
     private final JwtUtil jwtUtil;
+    private final com.enroll.server.repository.ApplicationRepository appRepo;
 
     @Value("${sms.sn}")
     private String smsSn;
@@ -56,9 +60,11 @@ public class AuthService {
     @Value("${sms.test-mode:false}")
     private boolean testMode;
 
-    public AuthService(StringRedisTemplate redis, JwtUtil jwtUtil) {
+    public AuthService(StringRedisTemplate redis, JwtUtil jwtUtil,
+                       com.enroll.server.repository.ApplicationRepository appRepo) {
         this.redis = redis;
         this.jwtUtil = jwtUtil;
+        this.appRepo = appRepo;
     }
 
     /**
@@ -181,6 +187,24 @@ public class AuthService {
         String token = jwtUtil.generateStudent(phone);
         // log.info("【学生登录成功】phone={}", phone);
         return token;
+    }
+
+    /** 登录后查报名状态，构造响应（从 AuthController 搬入） */
+    public Map<String, Object> getLoginResponse(String phone, String token) {
+        List<com.enroll.server.entity.Application> apps = appRepo.findByPhoneAndStatusIn(phone, List.of(1, 2, 3, 4));
+        if (apps.isEmpty()) {
+            return R.ok("登录成功", Map.of("token", token, "phone", phone,
+                    "hasRegistration", false, "status", 0));
+        }
+        com.enroll.server.entity.Application app = apps.get(0);
+        return R.ok("登录成功", Map.of(
+                "token", token,
+                "phone", phone,
+                "hasRegistration", true,
+                "status", app.getStatus(),
+                "classId", app.getClassId(),
+                "applyTime", app.getApplyTime() != null ? app.getApplyTime().toString() : null
+        ));
     }
 
     /**

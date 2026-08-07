@@ -1,17 +1,17 @@
 package com.enroll.server.controller;
 
-import com.enroll.server.dto.ResultCode;
 import com.enroll.server.dto.R;
-import com.enroll.server.entity.Application;
-import com.enroll.server.repository.ApplicationRepository;
-import com.enroll.server.security.JwtUtil;
+import com.enroll.server.dto.ResultCode;
+import com.enroll.server.dto.request.AdminLoginRequest;
+import com.enroll.server.dto.request.SmsLoginRequest;
+import com.enroll.server.dto.request.SmsSendRequest;
 import com.enroll.server.service.AuthService;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.web.bind.annotation.*;
-
+import com.enroll.server.security.JwtUtil;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
-import java.util.List;
+import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 
 /**
@@ -30,10 +30,8 @@ import java.util.Map;
 @RequestMapping("/api/auth")
 public class AuthController {
 
-
     private final JwtUtil jwtUtil;
     private final AuthService authService;
-    private final ApplicationRepository appRepo;
 
     // 管理员账号密码（⚠️ 2026-08-07 fail-closed 整改：不再写死 fallback，
     // 改从 application.yml 读取 ${ADMIN_USERNAME:***REMOVED***} / ${ADMIN_PASSWORD:***REMOVED***}，
@@ -44,26 +42,20 @@ public class AuthController {
     @Value("${admin.password}")
     private String adminPassword;
 
-    public AuthController(JwtUtil jwtUtil, AuthService authService, ApplicationRepository appRepo) {
+    public AuthController(JwtUtil jwtUtil, AuthService authService) {
         this.jwtUtil = jwtUtil;
         this.authService = authService;
-        this.appRepo = appRepo;
     }
 
     /** 管理员账号密码登录 → 返 JWT（⚠️ S8 修复：同时设 httpOnly Cookie） */
     @PostMapping("/login")
-    public Map<String, Object> login(@RequestBody Map<String, String> body, HttpServletResponse response) {
-        String username = body.get("username");
-        String password = body.get("password");
-
-        if (username == null || password == null) {
-            return R.fail(ResultCode.PARAM_INVALID, "账号和密码不能为空");
-        }
-        if (!adminUsername.equals(username) || !adminPassword.equals(password)) {
+    public Map<String, Object> login(@RequestBody @Valid AdminLoginRequest req, HttpServletResponse response) {
+        // @Valid + @NotBlank 已保证 username/password 非空，这里只需比对
+        if (!adminUsername.equals(req.getUsername()) || !adminPassword.equals(req.getPassword())) {
             return R.fail(ResultCode.PARAM_INVALID, "账号或密码错误");
         }
 
-        String token = jwtUtil.generateAdmin(username);
+        String token = jwtUtil.generateAdmin(req.getUsername());
         // S8 修复：httpOnly Cookie，JS 无法通过 document.cookie 读取
         Cookie cookie = new Cookie("admin_token", token);
         cookie.setHttpOnly(true);
@@ -73,15 +65,13 @@ public class AuthController {
         cookie.setAttribute("SameSite", "Strict");           // 防 CSRF
         response.addCookie(cookie);
 
-        // log.info("管理员登录成功：username={}", username);
-        return R.ok("登录成功", Map.of("token", token, "username", username));
+        return R.ok("登录成功", Map.of("token", token, "username", req.getUsername()));
     }
 
     /** 学生发送验证码（Redis 存储，5分钟有效） */
     @PostMapping("/send-code")
-    public Map<String, Object> sendCode(@RequestBody Map<String, String> body) {
-        String phone = body.get("phone");
-        authService.sendCode(phone);
+    public Map<String, Object> sendCode(@RequestBody @Valid SmsSendRequest req) {
+        authService.sendCode(req.getPhone());
         return R.ok("验证码已发送", null);
     }
 
@@ -90,10 +80,8 @@ public class AuthController {
      * status=4 表示未报名（登录后无记录）
      */
     @PostMapping("/login/sms")
-    public Map<String, Object> loginSms(@RequestBody Map<String, String> body, HttpServletResponse response) {
-        String phone = body.get("phone");
-        String code  = body.get("code");
-        String token = authService.verifyCodeAndLogin(phone, code);
+    public Map<String, Object> loginSms(@RequestBody @Valid SmsLoginRequest req, HttpServletResponse response) {
+        String token = authService.verifyCodeAndLogin(req.getPhone(), req.getCode());
 
         // S8 修复：httpOnly Cookie，JS 无法通过 document.cookie 读取
         Cookie cookie = new Cookie("student_token", token);
@@ -102,21 +90,7 @@ public class AuthController {
         cookie.setMaxAge(86400); // 24小时
         response.addCookie(cookie);
 
-        // 查该手机号是否有有效报名记录（status=1/2/3/4）
-        List<Application> apps = appRepo.findByPhoneAndStatusIn(phone, List.of(1, 2, 3, 4));
-        if (apps.isEmpty()) {
-            // 无记录 → status=0，未报名
-            return R.ok("登录成功", Map.of("token", token, "phone", phone,
-                    "hasRegistration", false, "status", 0));
-        }
-        Application app = apps.get(0);
-        return R.ok("登录成功", Map.of(
-                "token", token,
-                "phone", phone,
-                "hasRegistration", true,
-                "status", app.getStatus(),
-                "classId", app.getClassId(),
-                "applyTime", app.getApplyTime().toString()
-        ));
+        // 查该手机号是否有有效报名记录（status=1/2/3/4）——逻辑下沉到 AuthService
+        return authService.getLoginResponse(req.getPhone(), token);
     }
 }

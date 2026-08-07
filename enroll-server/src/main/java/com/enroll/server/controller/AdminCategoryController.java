@@ -1,11 +1,12 @@
 package com.enroll.server.controller;
 
-import com.enroll.server.dto.CategoryDTO;
 import com.enroll.server.dto.R;
+import com.enroll.server.dto.request.CategoryCreateRequest;
+import com.enroll.server.dto.request.CategoryDeleteRequest;
+import com.enroll.server.dto.request.CategoryUpdateRequest;
 import com.enroll.server.service.CategoryService;
-import com.enroll.server.util.RequestUtils;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.Map;
 
 /**
@@ -37,32 +38,20 @@ public class AdminCategoryController {
     }
 
     @PostMapping
-    public Map<String, Object> create(@RequestBody Map<String, String> body) {
-        String name = body.get("name");
-        CategoryDTO created = categoryService.create(name);
-        return R.ok(created);
+    public Map<String, Object> create(@RequestBody @Valid CategoryCreateRequest req) {
+        return R.ok(categoryService.create(req.getName()));
     }
 
-    /**
-     * 修改类别（POST 替代原有 PUT）
-     * Body: { id: 1, name: "新名称" }
-     */
+    /** 修改类别（POST 替代原有 PUT） */
     @PostMapping("/update")
-    public Map<String, Object> update(@RequestBody Map<String, Object> body) {
-        Integer id = RequestUtils.parseId(body, "id");
-        String name = (String) body.get("name");
-        CategoryDTO updated = categoryService.update(id, name);
-        return R.ok(updated);
+    public Map<String, Object> update(@RequestBody @Valid CategoryUpdateRequest req) {
+        return R.ok(categoryService.update(req.getId(), req.getName()));
     }
 
-    /**
-     * 删除类别（POST 替代原有 DELETE）
-     * Body: { id: 1 }
-     */
+    /** 删除类别（POST 替代原有 DELETE） */
     @PostMapping("/delete")
-    public Map<String, Object> delete(@RequestBody Map<String, Object> body) {
-        Integer id = RequestUtils.parseId(body, "id");
-        categoryService.delete(id);
+    public Map<String, Object> delete(@RequestBody @Valid CategoryDeleteRequest req) {
+        categoryService.delete(req.getId());
         return R.ok(null);
     }
 }
