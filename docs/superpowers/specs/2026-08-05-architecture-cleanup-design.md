@@ -3,6 +3,7 @@
 > 日期：2026-08-05
 > 状态：已批准
 > 分支策略：从 main 创建 `refactor/architecture-cleanup` 分支，逐 Phase 推进
+> 验证铁律：每个 Phase 完成后必须调用 `/verification-before-completion` 技能，实际跑命令验证，不能光说"做完了"
 
 ---
 
