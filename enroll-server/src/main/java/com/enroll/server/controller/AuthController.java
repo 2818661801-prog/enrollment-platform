@@ -6,6 +6,7 @@ import com.enroll.server.entity.Application;
 import com.enroll.server.repository.ApplicationRepository;
 import com.enroll.server.security.JwtUtil;
 import com.enroll.server.service.AuthService;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.servlet.http.Cookie;
@@ -34,11 +35,14 @@ public class AuthController {
     private final AuthService authService;
     private final ApplicationRepository appRepo;
 
-    // 固定管理员账号（⚠️ S3 修复：生产通过环境变量注入，禁止写死）
-    private static final String ADMIN_USER = System.getenv("AUTH_ADMIN_USER") != null
-        ? System.getenv("AUTH_ADMIN_USER") : "***REMOVED***";
-    private static final String ADMIN_PWD  = System.getenv("AUTH_ADMIN_PASSWORD") != null
-        ? System.getenv("AUTH_ADMIN_PASSWORD") : "***REMOVED***";
+    // 管理员账号密码（⚠️ 2026-08-07 fail-closed 整改：不再写死 fallback，
+    // 改从 application.yml 读取 ${ADMIN_USERNAME:***REMOVED***} / ${ADMIN_PASSWORD:***REMOVED***}，
+    // 开发环境 yml 有 fallback 方便调试，生产由堡垒机环境变量覆盖）
+    @Value("${admin.username}")
+    private String adminUsername;
+
+    @Value("${admin.password}")
+    private String adminPassword;
 
     public AuthController(JwtUtil jwtUtil, AuthService authService, ApplicationRepository appRepo) {
         this.jwtUtil = jwtUtil;
@@ -55,7 +59,7 @@ public class AuthController {
         if (username == null || password == null) {
             return R.fail(ResultCode.PARAM_INVALID, "账号和密码不能为空");
         }
-        if (!ADMIN_USER.equals(username) || !ADMIN_PWD.equals(password)) {
+        if (!adminUsername.equals(username) || !adminPassword.equals(password)) {
             return R.fail(ResultCode.PARAM_INVALID, "账号或密码错误");
         }
 

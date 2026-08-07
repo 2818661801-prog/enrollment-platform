@@ -47,6 +47,11 @@ sms:
   sign: 【杭州电子科技大学信息工程学院】
   test-mode: true
 
+# 管理员账号（开发环境保留 fallback 方便调试，生产由堡垒机环境变量覆盖）
+admin:
+  username: ${ADMIN_USERNAME:***REMOVED***}
+  password: ${ADMIN_PASSWORD:***REMOVED***}
+
 jwt:
   enabled: true
   secret: ${JWT_SECRET:***REMOVED***}
