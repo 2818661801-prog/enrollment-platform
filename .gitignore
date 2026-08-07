@@ -20,3 +20,11 @@ enroll-server/src/main/resources/application-external.yml
 # Environment secrets (never commit real credentials)
 *.pem
 *.key
+
+# 运行时产物（前端构建后复制进后端静态目录，部署时重建，不入库）
+enroll-server/src/main/resources/static/
+enroll-server/data/
+
+# 临时文件 / 截图
+tmp/
+create_class.json
