@@ -38,7 +38,6 @@
           @update:selectedRound="selectedRound = $event"
           @update:selectedTimeStatus="selectedTimeStatus = $event"
           @reset="searchKeyword = null"
-          @logout="onLogout"
         />
 
         <!-- 卡片 -->
@@ -317,12 +316,6 @@ const flatTableData = computed(() => {
     }
   })
 })
-
-function onLogout() {
-  // 统一走 Pinia：logout() 派发 application_changed → onAppChanged → loadData 重刷（自动清空已报名标记）
-  auth.logout()
-  ElMessage.success('已退出登录')
-}
 
 function onAgreeNotice() {
   // 记录同意时间戳，后续报名提交时后端写入 notice_agreed=1
