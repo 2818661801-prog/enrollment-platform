@@ -405,9 +405,9 @@ onUnmounted(() => {
 
 /* ==================== 轮次下拉框高度对齐 ==================== */
 /* el-select 内部 input 高度 + line-height 与 .user-btn(36px) 对齐 */
-::v-deep(.pc-round-select .el-select__wrapper),
-::v-deep(.pc-time-select .el-select__wrapper),
-::v-deep(.mobile-actions-row .el-select__wrapper) {
+:deep(.pc-round-select .el-select__wrapper),
+:deep(.pc-time-select .el-select__wrapper),
+:deep(.mobile-actions-row .el-select__wrapper) {
   height: 34px !important;
   min-height: 34px !important;
   line-height: 34px !important;
@@ -416,14 +416,14 @@ onUnmounted(() => {
   border-radius: 8px;
   font-size: 14px;
 }
-::v-deep(.pc-round-select .el-select__wrapper:hover),
-::v-deep(.pc-time-select .el-select__wrapper:hover),
-::v-deep(.mobile-actions-row .el-select__wrapper:hover) {
+:deep(.pc-round-select .el-select__wrapper:hover),
+:deep(.pc-time-select .el-select__wrapper:hover),
+:deep(.mobile-actions-row .el-select__wrapper:hover) {
   box-shadow: 0 0 0 3px rgba(59, 123, 248, 0.1), 1px solid #3b7bf8 !important;
 }
-::v-deep(.pc-round-select .el-select__wrapper.is-focused),
-::v-deep(.pc-time-select .el-select__wrapper.is-focused),
-::v-deep(.mobile-actions-row .el-select__wrapper.is-focused) {
+:deep(.pc-round-select .el-select__wrapper.is-focused),
+:deep(.pc-time-select .el-select__wrapper.is-focused),
+:deep(.mobile-actions-row .el-select__wrapper.is-focused) {
   box-shadow: 0 0 0 3px rgba(59, 123, 248, 0.15), 1px solid #3b7bf8 !important;
 }
 

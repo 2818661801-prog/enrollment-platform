@@ -595,12 +595,12 @@ async function onSubmit() {
     display: block;
     text-align: left;
     padding-bottom: 4px;
-    width: auto !important;
+    width: auto !important;   /* 覆盖 Element Plus inline style 设的 label width */
     font-size: 13px;
     line-height: 1.4;
   }
   .form-card :deep(.el-form-item__content) {
-    margin-left: 0 !important;
+    margin-left: 0 !important;   /* 覆盖 Element Plus inline style 设的 margin-left */
   }
   /* 杭电班类别 radio-button 纵向排列 */
   .form-row :deep(.el-radio-group) {

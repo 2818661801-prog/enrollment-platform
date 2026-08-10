@@ -132,6 +132,8 @@ const admittedClassIds = reactive({})
 // 仅首次进入弹窗（关闭浏览器标签后重开才再弹）
 // 为什么用 sessionStorage：关闭标签即清除，localStorage 会永久记着
 let pollTimer = null
+let pollDelay = 30_000              // 正常间隔 30s
+const MAX_POLL_DELAY = 5 * 60_000   // 最大退避 5min
 // storage 事件处理器（需存引用才能在 unmount 时正确移除）
 const onStorageChange = (e) => {
   if (e.key === 'application_changed') loadData()
@@ -179,7 +181,15 @@ onMounted(async () => {
   }
 
   // 每 30 秒轮询，管理员操作后返回首页能自动看到最新数据
-  pollTimer = setInterval(loadData, 30_000)
+  // 失败时指数退避（最大 5min），成功恢复 30s
+  function schedulePoll() {
+    pollTimer = setTimeout(async () => {
+      const ok = await loadData()
+      pollDelay = ok ? 30_000 : Math.min(pollDelay * 2, MAX_POLL_DELAY)
+      schedulePoll()
+    }, pollDelay)
+  }
+  schedulePoll()
 
   // 监听其他页面报名变化，刷新已报名状态（storage 事件跨标签页，自定义事件同标签页）
   window.addEventListener('storage', onStorageChange)
@@ -188,7 +198,7 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
-  if (pollTimer) clearInterval(pollTimer)
+  if (pollTimer) clearTimeout(pollTimer)
   window.removeEventListener('storage', onStorageChange)
   window.removeEventListener('application_changed', onAppChanged)
   window.removeEventListener('login_changed', onLoginChanged)
@@ -215,9 +225,11 @@ async function loadData() {
         if (a.status === '3') admittedClassIds[key] = true
       })
     }
+    return true   // 成功
   } catch (err) {
     loadError.value = '班级数据加载失败，请检查后端是否启动'
     ElMessage.error(loadError.value)
+    return false  // 失败
   } finally {
     loading.value = false
   }
@@ -335,13 +347,6 @@ async function goFormDirect({ id, period }) {
   showNotice.value = false
   await nextTick()
   router.push(`/form/${id}?period=${encodeURIComponent(period)}`)
-}
-
-/**
- * 判断是否为成电班（多轮班级，id=2,3 或 name 含"成电联合培养"）
- */
-function isChengDian(cls) {
-  return cls.id === 2 || cls.id === 3 || (cls.name && cls.name.includes('成电联合培养'))
 }
 
 /**
