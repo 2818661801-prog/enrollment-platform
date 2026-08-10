@@ -6,6 +6,8 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+
 /**
  * 班级数据访问层
  *
@@ -40,4 +42,7 @@ public interface ClassInfoRepository extends JpaRepository<ClassInfo, Integer> {
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query(value = "TRUNCATE TABLE ssc_classes", nativeQuery = true)
     void truncateAll();
+
+    /** 查未删除班级（学生端用，替代 findAll().stream().filter()） */
+    List<ClassInfo> findByIsDeleted(Integer isDeleted);
 }

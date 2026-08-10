@@ -1,8 +1,10 @@
 package com.enroll.server.controller;
 
+import com.enroll.server.util.IpUtil;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -33,7 +35,7 @@ public class TimeController {
 
     @GetMapping("/time")
     public Map<String, Object> getServerTime(HttpServletRequest request) {
-        String ip = getClientIp(request);
+        String ip = IpUtil.getClientIp(request);
         if (ip == null) ip = "unknown";
         long now = System.currentTimeMillis();
 
@@ -60,19 +62,13 @@ public class TimeController {
         return Map.of("year", year);
     }
 
-    /** 清理过期 IP（防止内存泄漏，惰性清理） */
-    public static void cleanExpired() {
+    /** 每 60 秒清理过期 IP，防止内存泄漏（原来是死代码，从未被调用） */
+    @Scheduled(fixedRate = 60_000)
+    public void cleanExpired() {
         long now = System.currentTimeMillis();
         RATE_LIMIT.forEach((ip, ts) -> {
             if (now - ts > WINDOW_MS * 2) RATE_LIMIT.remove(ip);
         });
     }
 
-    private String getClientIp(HttpServletRequest request) {
-        String ip = request.getHeader("X-Forwarded-For");
-        if (ip == null || ip.isBlank()) ip = request.getHeader("X-Real-IP");
-        if (ip == null || ip.isBlank()) ip = request.getRemoteAddr();
-        if (ip != null && ip.contains(",")) ip = ip.split(",")[0].trim();
-        return ip;
-    }
 }

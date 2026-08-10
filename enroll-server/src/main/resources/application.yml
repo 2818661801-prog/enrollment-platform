@@ -61,14 +61,14 @@ jwt:
 
 logging:
   level:
-    root: OFF
-    com.enroll.server: OFF
+    root: WARN
+    com.enroll.server: INFO
     org.hibernate: OFF
     org.hibernate.SQL: OFF
     org.hibernate.orm.jdbc.bind: OFF
     # 第三方库 WARN 清理
-    org.apache: OFF           # Tomcat
-    io.netty: OFF             # Netty
-    com.google: OFF           # Guava
-    sun.net: OFF              # Sun-net
-    java.sql: OFF             # JDBC
+    org.apache: WARN           # Tomcat
+    io.netty: WARN             # Netty
+    com.google: OFF            # Guava
+    sun.net: OFF               # Sun-net
+    java.sql: OFF              # JDBC

@@ -7,6 +7,10 @@ spring:
     hibernate:
       ddl-auto: validate
 
+# ⚠️ 生产必须关闭测试模式，否则任何手机号+验证码666666均可登录（不发真实短信）
+sms:
+  test-mode: false
+
 logging:
   level:
     root: WARN

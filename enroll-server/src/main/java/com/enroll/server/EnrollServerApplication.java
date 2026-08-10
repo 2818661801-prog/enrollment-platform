@@ -3,6 +3,7 @@ package com.enroll.server;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.scheduling.annotation.EnableAsync;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
  * 报名系统后端启动类
@@ -14,6 +15,7 @@ import org.springframework.scheduling.annotation.EnableAsync;
  */
 @SpringBootApplication
 @EnableAsync  // 启用异步，短信发送不阻塞主线程
+@EnableScheduling  // 启用定时任务，TimeController.cleanExpired 定期清理过期 IP 防内存泄漏
 public class EnrollServerApplication {
 
     public static void main(String[] args) {

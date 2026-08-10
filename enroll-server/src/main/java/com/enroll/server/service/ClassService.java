@@ -33,27 +33,28 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class ClassService {
 
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private final ObjectMapper objectMapper;
 
     private final ClassInfoRepository classRepo;
     private final ClassRoundRepository roundRepo;
     private final ClassCategoryRepository classCatRepo;
     private final CategoryRepository categoryRepo;
 
-    public ClassService(ClassInfoRepository classRepo,
+    public ClassService(ObjectMapper objectMapper,
+                        ClassInfoRepository classRepo,
                         ClassRoundRepository roundRepo,
                         ClassCategoryRepository classCatRepo,
                         CategoryRepository categoryRepo) {
+        this.objectMapper = objectMapper;
         this.classRepo = classRepo;
         this.roundRepo = roundRepo;
         this.classCatRepo = classCatRepo;
         this.categoryRepo = categoryRepo;
     }
 
-    /** 查所有未删除班级（学生端用） */
+    /** 查所有未删除班级（学生端用，SQL WHERE 替代内存 filter） */
     public List<ClassDTO> listAll() {
-        return classRepo.findAll().stream()
-                .filter(c -> c.getIsDeleted() == null || c.getIsDeleted() == 0)
+        return classRepo.findByIsDeleted(0).stream()
                 .map(this::toDTO)
                 .collect(Collectors.toList());
     }
@@ -231,7 +232,7 @@ public class ClassService {
         List<Map<String, Object>> rounds;
         if (roundsObj instanceof String) {
             try {
-                rounds = MAPPER.readValue((String) roundsObj, new TypeReference<List<Map<String, Object>>>() {});
+                rounds = objectMapper.readValue((String) roundsObj, new TypeReference<List<Map<String, Object>>>() {});
             } catch (Exception e) {
                 throw new BusinessException(ResultCode.PARAM_INVALID, "classRounds 格式错误");
             }
@@ -306,7 +307,7 @@ public class ClassService {
         List<String> names;
         if (categoryNamesObj instanceof String) {
             try {
-                names = MAPPER.readValue((String) categoryNamesObj, new TypeReference<List<String>>() {});
+                names = objectMapper.readValue((String) categoryNamesObj, new TypeReference<List<String>>() {});
             } catch (Exception e) {
                 return;
             }

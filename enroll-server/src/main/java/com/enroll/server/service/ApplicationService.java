@@ -10,7 +10,6 @@ import com.enroll.server.exception.BusinessException;
 import com.enroll.server.repository.ApplicationRepository;
 import com.enroll.server.repository.ClassInfoRepository;
 import com.enroll.server.repository.ClassRoundRepository;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -58,16 +57,19 @@ public class ApplicationService {
     private final ApplicationRepository appRepo;
     private final ClassInfoRepository classRepo;
     private final ClassRoundRepository roundRepo;
+    private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
 
     /** 并发提交锁池：按身份证号加锁，防止同一人在两个 tab 同时提交绕过互斥校验 */
     private final ConcurrentHashMap<String, Object> submitLocks = new ConcurrentHashMap<>();
 
     public ApplicationService(ApplicationRepository appRepo,
                                ClassInfoRepository classRepo,
-                               ClassRoundRepository roundRepo) {
+                               ClassRoundRepository roundRepo,
+                               com.fasterxml.jackson.databind.ObjectMapper objectMapper) {
         this.appRepo = appRepo;
         this.classRepo = classRepo;
         this.roundRepo = roundRepo;
+        this.objectMapper = objectMapper;
     }
 
     // ==================== 提交报名（写） ====================
@@ -252,7 +254,6 @@ public class ApplicationService {
     }
 
     public List<ApplicationDTO> findMyByPhone(String phone) {
-        ObjectMapper om = new ObjectMapper();
         return appRepo.findByPhoneAndStatusInAndIsDeleted(phone, List.of(STATUS_APPLIED, STATUS_ENROLLED, STATUS_REJECTED), 0).stream()
                 .map(app -> {
                     ClassInfo cls = classRepo.findById(app.getClassId()).orElse(null);
@@ -272,7 +273,7 @@ public class ApplicationService {
                                         return m;
                                     })
                                     .collect(Collectors.toList());
-                            classPeriods = om.writeValueAsString(list);
+                            classPeriods = objectMapper.writeValueAsString(list);
                         } catch (Exception e) {
                             classPeriods = "[]";
                         }
