@@ -45,7 +45,7 @@
                           "round":            { "type": "integer",  "description": "报名轮次（1=第一轮,2=第二轮）" },
                           "isDeleted":        { "type": "integer",  "description": "软删除标记（0=正常）" },
                           "innerId":          { "type": "integer",  "description": "内网班级ID（外网classes.outer_id）" },
-                          "enrollmentYear":   { "type": "integer",  "description": "报名年级（26=2026年,27=2027年），外网后端自动写入，2026-07-19之前的旧数据可能为null" }
+                          "enrollmentYear":   { "type": "integer",  "description": "报名年级（2026=2026年,2027=2027年），外网后端自动写入，2026-07-19之前的旧数据可能为null" }
                         }
                       }
                     }

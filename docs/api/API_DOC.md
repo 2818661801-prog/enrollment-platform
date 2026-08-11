@@ -353,7 +353,7 @@ GET /api/admin/notice
 | apply_time | datetime | 报名时间 |
 | round | int | 轮次 |
 | source | string | 数据来源 |
-| enrollment_year | int | 报名年级（26=2026年，27=2027年），后端自动写入，前端/同步接口不需传参 |
+| enrollment_year | int | 报名年级（2026=2026年，2027=2027年），后端自动写入，前端/同步接口不需传参 |
 
 ### 系统配置（sys_config）
 
