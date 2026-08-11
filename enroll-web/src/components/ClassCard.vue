@@ -283,43 +283,33 @@ function showDescription() {
 /* ==================== 卡片正文 ==================== */
 .card-body {
   padding: 12px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;                     /* 紧凑间距，删类别后收紧 */
+  display: grid;
+  grid-template-rows: auto 1px 1fr auto;
+  gap: 6px 0;                     /* 标题-分割线-时间段-按钮 之间的统一间距 */
 }
 
-/* 内容区：flex 纵向布局，各行固定高度，保证所有卡片对齐 */
+/* 内容区：display: contents 让子元素参与父级 grid（同行卡片各段精确对齐） */
 .card-content {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
+  display: contents;
 }
 
-/* 标题行：高度自适应，溢出隐藏 */
+/* 标题行：grid-row:1，min-height 保证同行卡片标题区对齐 */
 .card-head {
-  flex-shrink: 0;
+  grid-row: 1;
   position: relative;              /* 让 desc-btn 绝对定位 */
   display: flex;
   align-items: flex-start;
   gap: 4px;
   overflow: hidden;
   min-height: 40px;                /* 至少一行标题高度 */
-  padding-bottom: 2px;             /* 紧凑 */
+  padding-bottom: 2px;
 }
 
-/* 分割线：固定高度 */
+/* 分割线：grid-row:2，固定高度 */
 .card-rule {
-  flex-shrink: 0;
+  grid-row: 2;
   height: 1px;
-}
-
-/* 时间区：flex-grow 填满剩余空间 */
-.card-periods {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding-top: 6px;                 /* 紧凑间距 */
+  background: var(--rule, #e2e8f0);
 }
 
 .card-name {
@@ -364,16 +354,9 @@ function showDescription() {
   font-weight: 600;
 }
 
-/* 标题下分割线（签名元素） */
-.card-rule {
-  grid-row: 3;
-  height: 1px;
-  background: var(--rule, #e2e8f0);
-}
-
 /* ==================== 时间段（支持多轮） ==================== */
 .card-periods {
-  grid-row: 4;
+  grid-row: 3;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -457,9 +440,9 @@ function showDescription() {
 
 /* ==================== 三态按钮 ==================== */
 .card-btn {
+  grid-row: 4;
   width: 100%;
   height: 34px;
-  margin-top: auto;               /* 永远贴卡片底部 */
   border: 1px solid transparent;
   border-radius: 4px;
   font-size: 14px;
