@@ -293,7 +293,7 @@ function showDescription() {
   display: contents;
 }
 
-/* 标题行：grid-row:1，min-height 保证同行卡片标题区对齐 */
+/* 标题行：grid-row:1，固定高度保证同行卡片各段对齐 */
 .card-head {
   grid-row: 1;
   position: relative;              /* 让 desc-btn 绝对定位 */
@@ -301,7 +301,7 @@ function showDescription() {
   align-items: flex-start;
   gap: 4px;
   overflow: hidden;
-  min-height: 40px;                /* 至少一行标题高度 */
+  height: 48px;                    /* 固定2行高度，对齐关键 */
   padding-bottom: 2px;
 }
 
@@ -319,7 +319,10 @@ function showDescription() {
   line-height: 1.4;
   color: var(--ink, #0f172a);
   margin: 0;
-  overflow: visible;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
   padding-right: 56px;           /* 给右上角 absolute 按钮留空间 */
 }
 
