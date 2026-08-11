@@ -104,16 +104,25 @@ watch(() => props.classInfo._uid, () => {
 onMounted(() => {
   // 移动端入场动画：IntersectionObserver 检测卡片进入视口时触发
   if (window.innerWidth <= 768 && cardRef.value) {
+    let fired = false
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting) {
+        if (entry.isIntersecting && !fired) {
+          fired = true
           isVisible.value = true
-          observer.disconnect()  // 只触发一次，不再监听
+          observer.disconnect()
         }
       },
-      { threshold: 0.1 }  // 卡片露出 10% 即触发
+      { threshold: 0.1 }
     )
     observer.observe(cardRef.value)
+    // 兜底：1s 后如果 observer 还没触发，强制显示（防止卡片永久不可见）
+    setTimeout(() => {
+      if (!fired) {
+        isVisible.value = true
+        observer.disconnect()
+      }
+    }, 1000)
   }
 })
 
@@ -216,14 +225,17 @@ function showDescription() {
 }
 /* 移动端动画声明（必须在非 scoped 块，否则 keyframes 名与 animation 引用不匹配） */
 @media (max-width: 768px) {
-  /* 初始状态：隐藏，等待 IntersectionObserver 触发 */
+  /* 移动端：去掉 hover 的 transform transition（避免与入场动画冲突） */
   .class-card {
-    opacity: 0;
-    transform: translateY(20px);
     transition: border-color 0.18s ease, box-shadow 0.18s ease !important;
   }
   .class-card:hover {
     transform: none !important;
+  }
+  /* 初始隐藏（仅未触发 IntersectionObserver 的卡片），等进入视口再滑入 */
+  .class-card:not(.is-visible) {
+    opacity: 0;
+    transform: translateY(20px);
   }
   /* 进入视口后：播放滑入动画 */
   .class-card.is-visible {
