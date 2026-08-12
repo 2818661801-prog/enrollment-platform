@@ -66,7 +66,7 @@ CREATE TABLE `ssc_applications` (
   `status`           INT          NOT NULL DEFAULT 0      COMMENT '状态：0=未报名，1=已报名，2=已撤回，3=已录取，4=未录取',
   `notice_agreed`    INT          NOT NULL                COMMENT '是否同意报名须知（0=否，1=是）',
   `audit_comment`    VARCHAR(500) DEFAULT NULL            COMMENT '审核意见（管理员填写）',
-  `apply_time`       DATETIME     NOT NULL                COMMENT '报名时间',
+  `apply_time`       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '报名时间，MySQL NOW()自动填入，不依赖JVM时区（2026-08-12 对齐实体）',
   `round`            INT          NOT NULL DEFAULT 1      COMMENT '报名轮次：1=第一轮，2=第二轮（存报名时确定的值）',
   `source`           VARCHAR(20)  NOT NULL DEFAULT 'student' COMMENT '数据来源：student(学生自报)/admin(管理员导入)/sync(低代码同步)',
   `is_deleted`       INT          NOT NULL DEFAULT 0      COMMENT '管理员软删除：0=正常，1=已删除（2026-07-10 新增）',
