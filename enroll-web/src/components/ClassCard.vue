@@ -116,13 +116,6 @@ onMounted(() => {
       { threshold: 0.1 }
     )
     observer.observe(cardRef.value)
-    // 兜底：1s 后如果 observer 还没触发，强制显示（防止卡片永久不可见）
-    setTimeout(() => {
-      if (!fired) {
-        isVisible.value = true
-        observer.disconnect()
-      }
-    }, 1000)
   }
 })
 
@@ -283,33 +276,43 @@ function showDescription() {
 /* ==================== 卡片正文 ==================== */
 .card-body {
   padding: 12px 16px;
-  display: grid;
-  grid-template-rows: auto 1px 1fr auto;
-  gap: 6px 0;                     /* 标题-分割线-时间段-按钮 之间的统一间距 */
+  display: flex;
+  flex-direction: column;
+  gap: 12px;                     /* 紧凑间距，删类别后收紧 */
 }
 
-/* 内容区：display: contents 让子元素参与父级 grid（同行卡片各段精确对齐） */
+/* 内容区：flex 纵向布局，各行固定高度，保证所有卡片对齐 */
 .card-content {
-  display: contents;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
 }
 
-/* 标题行：grid-row:1，固定高度保证同行卡片各段对齐 */
+/* 标题行：固定高度 48px（2行），确保同行卡片各段对齐 */
 .card-head {
-  grid-row: 1;
-  position: relative;              /* 让 desc-btn 绝对定位 */
+  flex-shrink: 0;
+  position: relative;
   display: flex;
   align-items: flex-start;
   gap: 4px;
   overflow: hidden;
-  height: 48px;                    /* 固定2行高度，对齐关键 */
+  height: 48px;
   padding-bottom: 2px;
 }
 
-/* 分割线：grid-row:2，固定高度 */
+/* 分割线：固定高度 */
 .card-rule {
-  grid-row: 2;
+  flex-shrink: 0;
   height: 1px;
-  background: var(--rule, #e2e8f0);
+}
+
+/* 时间区：flex-grow 填满剩余空间 */
+.card-periods {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 6px;                 /* 紧凑间距 */
 }
 
 .card-name {
@@ -323,7 +326,7 @@ function showDescription() {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  padding-right: 56px;           /* 给右上角 absolute 按钮留空间 */
+  padding-right: 56px;
 }
 
 /* 介绍按钮：绝对定位右上角 */
@@ -357,9 +360,16 @@ function showDescription() {
   font-weight: 600;
 }
 
+/* 标题下分割线（签名元素） */
+.card-rule {
+  grid-row: 3;
+  height: 1px;
+  background: var(--rule, #e2e8f0);
+}
+
 /* ==================== 时间段（支持多轮） ==================== */
 .card-periods {
-  grid-row: 3;
+  grid-row: 4;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -443,9 +453,9 @@ function showDescription() {
 
 /* ==================== 三态按钮 ==================== */
 .card-btn {
-  grid-row: 4;
   width: 100%;
   height: 34px;
+  margin-top: auto;               /* 永远贴卡片底部 */
   border: 1px solid transparent;
   border-radius: 4px;
   font-size: 14px;
@@ -495,6 +505,26 @@ function showDescription() {
   background: #f59e0b;
   color: #fff;
   cursor: not-allowed;
+}
+/* 已录取 */
+.card-btn--admitted {
+  background: #f59e0b;
+  color: #fff;
+  cursor: not-allowed;
+}
+
+/* 桌面端：flex 让 body 撑满卡片，按钮贴底对齐（仅 >768px） */
+@media (min-width: 769px) {
+  .class-card {
+    display: flex;
+    flex-direction: column;
+  }
+  .card-accent-bar {
+    flex-shrink: 0;
+  }
+  .card-body {
+    flex: 1;
+  }
 }
 
 </style>
