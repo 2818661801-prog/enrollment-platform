@@ -1,6 +1,7 @@
 # Build artifacts
 enroll-server/target/
 enroll-web/dist/
+enroll-web/node_modules/
 
 # IDE
 .idea/
