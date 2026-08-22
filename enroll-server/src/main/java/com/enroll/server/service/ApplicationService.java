@@ -111,9 +111,10 @@ public class ApplicationService {
                 throw new BusinessException(ResultCode.PARAM_INVALID, "身份证号校验码不正确");
             }
 
-            // 3) 身份证全局唯一：已报名（审核中）或已录取（永久锁定）不可再报（只查未删除）
+            // 3) 身份证全局唯一：已报名/已录取/已驳回 均不可再报（只查未删除）
+            // 2026-08-23 修复：加上 STATUS_REJECTED，被驳回后同一身份证不能重报
             List<Application> idCardDup = appRepo.findByIdCardAndStatusInAndIsDeleted(
-                    idCard, List.of(STATUS_APPLIED, STATUS_ENROLLED), 0);
+                    idCard, List.of(STATUS_APPLIED, STATUS_ENROLLED, STATUS_REJECTED), 0);
             if (!idCardDup.isEmpty()) {
                 Application existing = idCardDup.get(0);
                 String className = classRepo.findById(existing.getClassId())
@@ -124,8 +125,9 @@ public class ApplicationService {
             }
 
             // 3.5) 手机号全局唯一：同一手机号只能报名一个班
+            // 2026-08-23 修复：加上 STATUS_REJECTED，被驳回后同一手机号不能重报
             List<Application> phoneDup = appRepo.findByPhoneAndStatusInAndIsDeleted(
-                    phone, List.of(STATUS_APPLIED, STATUS_ENROLLED), 0);
+                    phone, List.of(STATUS_APPLIED, STATUS_ENROLLED, STATUS_REJECTED), 0);
             if (!phoneDup.isEmpty()) {
                 Application existing = phoneDup.get(0);
                 String className = classRepo.findById(existing.getClassId())
@@ -136,9 +138,9 @@ public class ApplicationService {
             }
 
             // 4) 本轮防重复（同一身份证+同一班级，防止同一人报两次同一班，只查未删除）
-            // 只拦截"已报名(1)"和"已录取(3)"，未录取(4)和已撤回(2)后允许重报
+            // 2026-08-23 修复：加上 STATUS_REJECTED，被驳回后不能重报同一个班（已撤回仍可重报）
             List<Application> roundDup = appRepo.findByIdCardAndClassIdAndStatusInAndIsDeleted(
-                    idCard, classId, List.of(STATUS_APPLIED, STATUS_ENROLLED), 0);
+                    idCard, classId, List.of(STATUS_APPLIED, STATUS_ENROLLED, STATUS_REJECTED), 0);
             if (!roundDup.isEmpty()) {
                 throw new BusinessException(ResultCode.DUPLICATE_APPLICATION);
             }
@@ -499,8 +501,9 @@ public class ApplicationService {
         result.put("hasSameClassConflict", false);
 
         // 1) 手机号全局唯一检查
+        // 2026-08-23 修复：加上 STATUS_REJECTED，与 submit() 防重逻辑保持一致
         java.util.List<Application> phoneDup = appRepo.findByPhoneAndStatusInAndIsDeleted(
-                phone, java.util.List.of(STATUS_APPLIED, STATUS_ENROLLED), 0);
+                phone, java.util.List.of(STATUS_APPLIED, STATUS_ENROLLED, STATUS_REJECTED), 0);
         if (!phoneDup.isEmpty()) {
             Application existing = phoneDup.get(0);
             String className = classRepo.findById(existing.getClassId())
@@ -510,8 +513,9 @@ public class ApplicationService {
         }
 
         // 2) 身份证全局唯一检查
+        // 2026-08-23 修复：加上 STATUS_REJECTED，与 submit() 防重逻辑保持一致
         java.util.List<Application> idCardDup = appRepo.findByIdCardAndStatusInAndIsDeleted(
-                idCard, java.util.List.of(STATUS_APPLIED, STATUS_ENROLLED), 0);
+                idCard, java.util.List.of(STATUS_APPLIED, STATUS_ENROLLED, STATUS_REJECTED), 0);
         if (!idCardDup.isEmpty()) {
             Application existing = idCardDup.get(0);
             String className = classRepo.findById(existing.getClassId())
@@ -521,9 +525,9 @@ public class ApplicationService {
         }
 
         // 3) 同班级防重（同一身份证+同一班级）
-        // 只拦截"已报名(1)"和"已录取(3)"，未录取(4)和已撤回(2)后允许重报
+        // 2026-08-23 修复：加上 STATUS_REJECTED，被驳回后不能重报同一个班（已撤回仍可重报）
         java.util.List<Application> sameClassDup = appRepo.findByIdCardAndClassIdAndStatusInAndIsDeleted(
-                idCard, classId, java.util.List.of(STATUS_APPLIED, STATUS_ENROLLED), 0);
+                idCard, classId, java.util.List.of(STATUS_APPLIED, STATUS_ENROLLED, STATUS_REJECTED), 0);
         if (!sameClassDup.isEmpty()) {
             result.put("hasSameClassConflict", true);
         }
