@@ -50,6 +50,8 @@
             :class-info="c"
             :is-applied="appliedClassIds[c.id]"
             :is-admitted="admittedClassIds[c.id]"
+            :is-rejected="rejectedClassIds[c.id]"
+            :lock-type="globalLockType"
             :is-logged-in="isLoggedIn"
             :style="{ '--anim-delay': `${idx * 0.05}s` }"
             @select="goFormDirect"
@@ -211,10 +213,14 @@ const classesWithGroupInfo = computed(() => {
   })
 })
 
-// 已报名的班级 ID（status=1/4，不含撤回）
+// 已报名的班级 ID（status=1 已报名 / status=3 已录取，不含被驳回）
 const appliedClassIds = reactive({})
 // 已录取的班级 ID（status=3，单独显示黄色"已录取"）
 const admittedClassIds = reactive({})
+// 被驳回的班级 ID（status=4，按钮显示"立即报名"，点击提示"未录取无法再次报名"）
+const rejectedClassIds = reactive({})
+// 全局锁定类型：''=无，'applied'=已报名其他班（全局唯一），'admitted'=已录取（永久锁定）
+const globalLockType = ref('')
 
 // 仅首次进入弹窗（关闭浏览器标签后重开才再弹）
 // 为什么用 sessionStorage：关闭标签即清除，localStorage 会永久记着
@@ -227,6 +233,8 @@ const onStorageChange = (e) => {
     isLoggedIn.value = false
     Object.keys(appliedClassIds).forEach(k => delete appliedClassIds[k])
     Object.keys(admittedClassIds).forEach(k => delete admittedClassIds[k])
+    Object.keys(rejectedClassIds).forEach(k => delete rejectedClassIds[k])
+    globalLockType.value = ''
   }
 }
 const onAppChanged = () => loadData()
@@ -297,13 +305,30 @@ async function loadData() {
     // 无论登录/退出，先清空旧数据（退出登录后 token 没了，if 被跳过导致残留）
     Object.keys(appliedClassIds).forEach(k => delete appliedClassIds[k])
     Object.keys(admittedClassIds).forEach(k => delete admittedClassIds[k])
-    // 已登录时加载我的报名记录，标记已报名的班级（只要有记录就不让再报）
+    Object.keys(rejectedClassIds).forEach(k => delete rejectedClassIds[k])
+    globalLockType.value = ''
+    // 已登录时加载我的报名记录，标记已报名的班级
     if (localStorage.getItem('student_token')) {
       const myApps = await fetchMyApplicationsMe()
+      // 同一班级可能有多条历史记录（脏数据），取 id 最大的最新一条
+      const latestByClass = {}
       myApps.forEach(a => {
         const key = String(a.classId)
+        const prev = latestByClass[key]
+        if (!prev || (a.id && a.id > (prev.id || 0))) latestByClass[key] = a
+      })
+      const latest = Object.values(latestByClass)
+      // 全局锁定：已录取(3)优先级最高，其次已报名(1)
+      if (latest.some(a => a.status === '3')) globalLockType.value = 'admitted'
+      else if (latest.some(a => a.status === '1')) globalLockType.value = 'applied'
+      latest.forEach(a => {
+        const key = String(a.classId)
+        // 已报名(1)/已录取(3)：该班本身不可再报
         if (a.status === '1' || a.status === '3') appliedClassIds[key] = true
+        // 已录取(3)：黄色"已录取"
         if (a.status === '3') admittedClassIds[key] = true
+        // 被驳回(4)：按钮显示"立即报名"，点击提示"未录取无法再次报名"
+        if (a.status === '4') rejectedClassIds[key] = true
       })
     }
   } catch (err) {
@@ -506,6 +531,8 @@ function onLogout() {
   isLoggedIn.value = false
   Object.keys(appliedClassIds).forEach(k => delete appliedClassIds[k])
   Object.keys(admittedClassIds).forEach(k => delete admittedClassIds[k])
+  Object.keys(rejectedClassIds).forEach(k => delete rejectedClassIds[k])
+  globalLockType.value = ''
   ElMessage.success('已退出登录')
 }
 

@@ -7,6 +7,7 @@ import com.enroll.server.entity.ClassInfo;
 import com.enroll.server.entity.ClassRound;
 import com.enroll.server.exception.BusinessException;
 import com.enroll.server.repository.ApplicationRepository;
+import com.enroll.server.repository.ClassCategoryRepository;
 import com.enroll.server.repository.ClassInfoRepository;
 import com.enroll.server.repository.ClassRoundRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -57,16 +58,19 @@ public class ApplicationService {
     private final ApplicationRepository appRepo;
     private final ClassInfoRepository classRepo;
     private final ClassRoundRepository roundRepo;
+    private final ClassCategoryRepository classCatRepo;
 
     /** 并发提交锁池：按身份证号加锁，防止同一人在两个 tab 同时提交绕过互斥校验 */
     private final ConcurrentHashMap<String, Object> submitLocks = new ConcurrentHashMap<>();
 
     public ApplicationService(ApplicationRepository appRepo,
                                ClassInfoRepository classRepo,
-                               ClassRoundRepository roundRepo) {
+                               ClassRoundRepository roundRepo,
+                               ClassCategoryRepository classCatRepo) {
         this.appRepo = appRepo;
         this.classRepo = classRepo;
         this.roundRepo = roundRepo;
+        this.classCatRepo = classCatRepo;
     }
 
     // ==================== 提交报名（写） ====================
@@ -108,7 +112,21 @@ public class ApplicationService {
                 throw new BusinessException(ResultCode.PARAM_INVALID, "身份证号校验码不正确");
             }
 
-            // 3) 身份证全局唯一：已报名（审核中）或已录取（永久锁定）不可再报（只查未删除）
+            // 3) 班级类别校验：若班级设置了类别，必须选择且为有效类别（防止绕过前端直接调API）
+            List<String> classCategories = classCatRepo.findCategoryNamesByClassId(classId);
+            if (classCategories != null && !classCategories.isEmpty()) {
+                String appliedCategory = (String) form.get("appliedCategory");
+                if (appliedCategory == null || appliedCategory.isBlank()) {
+                    throw new BusinessException(ResultCode.PARAM_INVALID, "请选择班级类别");
+                }
+                if (!classCategories.contains(appliedCategory)) {
+                    throw new BusinessException(ResultCode.PARAM_INVALID,
+                            "班级类别无效，可选：" + String.join("、", classCategories));
+                }
+            }
+
+            // 4) 身份证全局唯一：已报名（审核中）或已录取（永久锁定）不可再报任何班（只查未删除）
+            // 注意：被驳回(4)后应能报其他班，所以这里不查 STATUS_REJECTED
             List<Application> idCardDup = appRepo.findByIdCardAndStatusInAndIsDeleted(
                     idCard, List.of(STATUS_APPLIED, STATUS_ENROLLED), 0);
             if (!idCardDup.isEmpty()) {
@@ -120,7 +138,8 @@ public class ApplicationService {
                         "该身份证持有者已报名【" + className + "】");
             }
 
-            // 3.5) 手机号全局唯一：同一手机号只能报名一个班
+            // 4.5) 手机号全局唯一：同一手机号只能报名一个班
+            // 注意：被驳回(4)后应能报其他班，所以这里不查 STATUS_REJECTED
             List<Application> phoneDup = appRepo.findByPhoneAndStatusInAndIsDeleted(
                     phone, List.of(STATUS_APPLIED, STATUS_ENROLLED), 0);
             if (!phoneDup.isEmpty()) {
@@ -132,11 +151,16 @@ public class ApplicationService {
                         "该手机号已报名【" + className + "】");
             }
 
-            // 4) 本轮防重复（同一身份证+同一班级，防止同一人报两次同一班，只查未删除）
-            // 只拦截"已报名(1)"和"已录取(3)"，未录取(4)和已撤回(2)后允许重报
+            // 5) 本轮防重复（同一身份证+同一班级，防止同一人报两次同一班，只查未删除）
+            // 2026-08-23 修复：加上 STATUS_REJECTED，被驳回后不能重报同一个班（已撤回仍可重报）
             List<Application> roundDup = appRepo.findByIdCardAndClassIdAndStatusInAndIsDeleted(
-                    idCard, classId, List.of(STATUS_APPLIED, STATUS_ENROLLED), 0);
+                    idCard, classId, List.of(STATUS_APPLIED, STATUS_ENROLLED, STATUS_REJECTED), 0);
             if (!roundDup.isEmpty()) {
+                Application existing = roundDup.get(0);
+                // 被驳回(4)的学生重报同一个班 → 明确提示"未录取无法再次报名"
+                if (existing.getStatus() == STATUS_REJECTED) {
+                    throw new BusinessException(ResultCode.DUPLICATE_APPLICATION, "未录取无法再次报名");
+                }
                 throw new BusinessException(ResultCode.DUPLICATE_APPLICATION);
             }
 
@@ -334,41 +358,70 @@ public class ApplicationService {
     }
 
     @Transactional
-    public void batchAdmit(List<Integer> ids) {
-        batchAdmit(ids, "");
+    public java.util.Map<String, Object> batchAdmit(List<Integer> ids) {
+        return batchAdmit(ids, "");
     }
 
+    /**
+     * 批量录取（容错版）
+     * 2026-09-01 修复：原实现"全有或全无"——ids 里只要有一条非审核中(1)就整批抛异常，
+     * 导致低代码平台按审核意见分组的批量同步被一条"已处理过"的记录连累（如 ***REMOVED*** 案例）。
+     * 现改为：跳过不符合条件的记录（status != 审核中），继续处理符合条件的，返回处理统计。
+     */
     @Transactional
-    public void batchAdmit(List<Integer> ids, String auditComment) {
-        // Bug #5 修复：只允许录取"审核中(status=1)"的记录，防止覆盖已撤回/已录取/已驳回
+    public java.util.Map<String, Object> batchAdmit(List<Integer> ids, String auditComment) {
         List<Application> apps = appRepo.findAllById(ids);
+        List<Integer> validIds = new java.util.ArrayList<>();
+        List<String> skipReasons = new java.util.ArrayList<>();
         for (Application app : apps) {
             if (app.getStatus() != STATUS_APPLIED) {
-                throw new BusinessException(ResultCode.PARAM_INVALID,
-                        "只能录取审核中的记录（id=" + app.getId() + " 当前状态为" + statusLabel(app.getStatus()) + "）");
+                skipReasons.add("id=" + app.getId() + " 当前状态为" + statusLabel(app.getStatus()) + "，已跳过");
+                continue;
             }
+            validIds.add(app.getId());
         }
-        appRepo.batchUpdateStatusAndComment(ids, STATUS_ENROLLED, auditComment);
+        if (!validIds.isEmpty()) {
+            appRepo.batchUpdateStatusAndComment(validIds, STATUS_ENROLLED, auditComment);
+        }
+        java.util.Map<String, Object> result = new java.util.LinkedHashMap<>();
+        result.put("processed", validIds.size());
+        result.put("skippedCount", skipReasons.size());
+        result.put("skipped", skipReasons);
+        return result;
     }
 
     @Transactional
-    public void batchReject(List<Integer> ids) {
-        batchReject(ids, "");
+    public java.util.Map<String, Object> batchReject(List<Integer> ids) {
+        return batchReject(ids, "");
     }
 
+    /**
+     * 批量未录取（容错版）
+     * 2026-09-01 修复：与 batchAdmit 同理，跳过非审核中记录，避免整批失败连累其他记录。
+     * 释放名额逻辑不变：只有被实际驳回的审核中记录才释放 enrolled。
+     */
     @Transactional
-    public void batchReject(List<Integer> ids, String auditComment) {
-        // Bug #4 修复：驳回时释放名额 + Bug #5 修复：只允许驳回"审核中"的记录
+    public java.util.Map<String, Object> batchReject(List<Integer> ids, String auditComment) {
         List<Application> apps = appRepo.findAllById(ids);
+        List<Integer> validIds = new java.util.ArrayList<>();
+        List<String> skipReasons = new java.util.ArrayList<>();
         for (Application app : apps) {
             if (app.getStatus() != STATUS_APPLIED) {
-                throw new BusinessException(ResultCode.PARAM_INVALID,
-                        "只能驳回审核中的记录（id=" + app.getId() + " 当前状态为" + statusLabel(app.getStatus()) + "）");
+                skipReasons.add("id=" + app.getId() + " 当前状态为" + statusLabel(app.getStatus()) + "，已跳过");
+                continue;
             }
             // 释放每个被驳回记录占用的名额
             classRepo.decrementEnrolled(app.getClassId());
+            validIds.add(app.getId());
         }
-        appRepo.batchUpdateStatusAndComment(ids, STATUS_REJECTED, auditComment);
+        if (!validIds.isEmpty()) {
+            appRepo.batchUpdateStatusAndComment(validIds, STATUS_REJECTED, auditComment);
+        }
+        java.util.Map<String, Object> result = new java.util.LinkedHashMap<>();
+        result.put("processed", validIds.size());
+        result.put("skippedCount", skipReasons.size());
+        result.put("skipped", skipReasons);
+        return result;
     }
 
     // ==================== 低代码平台同步 ====================
@@ -390,8 +443,13 @@ public class ApplicationService {
     }
 
     /**
-     * 全量同步报名记录（低代码平台调 sync/applications 时调用）
+     * 同步报名记录（低代码平台调 sync/applications 时调用）
      * 主键：idCard + classId（一个学生一个班只有一条报名记录）
+     *
+     * ⚠️ 2026-09-01 修复：不再做"a有b无→全量软删"。
+     *   原因：低代码平台推送部分数据（如单条状态更新）时，会把 enroll_db 里
+     *   未包含的记录全部软删（实测空 data 删 14 条）。applications 只能条件同步，
+     *   软删请显式传 isDeleted=1 或调 POST /api/admin/applications/delete。
      *
      * @param dataList  低代码平台传来的报名数据列表
      * @return 同步结果统计 {total, inserted, updated, deleted}
@@ -406,10 +464,12 @@ public class ApplicationService {
             aMap.put(a.getIdCard() + "|" + a.getClassId(), a);
         }
 
-        java.util.Set<String> bKeys = new java.util.HashSet<>();
-        java.util.Set<String> toDelete = new java.util.HashSet<>(aMap.keySet());
+        int inserted = 0, updated = 0, deleted = 0, skipped = 0;
 
-        int inserted = 0, updated = 0, deleted = 0;
+        // 2026-09-01 防重：同身份证/手机号已有有效报名(1审核中/3已录取)则跳过新增
+        // （双 Set 防止同批次内先插一条、后一条又重复插入；DB 查询兜底批次间重复）
+        java.util.Set<String> seenAppliedIdCard = new java.util.HashSet<>();
+        java.util.Set<String> seenAppliedPhone = new java.util.HashSet<>();
 
         for (Map<String, Object> item : dataList) {
             String idCard = (String) item.get("idCard");
@@ -417,11 +477,27 @@ public class ApplicationService {
             if (idCard == null || idCard.isBlank() || classId == null) continue;
 
             String key = idCard + "|" + classId;
-            bKeys.add(key);
-            toDelete.remove(key);
 
             Application existing = aMap.get(key);
             if (existing == null) {
+                // ===== 全局唯一防重：仅对"新增且为有效报名"的记录检查 =====
+                Integer newStatus = item.get("status") != null ? (Integer) item.get("status") : STATUS_APPLIED;
+                if (newStatus == STATUS_APPLIED || newStatus == STATUS_ENROLLED) {
+                    boolean idCardTaken = seenAppliedIdCard.contains(idCard)
+                            || !appRepo.findByIdCardAndStatusInAndIsDeleted(
+                                    idCard, List.of(STATUS_APPLIED, STATUS_ENROLLED), 0).isEmpty();
+                    String phone = (String) item.get("phone");
+                    boolean phoneTaken = phone != null && !phone.isBlank()
+                            && (seenAppliedPhone.contains(phone)
+                                || !appRepo.findByPhoneAndStatusInAndIsDeleted(
+                                    phone, List.of(STATUS_APPLIED, STATUS_ENROLLED), 0).isEmpty());
+                    if (idCardTaken || phoneTaken) {
+                        skipped++;  // 跳过重复，不插入
+                        continue;
+                    }
+                    seenAppliedIdCard.add(idCard);
+                    if (phone != null && !phone.isBlank()) seenAppliedPhone.add(phone);
+                }
                 // 新增
                 Application app = new Application();
                 app.setName((String) item.get("name"));
@@ -452,18 +528,10 @@ public class ApplicationService {
                 if (item.containsKey("status"))         existing.setStatus((Integer) item.get("status"));
                 if (item.containsKey("noticeAgreed"))   existing.setNoticeAgreed(parseFlag(item.get("noticeAgreed")));
                 if (item.containsKey("auditComment"))  existing.setAuditComment((String) item.get("auditComment"));
+                // 显式软删：仅当 item 传 isDeleted=1 时软删（防止低代码平台推送部分数据误删 enroll_db 其他记录）
+                if (item.containsKey("isDeleted"))      existing.setIsDeleted((Integer) item.get("isDeleted"));
                 appRepo.save(existing);
                 updated++;
-            }
-        }
-
-        // a有、b无 → 软删除（is_deleted=1）
-        for (String keyToDelete : toDelete) {
-            Application toRemove = aMap.get(keyToDelete);
-            if (toRemove != null) {
-                toRemove.setIsDeleted(1);
-                appRepo.save(toRemove);
-                deleted++;
             }
         }
 
@@ -471,7 +539,8 @@ public class ApplicationService {
             "total", dataList.size(),
             "inserted", inserted,
             "updated", updated,
-            "deleted", deleted
+            "deleted", deleted,
+            "skipped", skipped
         );
     }
 
@@ -492,6 +561,7 @@ public class ApplicationService {
         result.put("hasSameClassConflict", false);
 
         // 1) 手机号全局唯一检查
+        // 1) 手机号全局唯一检查（被驳回(4)后应能报其他班，不查 STATUS_REJECTED）
         java.util.List<Application> phoneDup = appRepo.findByPhoneAndStatusInAndIsDeleted(
                 phone, java.util.List.of(STATUS_APPLIED, STATUS_ENROLLED), 0);
         if (!phoneDup.isEmpty()) {
@@ -502,7 +572,7 @@ public class ApplicationService {
             result.put("phoneClassName", className);
         }
 
-        // 2) 身份证全局唯一检查
+        // 2) 身份证全局唯一检查（被驳回(4)后应能报其他班，不查 STATUS_REJECTED）
         java.util.List<Application> idCardDup = appRepo.findByIdCardAndStatusInAndIsDeleted(
                 idCard, java.util.List.of(STATUS_APPLIED, STATUS_ENROLLED), 0);
         if (!idCardDup.isEmpty()) {
@@ -514,9 +584,9 @@ public class ApplicationService {
         }
 
         // 3) 同班级防重（同一身份证+同一班级）
-        // 只拦截"已报名(1)"和"已录取(3)"，未录取(4)和已撤回(2)后允许重报
+        // 2026-08-23 修复：加上 STATUS_REJECTED，被驳回后不能重报同一个班（已撤回仍可重报）
         java.util.List<Application> sameClassDup = appRepo.findByIdCardAndClassIdAndStatusInAndIsDeleted(
-                idCard, classId, java.util.List.of(STATUS_APPLIED, STATUS_ENROLLED), 0);
+                idCard, classId, java.util.List.of(STATUS_APPLIED, STATUS_ENROLLED, STATUS_REJECTED), 0);
         if (!sameClassDup.isEmpty()) {
             result.put("hasSameClassConflict", true);
         }

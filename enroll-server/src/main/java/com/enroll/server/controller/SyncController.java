@@ -12,6 +12,7 @@ import com.enroll.server.repository.ClassCategoryRepository;
 import com.enroll.server.repository.ClassInfoRepository;
 import com.enroll.server.repository.ClassRoundRepository;
 import com.enroll.server.repository.SysConfigRepository;
+import com.enroll.server.service.ApplicationService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.PersistenceContext;
 import org.springframework.transaction.annotation.Transactional;
@@ -45,6 +46,7 @@ public class SyncController {
     private final ClassCategoryRepository classCatRepo;
     private final CategoryRepository categoryRepo;
     private final SysConfigRepository sysConfigRepo;
+    private final ApplicationService applicationService;
     private final ObjectMapper objectMapper;
 
     @PersistenceContext
@@ -54,12 +56,14 @@ public class SyncController {
                           ClassRoundRepository roundRepo,
                           ClassCategoryRepository classCatRepo,
                           CategoryRepository categoryRepo,
-                          SysConfigRepository sysConfigRepo) {
+                          SysConfigRepository sysConfigRepo,
+                          ApplicationService applicationService) {
         this.classRepo = classRepo;
         this.roundRepo = roundRepo;
         this.classCatRepo = classCatRepo;
         this.categoryRepo = categoryRepo;
         this.sysConfigRepo = sysConfigRepo;
+        this.applicationService = applicationService;
         this.objectMapper = new ObjectMapper();
     }
 
@@ -248,6 +252,24 @@ public class SyncController {
     // ==================== 报名记录同步 ====================
     // 注意：applications 不允许全量覆盖（会覆盖老师录取状态），只能按条件同步（admit/reject/delete）
     // 条件同步逻辑在 ApplicationService.syncFromLowCode() 中实现
+
+    /**
+     * 同步报名记录（低代码平台推送报名/录取/驳回状态）
+     * Body: { "data": [{ "idCard": "...", "classId": 7, "name": "...", "status": 3, ... }] }
+     * 主键：idCard + classId
+     * 逻辑：b有a无→新增；b有a有→更新；a有b无→软删
+     */
+    @Transactional
+    @PostMapping("/applications")
+    public Map<String, Object> syncApplications(@RequestBody Map<String, Object> body) {
+        List<Map> dataList = extractList(body, "data");
+        Map<String, Object> result = applicationService.syncFromLowCode(dataList);
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("code", ResultCode.SUCCESS.getCode());
+        response.put("message", "同步成功");
+        response.put("data", result);
+        return response;
+    }
 
     // ==================== 系统配置同步 ====================
 

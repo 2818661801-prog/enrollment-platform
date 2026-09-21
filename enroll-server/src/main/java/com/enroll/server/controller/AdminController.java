@@ -116,9 +116,9 @@ public class AdminController {
             return R.ok("没有需要录取的记录", null);
         }
         String auditComment = (String) body.getOrDefault("auditComment", "");
-        applicationService.batchAdmit(idList, auditComment);
+        Map<String, Object> result = applicationService.batchAdmit(idList, auditComment);
         // log.info("批量录取: ids={}, auditComment={}", idList, auditComment);
-        return R.ok("已录取 " + idList.size() + " 名学生", null);
+        return R.ok("已录取 " + result.get("processed") + " 名学生（跳过 " + result.get("skippedCount") + " 条）", result);
     }
 
     /**
@@ -133,9 +133,9 @@ public class AdminController {
             return R.ok("没有需要驳回的记录", null);
         }
         String auditComment = (String) body.getOrDefault("auditComment", "");
-        applicationService.batchReject(idList, auditComment);
+        Map<String, Object> result = applicationService.batchReject(idList, auditComment);
         // log.info("批量未录取: ids={}, auditComment={}", idList, auditComment);
-        return R.ok("已设置 " + idList.size() + " 名学生为未录取", null);
+        return R.ok("已设置 " + result.get("processed") + " 名学生为未录取（跳过 " + result.get("skippedCount") + " 条）", result);
     }
 
     /**

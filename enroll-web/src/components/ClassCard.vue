@@ -111,14 +111,17 @@
 
 <script setup>
 import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
+import { ElMessage } from 'element-plus'
 import calendarIcon from '../assets/images/calendar(1).svg'
 import descIcon from '../assets/images/description.svg'
 import { getClassTimeStatus, formatTime } from '../utils/data.js'
 
 const props = defineProps({
   classInfo: { type: Object, required: true }, // 班级数据对象
-  isApplied: { type: Boolean, default: false }, // 学生是否已报该班（status=1或4）
+  isApplied: { type: Boolean, default: false }, // 学生是否已报该班（status=1/3）
   isAdmitted: { type: Boolean, default: false }, // 是否已录取（status=3）
+  isRejected: { type: Boolean, default: false }, // 是否被驳回（status=4），按钮显示立即报名但点击提示
+  lockType: { type: String, default: '' }, // 全局锁定原因：''=无，'applied'=已报名其他班，'admitted'=已录取
   isLoggedIn: { type: Boolean, default: false }, // 学生是否已登录
 })
 
@@ -235,6 +238,20 @@ const btnClass = computed(() => {
 })
 
 function onClick() {
+  // 被驳回的班：按钮显示"立即报名"，点击提示"未录取无法再次报名"
+  if (props.isRejected) {
+    ElMessage.warning('未录取无法再次报名')
+    return
+  }
+  // 全局锁定：已录取/已报名其他班，点击提示，不跳转（不要叠加）
+  if (props.lockType === 'admitted') {
+    ElMessage.warning('已录取无法报名其他班级')
+    return
+  }
+  if (props.lockType === 'applied') {
+    ElMessage.warning('已报名无法重复报名其他班级')
+    return
+  }
   if (!timeStatus.value.canApply || props.isApplied || props.isAdmitted) return
   emit('select', { id: props.classInfo.id, period: props.classInfo._period })
 }
