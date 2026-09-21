@@ -38,16 +38,16 @@ public class AdminApplicationController {
     @PostMapping("/applications/admit")
     public Map<String, Object> batchAdmit(@RequestBody @Valid BatchAdmitRequest req) {
         if (req.getIds().isEmpty()) return R.ok("没有需要录取的记录", null);
-        applicationService.batchAdmit(req.getIds(), req.getAuditComment());
-        return R.ok("已录取 " + req.getIds().size() + " 名学生", null);
+        Map<String, Object> result = applicationService.batchAdmit(req.getIds(), req.getAuditComment());
+        return R.ok("已录取 " + result.get("processed") + " 名学生（跳过 " + result.get("skippedCount") + " 条）", result);
     }
 
     /** 批量未录取（status=3） */
     @PostMapping("/applications/reject")
     public Map<String, Object> batchReject(@RequestBody @Valid BatchRejectRequest req) {
         if (req.getIds().isEmpty()) return R.ok("没有需要驳回的记录", null);
-        applicationService.batchReject(req.getIds(), req.getAuditComment());
-        return R.ok("已设置 " + req.getIds().size() + " 名学生为未录取", null);
+        Map<String, Object> result = applicationService.batchReject(req.getIds(), req.getAuditComment());
+        return R.ok("已设置 " + result.get("processed") + " 名学生为未录取（跳过 " + result.get("skippedCount") + " 条）", result);
     }
 
     /** 批量删除报名记录（软删除：status→0） */

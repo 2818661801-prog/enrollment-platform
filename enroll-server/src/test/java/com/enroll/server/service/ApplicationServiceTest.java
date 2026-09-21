@@ -402,15 +402,15 @@ public class ApplicationServiceTest {
         }
     }
 
-    // ==================== batchAdmit / batchReject 状态守卫 ====================
+    // ==================== batchAdmit / batchReject 容错 ====================
 
     @Nested
-    @DisplayName("batchAdmit/batchReject 状态守卫")
+    @DisplayName("batchAdmit/batchReject 容错（跳过非审核中 + 返回统计）")
     class BatchStatusGuard {
 
         @Test
-        @DisplayName("batchAdmit：含非审核中记录 → 拒绝，提示状态")
-        void admit_nonApplied_reject() {
+        @DisplayName("batchAdmit：含非审核中记录 → 跳过该条，处理审核中的，返回 processed/skippedCount")
+        void admit_mixed_skipAndProcess() {
             Application applied = new Application();
             applied.setId(1);
             applied.setStatus(ApplicationService.STATUS_APPLIED);
@@ -421,22 +421,49 @@ public class ApplicationServiceTest {
 
             when(appRepo.findAllById(List.of(1, 2))).thenReturn(List.of(applied, withdrawn));
 
-            BusinessException ex = assertThrows(BusinessException.class, () -> service.batchAdmit(List.of(1, 2)));
-            assertTrue(ex.getMessage().contains("已撤回"));
+            Map<String, Object> result = service.batchAdmit(List.of(1, 2));
+            assertEquals(1, result.get("processed"));
+            assertEquals(1, result.get("skippedCount"));
+            // 只对审核中的 id 执行更新
+            verify(appRepo).batchUpdateStatusAndComment(List.of(1), ApplicationService.STATUS_ENROLLED, "");
         }
 
         @Test
-        @DisplayName("batchReject：含非审核中记录 → 拒绝")
-        void reject_nonApplied_reject() {
+        @DisplayName("batchAdmit：全是非审核中 → 不抛异常，processed=0，跳过全部")
+        void admit_allSkipped_noThrow() {
             Application enrolled = new Application();
             enrolled.setId(1);
             enrolled.setStatus(ApplicationService.STATUS_ENROLLED);
-            enrolled.setClassId(1);
 
             when(appRepo.findAllById(List.of(1))).thenReturn(List.of(enrolled));
 
-            BusinessException ex = assertThrows(BusinessException.class, () -> service.batchReject(List.of(1)));
-            assertTrue(ex.getMessage().contains("已录取"));
+            Map<String, Object> result = service.batchAdmit(List.of(1));
+            assertEquals(0, result.get("processed"));
+            assertEquals(1, result.get("skippedCount"));
+            verify(appRepo, never()).batchUpdateStatusAndComment(anyList(), anyInt(), anyString());
+        }
+
+        @Test
+        @DisplayName("batchReject：含非审核中记录 → 跳过该条，处理审核中的，返回统计")
+        void reject_mixed_skipAndProcess() {
+            Application applied = new Application();
+            applied.setId(1);
+            applied.setStatus(ApplicationService.STATUS_APPLIED);
+            applied.setClassId(1);
+
+            Application enrolled = new Application();
+            enrolled.setId(2);
+            enrolled.setStatus(ApplicationService.STATUS_ENROLLED);
+            enrolled.setClassId(1);
+
+            when(appRepo.findAllById(List.of(1, 2))).thenReturn(List.of(applied, enrolled));
+
+            Map<String, Object> result = service.batchReject(List.of(1, 2));
+            assertEquals(1, result.get("processed"));
+            assertEquals(1, result.get("skippedCount"));
+            // 只有被实际驳回的审核中记录释放名额
+            verify(classRepo).decrementEnrolled(1);
+            verify(appRepo).batchUpdateStatusAndComment(List.of(1), ApplicationService.STATUS_REJECTED, "");
         }
 
         @Test
@@ -542,7 +569,138 @@ public class ApplicationServiceTest {
         }
     }
 
-    // ==================== toDTO() idCardRaw 权限控制 ====================
+    // ==================== syncFromLowCode 同步 ====================
+
+    @Nested
+    @DisplayName("syncFromLowCode 低代码平台同步")
+    class SyncFromLowCode {
+
+        private Map<String, Object> syncItem(String idCard, Integer classId, String phone, Integer status) {
+            Map<String, Object> item = new HashMap<>();
+            item.put("idCard", idCard);
+            item.put("classId", classId);
+            item.put("name", "张三");
+            item.put("phone", phone);
+            item.put("gender", "男");
+            item.put("hasPhysics", "否");
+            item.put("hasEnglish", "否");
+            item.put("status", status);
+            return item;
+        }
+
+        /** 默认：a 端无记录、防重查询均无、save 透传 */
+        private void stubEmptyA() {
+            when(appRepo.findByIsDeleted(0)).thenReturn(Collections.emptyList());
+            when(appRepo.findByIdCardAndStatusInAndIsDeleted(anyString(), anyList(), anyInt())).thenReturn(Collections.emptyList());
+            when(appRepo.findByPhoneAndStatusInAndIsDeleted(anyString(), anyList(), anyInt())).thenReturn(Collections.emptyList());
+            when(appRepo.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        }
+
+        @Test
+        @DisplayName("空 data → 统计全 0，不软删 a 端已有记录（不再全量差异软删）")
+        void emptyData_noSoftDelete() {
+            // a 端已有 1 条记录，但 b 端空 → 不得软删它
+            Application existing = new Application();
+            existing.setId(1);
+            existing.setIdCard("110101***REMOVED***7");
+            existing.setClassId(1);
+            when(appRepo.findByIsDeleted(0)).thenReturn(List.of(existing));
+
+            Map<String, Object> result = service.syncFromLowCode(Collections.emptyList());
+
+            assertEquals(0, result.get("total"));
+            assertEquals(0, result.get("inserted"));
+            assertEquals(0, result.get("updated"));
+            assertEquals(0, result.get("deleted"));
+            assertEquals(0, result.get("skipped"));
+            verify(appRepo, never()).save(existing);
+        }
+
+        @Test
+        @DisplayName("b有a无 → 新增 inserted=1")
+        void newItem_insert() {
+            stubEmptyA();
+
+            Map<String, Object> result = service.syncFromLowCode(List.of(
+                    syncItem("110101***REMOVED***7", 1, "***REMOVED***", ApplicationService.STATUS_APPLIED)));
+
+            assertEquals(1, result.get("inserted"));
+            verify(appRepo).save(argThat(app ->
+                    app.getIdCard().equals("110101***REMOVED***7")
+                    && app.getClassId() == 1
+                    && app.getStatus() == ApplicationService.STATUS_APPLIED));
+        }
+
+        @Test
+        @DisplayName("b有a有 → 更新 updated=1")
+        void existingItem_update() {
+            Application existing = new Application();
+            existing.setId(1);
+            existing.setIdCard("110101***REMOVED***7");
+            existing.setClassId(1);
+            existing.setStatus(ApplicationService.STATUS_APPLIED);
+            when(appRepo.findByIsDeleted(0)).thenReturn(List.of(existing));
+
+            Map<String, Object> input = syncItem("110101***REMOVED***7", 1, "***REMOVED***", ApplicationService.STATUS_REJECTED);
+            Map<String, Object> result = service.syncFromLowCode(List.of(input));
+
+            assertEquals(1, result.get("updated"));
+            assertEquals(ApplicationService.STATUS_REJECTED, existing.getStatus());
+            verify(appRepo).save(existing);
+        }
+
+        @Test
+        @DisplayName("显式 isDeleted=1 → 软删该条，deleted=1")
+        void explicitDelete_softDelete() {
+            Application existing = new Application();
+            existing.setId(1);
+            existing.setIdCard("110101***REMOVED***7");
+            existing.setClassId(1);
+            existing.setStatus(ApplicationService.STATUS_APPLIED);
+            existing.setIsDeleted(0);
+            when(appRepo.findByIsDeleted(0)).thenReturn(List.of(existing));
+
+            Map<String, Object> input = syncItem("110101***REMOVED***7", 1, "***REMOVED***", ApplicationService.STATUS_APPLIED);
+            input.put("isDeleted", 1);
+            Map<String, Object> result = service.syncFromLowCode(List.of(input));
+
+            assertEquals(1, existing.getIsDeleted());
+            assertEquals(1, result.get("updated"));  // 走更新分支
+        }
+
+        @Test
+        @DisplayName("防重：同身份证已有有效报名(1/3) → 跳过新增 inserted，skipped=1")
+        void duplicateIdCard_skip() {
+            when(appRepo.findByIsDeleted(0)).thenReturn(Collections.emptyList());
+            Application dup = new Application();
+            dup.setId(99);
+            dup.setIdCard("110101***REMOVED***7");  // 同身份证，已有效报名
+            dup.setClassId(2);
+            when(appRepo.findByIdCardAndStatusInAndIsDeleted(eq("110101***REMOVED***7"), anyList(), eq(0)))
+                    .thenReturn(List.of(dup));
+            when(appRepo.findByPhoneAndStatusInAndIsDeleted(anyString(), anyList(), anyInt())).thenReturn(Collections.emptyList());
+
+            Map<String, Object> result = service.syncFromLowCode(List.of(
+                    syncItem("110101***REMOVED***7", 1, "***REMOVED***", ApplicationService.STATUS_APPLIED)));
+
+            assertEquals(0, result.get("inserted"));
+            assertEquals(1, result.get("skipped"));
+            verify(appRepo, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("状态为已驳回(4)且无冲突 → 可新增（被驳回后可报其他班）")
+        void rejectedStatus_newItemAllowed() {
+            // status=4 不触发防重查询，只需 stub 空 a 端与 save
+            when(appRepo.findByIsDeleted(0)).thenReturn(Collections.emptyList());
+            when(appRepo.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+            Map<String, Object> result = service.syncFromLowCode(List.of(
+                    syncItem("110101***REMOVED***7", 1, "***REMOVED***", ApplicationService.STATUS_REJECTED)));
+
+            assertEquals(1, result.get("inserted"));
+        }
+    }
 
     @Nested
     @DisplayName("toDTO() idCardRaw 权限控制")
