@@ -1,3 +1,3 @@
 @echo off
-cd /d ***REMOVED***RegistrationQuestionnaire\enroll-server
+cd /d "%~dp0enroll-server"
 call mvnw.cmd clean package -DskipTests

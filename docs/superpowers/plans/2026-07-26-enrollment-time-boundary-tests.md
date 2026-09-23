@@ -125,7 +125,7 @@ git commit -m "test: 创建时间边界测试类骨架"
 void shouldAllowEnrollment_whenStartTimeJustReached() {
     // GIVEN：构造一个极窄窗口，起点是当前时间前1秒，终点是当前时间后1小时
     // 实际用 UPDATE periods 改 id=1 的班级
-    String periodJson = "[{\"round\":1,\"period\":\"" + getTimeStr(1, -1) + " - " + getTimeStr(1, 3600) + "\"}]";
+    String periodJson = "[{\"round\":1,\"period\":\" + getTimeStr(1, -1) + " - " + getTimeStr(1, 3600) + "\"}]";
     classInfoRepository.findById(testClassId).ifPresent(c -> {
         c.setPeriod(periodJson);
         c.setPeriods(periodJson);
@@ -189,7 +189,7 @@ git commit -m "test: 场景A - 报名时间正好到达应可报名"
 void shouldRejectEnrollment_whenEndTimeJustPassed() {
     // GIVEN：构造窗口 = 0秒，即 startTime == endTime
     // now 既不小于 startTime，也不小于 endTime（因为 ==），所以 now < endTime 不成立
-    String periodJson = "[{\"round\":1,\"period\":\"" + getTimeStr(0, -1) + " - " + getTimeStr(0, -1) + "\"}]";
+    String periodJson = "[{\"round\":1,\"period\":\" + getTimeStr(0, -1) + " - " + getTimeStr(0, -1) + "\"}]";
     classInfoRepository.findById(testClassId).ifPresent(c -> {
         c.setPeriod(periodJson);
         c.setPeriods(periodJson);
@@ -241,7 +241,7 @@ git commit -m "test: 场景C - 截止时间刚过应拒绝报名"
 @Order(3)
 void shouldAllowEnrollment_whenWithinOpenWindow() {
     // GIVEN：窗口从现在起1小时后开始，2小时后结束（确定在未来）
-    String periodJson = "[{\"round\":1,\"period\":\"" + getTimeStr(0, 3600) + " - " + getTimeStr(0, 7200) + "\"}]";
+    String periodJson = "[{\"round\":1,\"period\":\" + getTimeStr(0, 3600) + " - " + getTimeStr(0, 7200) + "\"}]";
     classInfoRepository.findById(testClassId).ifPresent(c -> {
         c.setPeriod(periodJson);
         c.setPeriods(periodJson);

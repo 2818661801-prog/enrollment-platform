@@ -31,7 +31,7 @@ echo.
 :: ========== 2. 启动后端 ==========
 echo [2/4] 启动后端 (8081)...
 
-cd /d ***REMOVED***RegistrationQuestionnaire\enroll-server
+cd /d %~dp0\enroll-server
 start /B cmd /c "title 后端服务 && mvnw.cmd spring-boot:run -DskipTests > d:\enroll-backend.log 2>&1"
 
 echo   后端已在后台启动，日志: d:\enroll-backend.log
@@ -58,7 +58,7 @@ echo.
 :: ========== 3. 启动前端 ==========
 echo [3/4] 启动前端 (5173)...
 
-cd /d ***REMOVED***RegistrationQuestionnaire\enroll-web
+cd /d %~dp0\enroll-web
 start "前端服务" cmd /c "npm run dev"
 
 echo   前端已在新窗口启动

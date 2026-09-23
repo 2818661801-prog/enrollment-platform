@@ -126,10 +126,10 @@ git commit -m "feat: Entity 加 contact_info 和 group_info 字段"
 ```java
 // GET /api/config/notice 返回值加 contactInfo
 return R.ok(java.util.Map.of(
-    "title", c.getTitle() != null ? c.getTitle() : "",
-    "conditions", c.getConditions() != null ? c.getConditions() : "",
-    "notices", c.getNotices() != null ? c.getNotices() : "",
-    "contactInfo", c.getContactInfo() != null ? c.getContactInfo() : ""  // 新增
+    "title", c.getTitle() != null ? c.getTitle() : ",
+    "conditions", c.getConditions() != null ? c.getConditions() : ",
+    "notices", c.getNotices() != null ? c.getNotices() : ",
+    "contactInfo", c.getContactInfo() != null ? c.getContactInfo() : "  // 新增
 ));
 ```
 
@@ -138,7 +138,7 @@ return R.ok(java.util.Map.of(
 - [ ] **步骤 2：重启后端验证**
 
 ```bash
-cd ***REMOVED***RegistrationQuestionnaire/enroll-server
+cd enroll-server
 # 先杀后端
 netstat -ano | findstr 8081 | findstr LISTENING
 # 然后启动

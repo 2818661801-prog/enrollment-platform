@@ -227,7 +227,7 @@ git commit -m "refactor: 删除 computePeriod/upsertClassRounds/upsertClassCateg
 - [ ] **步骤 1：编译项目**
 
 ```bash
-cd ***REMOVED***RegistrationQuestionnaire/enroll-server
+cd enroll-server
 ./mvnw.cmd compile -DskipTests
 ```
 

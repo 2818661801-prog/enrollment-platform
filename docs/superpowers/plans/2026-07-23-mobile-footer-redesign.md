@@ -502,7 +502,7 @@ git commit -m "feat(2026-07-23): AppFooter 桌面端样式 - 卡片行+编号目
     background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.12) 12%, rgba(255, 255, 255, 0.12) 88%, transparent);
   }
   .footer-rule::after {
-    content: "";
+    content: ";
     position: absolute;
     top: 50%;
     left: 50%;
@@ -644,7 +644,7 @@ git commit -m "feat(2026-07-23): AppFooter 移动端样式 - logo居顶+卡片�
 - [ ] **步骤 1：跑前端构建**
 
 ```bash
-cd ***REMOVED***RegistrationQuestionnaire/enroll-web && npm run build
+cd enroll-web && npm run build
 ```
 
 预期：构建成功，无 CSS/JS 报错。

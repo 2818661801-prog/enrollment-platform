@@ -1,2 +1,2 @@
-cd ***REMOVED***enroll-server
+cd enroll-server
 .\mvnw.cmd spring-boot:run -DskipTests

@@ -1,14 +1,14 @@
 ﻿# start-dev.ps1
 # 特色班报名系统 · 一键启动脚本（PowerShell 版）
-# 用法：在 Git Bash 里运行  powershell -File "***REMOVED***RegistrationQuestionnaire/start-dev.ps1"
+# 用法：在 Git Bash 里运行  powershell -File "$PSScriptRoot/start-dev.ps1"
 
 param(
     [switch]$SkipBuild  # 跳过编译，直接启动（调试用）
 )
 
 $ErrorActionPreference = "Continue"
-$BackendDir = "***REMOVED***RegistrationQuestionnaire\enroll-server"
-$FrontendDir = "***REMOVED***RegistrationQuestionnaire\enroll-web"
+$BackendDir = "$PSScriptRoot\enroll-server"
+$FrontendDir = "$PSScriptRoot\enroll-web"
 $LogFile = "d:\enroll-backend.log"
 
 function Get-PortPid {
@@ -20,7 +20,7 @@ function Get-PortPid {
 Write-Host "========================================"
 Write-Host "  特色班报名系统 · 一键启动"
 Write-Host "========================================"
-Write-Host ""
+Write-Host "
 
 # ---------- 1. 清理旧进程 ----------
 Write-Host "[1/4] 清理旧进程..."
@@ -37,7 +37,7 @@ foreach ($port in @(8081, 5173, 5174)) {
 Start-Sleep -Milliseconds 500
 
 # ---------- 2. 启动后端 ----------
-Write-Host ""
+Write-Host "
 Write-Host "[2/4] 启动后端 (8081)..."
 
 # 清理旧日志
@@ -76,7 +76,7 @@ if ($started) {
 }
 
 # ---------- 3. 启动前端 ----------
-Write-Host ""
+Write-Host "
 Write-Host "[3/4] 启动前端 (5173)..."
 
 $frontendProcess = Start-Process `
@@ -104,7 +104,7 @@ if ($started) {
 }
 
 # ---------- 4. 验证 ----------
-Write-Host ""
+Write-Host "
 Write-Host "[4/4] 服务状态:"
 
 $backendPid = Get-PortPid 8081
@@ -127,7 +127,7 @@ if ($frontendPort) {
     Write-Host "  [ERR] 前端  未监听" -ForegroundColor Red
 }
 
-Write-Host ""
+Write-Host "
 Write-Host "========================================"
 Write-Host "  启动完成！"
 Write-Host "  后端日志: $LogFile"

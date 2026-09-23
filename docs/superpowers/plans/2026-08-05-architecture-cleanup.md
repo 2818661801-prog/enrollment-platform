@@ -123,7 +123,7 @@
 - [ ] **步骤 1：切换分支**
 
 ```bash
-cd ***REMOVED***RegistrationQuestionnaire
+cd 
 git checkout refactor/architecture-cleanup
 ```
 
@@ -308,7 +308,7 @@ git commit -m "fix: toDTO加includeRaw参数，学生端默认不返回idCardRaw
 - [ ] **步骤 1：确认无引用**
 
 ```bash
-cd ***REMOVED***RegistrationQuestionnaire
+cd 
 grep -r "ApiResponse" enroll-server/src --include="*.java" -l
 ```
 
@@ -333,7 +333,7 @@ git commit -m "chore: 删除死代码ApiResponse.java"
 - [ ] **步骤 1：启动后端**
 
 ```bash
-cd ***REMOVED***RegistrationQuestionnaire/enroll-server
+cd enroll-server
 mvnw.cmd spring-boot:run -DskipTests
 ```
 
@@ -880,12 +880,12 @@ public class SysConfigService {
     public Map<String, String> getNotice() {
         return sysConfigRepo.findById(1)
                 .map(cfg -> Map.of(
-                    "title", cfg.getTitle() != null ? cfg.getTitle() : "",
-                    "conditions", cfg.getConditions() != null ? cfg.getConditions() : "",
-                    "notices", cfg.getNotices() != null ? cfg.getNotices() : "",
-                    "contactInfo", cfg.getContactInfo() != null ? cfg.getContactInfo() : ""
+                    "title", cfg.getTitle() != null ? cfg.getTitle() : ",
+                    "conditions", cfg.getConditions() != null ? cfg.getConditions() : ",
+                    "notices", cfg.getNotices() != null ? cfg.getNotices() : ",
+                    "contactInfo", cfg.getContactInfo() != null ? cfg.getContactInfo() : "
                 ))
-                .orElse(Map.of("title", "", "conditions", "", "notices", "", "contactInfo", ""));
+                .orElse(Map.of("title", ", "conditions", ", "notices", ", "contactInfo", "));
     }
 
     /** 更新报名须知 */
@@ -1856,7 +1856,7 @@ git commit -m "refactor: Controller改用RequestDTO+移除Repository直接注入
 - [ ] **步骤 1：编译检查**
 
 ```bash
-cd ***REMOVED***RegistrationQuestionnaire/enroll-server
+cd enroll-server
 mvnw.cmd compile -DskipTests
 ```
 

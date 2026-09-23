@@ -307,7 +307,7 @@ git commit -m "refactor: 表单页去掉Step1验证码，改为手机号+身份�
 - [ ] **步骤 1：构建前端**
 
 ```powershell
-cd ***REMOVED***RegistrationQuestionnaire/enroll-web && npm run build
+cd enroll-web && npm run build
 ```
 
 - [ ] **步骤 2：重启后端**
@@ -316,7 +316,7 @@ cd ***REMOVED***RegistrationQuestionnaire/enroll-web && npm run build
 netstat -ano | findstr 8081
 # 找到 PID 后
 taskkill /F /PID <PID>
-cd ***REMOVED***RegistrationQuestionnaire/enroll-server; mvnw.cmd spring-boot:run -DskipTests
+cd enroll-server; mvnw.cmd spring-boot:run -DskipTests
 ```
 
 - [ ] **步骤 3：测试场景**

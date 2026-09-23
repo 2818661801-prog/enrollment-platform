@@ -26,7 +26,7 @@
 ### ① 装依赖
 
 ```bash
-cd ***REMOVED***RegistrationQuestionnaire/enroll-web && npm i pinia
+cd enroll-web && npm i pinia
 ```
 
 ### ② 新建 `enroll-web/src/stores/auth.js`
@@ -544,7 +544,7 @@ useDialogAdapt('group-info-dialog', () => props.modelValue, { maxWidthPc: 500, w
     <!-- 自定义头部：图标 + 标题 + 红关闭按钮 -->
     <div class="custom-header">
       <div class="header-content">
-        <img :src="descIcon" alt="" class="custom-icon" />
+        <img :src="descIcon" alt=" class="custom-icon" />
         <div class="header-text">
           <div class="header-title" :title="title">{{ title }}</div>
         </div>
@@ -647,7 +647,7 @@ const dialogWidth = computed(() => {
   >
     <div class="edit-dialog-bar" />
     <div class="edit-dialog-head">
-      <img :src="editToolsIcon" alt="" class="edit-dialog-icon" />
+      <img :src="editToolsIcon" alt=" class="edit-dialog-icon" />
       <span class="edit-dialog-title">修改报名信息</span>
     </div>
 
@@ -874,8 +874,8 @@ auth.login(token, phone)          // phone 有就传，没有传 undefined
 ## Task 27：Phase 3 验证
 
 ```bash
-cd ***REMOVED***RegistrationQuestionnaire/enroll-web && npm run build    # 编译通过
-cd ***REMOVED***RegistrationQuestionnaire/enroll-server && mvnw.cmd compile
+cd enroll-web && npm run build    # 编译通过
+cd enroll-server && mvnw.cmd compile
 ```
 
 调用 `/verification-before-completion` 技能，按技能清单实测，重点回归：
@@ -1054,7 +1054,7 @@ private final Validator validator = Validation.buildDefaultValidatorFactory().ge
 @Test
 void 姓名必填() {
     ClassRequestDTO dto = new ClassRequestDTO();
-    dto.setName("");  // 空
+    dto.setName(");  // 空
     Set<ConstraintViolation<ClassRequestDTO>> violations = validator.validate(dto);
     assertTrue(violations.stream().anyMatch(v -> v.getPropertyPath().toString().equals("name")));
 }

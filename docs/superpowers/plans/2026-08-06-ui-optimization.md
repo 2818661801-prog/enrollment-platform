@@ -132,14 +132,14 @@ git commit -m "fix: 咨询方式弹窗同名班级去重(只显示第一条)"
 - [ ] **步骤 1：安装 motion 库**
 
 ```bash
-cd ***REMOVED***RegistrationQuestionnaire/enroll-web
+cd enroll-web
 npm install motion
 ```
 
 - [ ] **步骤 2：验证 motion 安装成功**
 
 ```bash
-cd ***REMOVED***RegistrationQuestionnaire/enroll-web
+cd enroll-web
 node -e "const m = require('motion'); console.log('motion OK', Object.keys(m).slice(0,5))"
 ```
 
