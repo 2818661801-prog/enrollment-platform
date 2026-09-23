@@ -1,88 +1,80 @@
-# 特色班报名系统
+# 高校特色班报名系统
 
-> 高校特色班（拔尖班 / 成电联培 / ACCA 等）在线报名系统：学生扫描报名、管理员批量录取/驳回、低代码平台数据同步全链路。
+面向高校特色班（拔尖班 / 联合培养 / 方向班）选拔场景的在线报名系统：学生扫码报名、多级防重校验、管理员批量录取 / 驳回、报名名额防超卖，并预留与低代码教务平台的跨网数据同步链路。曾在真实招生周期内服务 8 个特色班、承载 500+ 条报名记录。
 
-## 项目现状（2026-09-21）
+## 核心能力
 
-- **线上 v1 已退役**：原企业实习期间部署的 v1 版本自 2026-09-21 起不再维护、不再作为参考基准（历史代码保留在 `release/v1` 分支，仅作档案）。
-- **`refactor/architecture-cleanup` 分支为唯一主线**（v2.0）：架构整改完成，本仓库目标是**完整、可本地运行、可放进个人作品集**。
-- 当前主线已打 tag `v2.0-personal`。
+- **报名与防重**：三层防重校验（身份证全局唯一 / 手机号全局唯一 / 同班不重复占位），业务裁决"被驳回学生同班禁报、他班可报"（决策记录见 [ADR](./docs/ADR-驳回后禁止重报.md)）
+- **名额与并发**：录取环节基于数据库事务 + 行级锁定实现名额扣减原子性，防并发超卖；外网入口 Redis 限流防刷
+- **认证与会话**：管理员账密 + JWT；学生端短信验证码 + JWT（开发模式验证码走固定值开关，生产接第三方通道）
+- **跨网同步契约**：与内网低代码平台以 REST 约定对接（40 个接口），`source` 字段溯源、`outer_id` 对账，保障内外网双库一致性
+- **测试体系**：后端 JUnit 5 测试 65 个（Mockito 单测 + 真实 MySQL 集成测试），前端 Vitest 单测 80 个，另配 Python 冒烟 / E2E 脚本作为发布前检查
 
-## 核心链路（纯本地可完整演示）
+## 架构
 
 ```
-管理员建班 → 学生扫码报名 → 查重拦截 → 批量录取/驳回（跳过无效记录） → 我的报名查询 → 低代码同步（curl 模拟）
+ 学生（外网）                                   管理员（内网）
+     │                                              │
+     ▼                                              ▼
+ Vue 3 学生端  ◄────►  Spring Boot 3 后端  ◄────►  MySQL (enroll_db)
+   (5173 → 8081)         │        ▲
+                         │        └──── 同步 API（source 溯源 / outer_id 对账）
+                         ▼               ◄──── 低代码平台（本地以 curl 模拟）
+                     Redis（限流 / 验证码缓存）
 ```
-
-- 学生端：报名、查重、我的报名、撤回
-- 管理端（API + 低代码平台）：建班、类别、报名须知、批量录取/驳回、同步
-- 业务规则：身份证/手机号全局唯一 + 同班防重；**被驳回后同班禁报、他班可报**（[ADR](./docs/ADR-驳回后禁止重报.md)）
 
 ## 技术栈
 
 | 层 | 技术 |
 |----|------|
-| 后端 | Spring Boot 3.2.7 + Spring Data JPA + MySQL 8（端口 8081）|
-| 前端 | Vue 3 + Element Plus + Vite + Pinia（端口 5173，proxy → 8081）|
-| 数据库 | MySQL，库名 `enroll_db`，用户 `enroll` / `***REMOVED***` |
-| 认证 | 管理员：账号密码 + JWT；学生：验证码 + JWT（测试模式固定 666666，见 CLAUDE.md §5）|
+| 后端 | Spring Boot 3.2.7 · Spring Data JPA · JWT · Redis · MySQL 8（:8081） |
+| 前端 | Vue 3 · Element Plus · Vite · Pinia（:5173，dev proxy → 8081） |
+| 测试 | JUnit 5 + Mockito · Vitest · Python（冒烟 / E2E） |
 
-## 快速启动（本地）
+## 快速启动
 
-前置：JDK 21、Maven、Node 18+、MySQL 8（本机服务或 Docker 均可）。
-
-```bash
-# 1. 建库（库不存在时）
-mysql -uenroll -p'***REMOVED***' --default-character-set=utf8mb4 enroll_db < docs/sql/V20260701__特色班报名系统_INIT.sql
-
-# 2. 后端
-cd enroll-server && mvnw.cmd spring-boot:run -DskipTests    # → 8081
-
-# 3. 前端
-cd enroll-web && npm install && npm run dev                 # → 5173
-```
-
-验证：`curl http://localhost:8081/api/classes` 返回班级列表即成功。
-
-## 测试与验证
+前置：JDK 21、Maven、Node 18+、MySQL 8（本机或 Docker）。
 
 ```bash
-# 后端单元测试（65 个，含 Mockito 单测 + MySQL 集成测试）
-cd enroll-server && mvn test
+# 1. 初始化数据库（含表结构与种子数据）
+mysql -uroot -p --default-character-set=utf8mb4 enroll_db < docs/sql/V20260701__特色班报名系统_INIT.sql
 
-# 前端单元测试（80 个）+ 构建
-cd enroll-web && npm run test && npm run build
+# 2. 启动后端（application.yml 中配置本地数据库账号）
+cd enroll-server && mvnw.cmd spring-boot:run -DskipTests    # → :8081
+
+# 3. 启动前端
+cd enroll-web && npm install && npm run dev                 # → :5173
 ```
 
-## 目录速览
+验证：`curl http://localhost:8081/api/classes` 返回班级列表即成功。开发模式配置与初始管理员见 `docs/00-项目学习手册.md`。
 
-```
-enroll-server/  Spring Boot 后端（controller/service/repository/entity/dto.request）
-enroll-web/     Vue 3 前端（views/components/stores/utils）
-docs/
-  sql/          数据库初始化与迁移脚本
-  ADR-驳回后禁止重报.md      业务规则裁决记录
-  00-项目学习手册.md         新手向维护手册（请求的一生 → 维护场景）
-  冒烟记录-20260921.md       本地全链路实测记录
-  superpowers/specs/        架构整改设计文档（13 个架构问题清单）
-CLAUDE.md        项目级约定（路径/数据库/多轮/重启方法）
+## 测试
+
+```bash
+cd enroll-server && mvn test     # 后端 65 个测试（含 MySQL 集成测试）
+cd enroll-web && npm run test    # 前端 Vitest 80 个单测
 ```
 
-## ⚠️ 企业环境依赖说明（去公司化标注）
+## 仓库导航
 
-本项目源自企业实习期间的「智慧教务平台 + 低代码平台」内外网双系统架构，以下能力**依赖原企业环境，本地以文档 / mock 形式保留**，不影响核心链路演示：
+| 内容 | 位置 |
+|------|------|
+| 后端源码 | `enroll-server/`（controller / service / repository / entity / dto） |
+| 前端源码 | `enroll-web/`（views / components / stores / utils） |
+| 数据库脚本 | `docs/sql/`（初始化与增量迁移） |
+| 架构决策记录 | `docs/ADR-驳回后禁止重报.md` |
+| 架构整改设计（13 项问题清单） | `docs/superpowers/specs/` |
+| 请求链路讲解（新手向） | `docs/00-项目学习手册.md` |
+| 本地全链路冒烟记录 | `docs/冒烟记录-20260921.md` |
 
-| 能力 | 依赖 | 本地替代 |
-|------|------|---------|
-| 低代码平台同步 `POST /api/admin/sync/**` | 内网低代码平台按约定 REST 推送 | curl 模拟（见 `docs/冒烟记录-20260921.md` §2.9）|
-| 管理员 UI | 内网低代码平台复刻 AdminDashboard | 本项目只保留 Admin API；学生端完整 |
-| 学生短信验证码 | 第三方短信通道 | 后端测试开关：固定 `666666` |
-| 内网表（SmsStudent / SysDepartment / 智慧教务账号） | 内网数据库，网络不可达 | 不接入；仅 `Sync*` 契约保留 |
+## 分支与版本
 
-设计文档：`CLAUDE.md` §11 内外网双系统架构。管理员账号（开发期）：`***REMOVED***` / `***REMOVED***`。
+| 分支 / 标签 | 说明 |
+|------|------|
+| `main` | 当前主线（tag `v2.0-personal`）：架构整改后的完整可本地运行版本 |
+| `refactor/architecture-cleanup` | v2.0 开发分支（架构整改 Task 1–30），已并入 main |
+| `release/v1` | 初版历史档案，已退役归档，不再维护 |
 
-## 分支说明
+## 说明
 
-- `main` — 当前主线（等于 v2.0 合并结果），tag `v2.0-personal`
-- `refactor/architecture-cleanup` — v2.0 开发分支（架构整改 Task 1-30），已并入 main
-- `release/v1` — 退役版历史档案（保留不删，仅作历史）
+本项目为企业实习系统的个人重构与脱敏版本：内网低代码平台、第三方短信通道等外部依赖以接口契约与本地模拟保留，核心报名链路（报名 → 防重 → 录取 / 驳回 → 查询）纯本地完整可演示。
