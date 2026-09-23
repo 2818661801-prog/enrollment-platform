@@ -1,6 +1,6 @@
 # 报名时间边界测试计划
 
-> **面向 AI 代理的工作者：** 必需子技能：使用 superpowers:subagent-driven-development（推荐）或 superpowers:executing-plans 逐任务实现此计划。步骤使用复选框（`- [ ]`）语法来跟踪进度。
+> **实现计划（任务驱动开发）：** 按 Phase 逐任务推进，每个任务含验证步骤与验收标准（复选框跟踪）；设计决策依据见 specs/ 对应设计文档。
 
 **目标：** 验证报名系统时间边界逻辑：`startTime <= now < endTime`，即"报名时间刚到可报名，超过截止时间不可报名"
 

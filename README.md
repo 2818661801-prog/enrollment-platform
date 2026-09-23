@@ -63,7 +63,7 @@ cd enroll-web && npm run test    # 前端 Vitest 80 个单测
 | 前端源码 | `enroll-web/`（views / components / stores / utils） |
 | 数据库脚本 | `docs/sql/`（初始化与增量迁移） |
 | 架构决策记录 | `docs/ADR-驳回后禁止重报.md` |
-| 架构整改设计（13 项问题清单） | `docs/superpowers/specs/` |
+| 架构整改设计（13 项问题清单） | `docs/dev-docs/specs/` |
 | 请求链路讲解（新手向） | `docs/00-项目学习手册.md` |
 | 本地全链路冒烟记录 | `docs/冒烟记录-20260921.md` |
 

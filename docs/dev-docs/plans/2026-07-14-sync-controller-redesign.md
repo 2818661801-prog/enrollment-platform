@@ -1,6 +1,6 @@
 # 低代码平台同步接口重构实现计划
 
-> **面向 AI 代理的工作者：** 必需子技能：使用 superpowers:subagent-driven-development（推荐）或 superpowers:executing-plans 逐任务实现此计划。步骤使用复选框（`- [ ]`）语法来跟踪进度。
+> **实现计划（任务驱动开发）：** 按 Phase 逐任务推进，每个任务含验证步骤与验收标准（复选框跟踪）；设计决策依据见 specs/ 对应设计文档。
 
 **目标：** 重构 SyncController，用"先清再插"策略替代复杂判断逻辑
 

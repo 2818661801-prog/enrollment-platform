@@ -1,6 +1,6 @@
 # 联系方式功能实现计划
 
-> **面向 AI 代理的工作者：** 必需子技能：使用 superpowers:subagent-driven-development（推荐）或 superpowers:executing-plans 逐任务实现此计划。步骤使用复选框（`- [ ]`）语法来跟踪进度。
+> **实现计划（任务驱动开发）：** 按 Phase 逐任务推进，每个任务含验证步骤与验收标准（复选框跟踪）；设计决策依据见 specs/ 对应设计文档。
 
 **目标：** 在 sys_config 表加 contact_info 全局联系方式字段，在 classes 表加 group_info 班级社群信息字段，前端首页横条显示 contact_info，两个按钮（报名须知 + 咨询方式）并排，咨询方式弹窗显示所有有 group_info 的班级列表。
 
@@ -460,7 +460,7 @@ git commit -m "feat: HomePage 加 contact_info 横条 + 咨询方式按钮 + 弹
 
 ## 执行交接
 
-计划已完成并保存到 `docs/superpowers/plans/2026-07-26-contact-info-group-info.md`。
+计划已完成并保存到 `docs/dev-docs/plans/2026-07-26-contact-info-group-info.md`。
 
 **两种执行方式：**
 

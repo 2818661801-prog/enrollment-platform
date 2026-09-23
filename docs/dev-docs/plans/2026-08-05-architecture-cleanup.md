@@ -1,6 +1,6 @@
 # 特色班报名系统 · 架构整改实现计划
 
-> **面向 AI 代理的工作者：** 必需子技能：使用 superpowers:subagent-driven-development（推荐）或 superpowers:executing-plans 逐任务实现此计划。步骤使用复选框（`- [ ]`）语法来跟踪进度。
+> **实现计划（任务驱动开发）：** 按 Phase 逐任务推进，每个任务含验证步骤与验收标准（复选框跟踪）；设计决策依据见 specs/ 对应设计文档。
 
 **目标：** 系统性修复 13 个架构级问题，使代码具备可维护性
 
@@ -8,7 +8,7 @@
 
 **技术栈：** Spring Boot 3.2.7 + JPA + MySQL / Vue 3 + Element Plus + Pinia + Vite
 
-**设计文档：** `docs/superpowers/specs/2026-08-05-architecture-cleanup-design.md`
+**设计文档：** `docs/dev-docs/specs/2026-08-05-architecture-cleanup-design.md`
 
 ---
 
@@ -1898,4 +1898,4 @@ curl -s -X POST "http://localhost:8081/api/applications" -H "Content-Type: appli
 
 ---
 
-Phase 3 和 Phase 4 的计划见 `docs/superpowers/plans/2026-08-05-architecture-cleanup-phase3-4.md`
+Phase 3 和 Phase 4 的计划见 `docs/dev-docs/plans/2026-08-05-architecture-cleanup-phase3-4.md`

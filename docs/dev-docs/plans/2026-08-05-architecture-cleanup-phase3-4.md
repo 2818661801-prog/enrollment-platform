@@ -1,6 +1,6 @@
 # 特色班报名系统 · 架构整改计划（Phase 3 + Phase 4）
 
-> 前置：Phase 1/2 计划见 `docs/superpowers/plans/2026-08-05-architecture-cleanup.md`。
+> 前置：Phase 1/2 计划见 `docs/dev-docs/plans/2026-08-05-architecture-cleanup.md`。
 > 本文件只在 `refactor/architecture-cleanup` 分支执行，改一处验证一处。
 > **验证铁律**：每个 Phase 全部任务完成后，必须调用 `/verification-before-completion` 技能，实际跑命令验证（`npm run build` / `mvnw.cmd compile` / curl / 浏览器冒烟），不能光说"做完了"。
 > **删除铁律**：Task 26 涉及删文件，执行时必须列清单、等主人二次确认（"是的，我确定删除"）后再删。
